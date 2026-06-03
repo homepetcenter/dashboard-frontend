@@ -17,14 +17,14 @@
 
   <!-- Header -->
   <div class="bg-white rounded-2xl shadow-sm p-5 flex flex-wrap items-center justify-between gap-3 mb-6">
-    <h1 class="text-2xl font-bold text-slate-800">ðŸ“Š Analytics Dashboard</h1>
+    <h1 class="text-2xl font-bold text-slate-800">📊 Analytics Dashboard</h1>
     <div class="flex flex-wrap items-center gap-3">
       <!-- Date range -->
       <div id="rangeButtons" class="flex rounded-lg overflow-hidden border border-slate-300">
-        <button data-range="7d"  class="range-btn px-3 py-2 text-sm">7 ×™×ž×™×</button>
-        <button data-range="30d" class="range-btn px-3 py-2 text-sm">30 ×™×•×</button>
-        <button data-range="90d" class="range-btn px-3 py-2 text-sm">90 ×™×•×</button>
-        <button data-range="12m" class="range-btn px-3 py-2 text-sm">×©× ×”</button>
+        <button data-range="7d"  class="range-btn px-3 py-2 text-sm">7 ימים</button>
+        <button data-range="30d" class="range-btn px-3 py-2 text-sm">30 יום</button>
+        <button data-range="90d" class="range-btn px-3 py-2 text-sm">90 יום</button>
+        <button data-range="12m" class="range-btn px-3 py-2 text-sm">שנה</button>
       </div>
       <!-- Site -->
       <select id="siteSelect"
@@ -43,27 +43,27 @@
   <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
     <div class="bg-white rounded-2xl shadow-sm p-5">
       <div class="text-slate-500 text-sm mb-1">Sessions</div>
-      <div id="kpiSessions" class="text-3xl font-bold text-blue-700">â€”</div>
+      <div id="kpiSessions" class="text-3xl font-bold text-blue-700">—</div>
     </div>
     <div class="bg-white rounded-2xl shadow-sm p-5">
       <div class="text-slate-500 text-sm mb-1">Users</div>
-      <div id="kpiUsers" class="text-3xl font-bold text-blue-700">â€”</div>
+      <div id="kpiUsers" class="text-3xl font-bold text-blue-700">—</div>
     </div>
     <div class="bg-white rounded-2xl shadow-sm p-5">
       <div class="text-slate-500 text-sm mb-1">Bounce Rate</div>
-      <div id="kpiBounce" class="text-3xl font-bold text-blue-700">â€”</div>
+      <div id="kpiBounce" class="text-3xl font-bold text-blue-700">—</div>
     </div>
     <div class="bg-white rounded-2xl shadow-sm p-5">
       <div class="text-slate-500 text-sm mb-1">Impressions</div>
-      <div id="kpiImpr" class="text-3xl font-bold text-blue-700">â€”</div>
+      <div id="kpiImpr" class="text-3xl font-bold text-blue-700">—</div>
     </div>
     <div class="bg-white rounded-2xl shadow-sm p-5">
       <div class="text-slate-500 text-sm mb-1">Clicks</div>
-      <div id="kpiClicks" class="text-3xl font-bold text-blue-700">â€”</div>
+      <div id="kpiClicks" class="text-3xl font-bold text-blue-700">—</div>
     </div>
     <div class="bg-white rounded-2xl shadow-sm p-5">
       <div class="text-slate-500 text-sm mb-1">CTR</div>
-      <div id="kpiCtr" class="text-3xl font-bold text-blue-700">â€”</div>
+      <div id="kpiCtr" class="text-3xl font-bold text-blue-700">—</div>
     </div>
   </div>
 
@@ -78,7 +78,7 @@
   <script>
     const API = "https://dashboard-backend-production-e29c.up.railway.app/api/data";
     const fmt = (n) => Number(n || 0).toLocaleString("en-US");
-    const RANGE_LABEL = { "7d": "7 ×™×ž×™× ××—×¨×•× ×™×", "30d": "30 ×™×•× ××—×¨×•× ×™×", "90d": "90 ×™×•× ××—×¨×•× ×™×", "12m": "×©× ×” ××—×¨×•× ×”" };
+    const RANGE_LABEL = { "7d": "7 ימים אחרונים", "30d": "30 יום אחרונים", "90d": "90 יום אחרונים", "12m": "שנה אחרונה" };
     let chart;
     let currentRange = "30d";
 
@@ -126,9 +126,9 @@
 
     async function load() {
       const site = document.getElementById("siteSelect").value;
-      document.getElementById("chartTitle").textContent = "Sessions â€” " + (RANGE_LABEL[currentRange] || "");
-      setStatus("×˜×•×¢×Ÿ × ×ª×•× ×™×...", "info");
-      document.querySelectorAll("[id^=kpi]").forEach((e) => (e.textContent = "â€¦"));
+      document.getElementById("chartTitle").textContent = "Sessions — " + (RANGE_LABEL[currentRange] || "");
+      setStatus("טוען נתונים...", "info");
+      document.querySelectorAll("[id^=kpi]").forEach((e) => (e.textContent = "…"));
       try {
         const res = await fetch(API + "?site=" + encodeURIComponent(site) + "&range=" + currentRange);
         const d = await res.json();
@@ -143,8 +143,8 @@
         renderChart(a.series || []);
         setStatus("", null);
       } catch (err) {
-        setStatus("×©×’×™××” ×‘×˜×¢×™× ×ª ×”× ×ª×•× ×™×: " + err.message, "error");
-        document.querySelectorAll("[id^=kpi]").forEach((e) => (e.textContent = "â€”"));
+        setStatus("שגיאה בטעינת הנתונים: " + err.message, "error");
+        document.querySelectorAll("[id^=kpi]").forEach((e) => (e.textContent = "—"));
       }
     }
 
