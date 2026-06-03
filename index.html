@@ -121,6 +121,10 @@
       <div class="card"><div class="text-slate-600 font-medium mb-2">Clicks</div><canvas id="seClicks" height="110"></canvas></div>
       <div class="card"><div class="text-slate-600 font-medium mb-2">CTR (%)</div><canvas id="seCtr" height="110"></canvas></div>
     </div>
+    <div class="card mb-4">
+      <div class="text-slate-600 font-medium mb-2">התפלגות מיקומים בחיפוש <span id="seKwTotal" class="text-slate-400 text-sm"></span></div>
+      <canvas id="sePos" height="80"></canvas>
+    </div>
     <div class="grid md:grid-cols-2 gap-4">
       <div class="card"><div class="text-slate-600 font-medium mb-3">מילות חיפוש מובילות</div>
         <table class="w-full text-sm"><thead><tr class="text-slate-400 text-right border-b"><th class="py-2 font-medium">מילה</th><th class="py-2 font-medium">קליקים</th><th class="py-2 font-medium">חשיפות</th><th class="py-2 font-medium">CTR</th><th class="py-2 font-medium">מיקום</th></tr></thead><tbody id="seQueries"></tbody></table></div>
@@ -246,6 +250,13 @@
       area("seImpr", labels, ser.map((r) => r.impressions), "#1d4ed8");
       area("seClicks", labels, ser.map((r) => r.clicks), "#10b981");
       area("seCtr", labels, ser.map((r) => r.ctr), "#f59e0b");
+      // Position distribution
+      const pos = d.positions || [];
+      document.getElementById("seKwTotal").textContent = d.totalKeywords ? `(סה"כ ${fmt(d.totalKeywords)} מילים)` : "";
+      makeChart("sePos", { type: "bar",
+        data: { labels: pos.map((b) => b.bucket), datasets: [{ data: pos.map((b) => b.count),
+          backgroundColor: ["#16a34a","#65a30d","#eab308","#f97316","#dc2626"] }] },
+        options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } } });
       const row = (r) => `<tr class="border-b last:border-0"><td class="py-2" title="${r.key}">${shortPath(r.key)}</td><td class="py-2">${fmt(r.clicks)}</td><td class="py-2">${fmt(r.impressions)}</td><td class="py-2">${r.ctr}%</td><td class="py-2">${r.position}</td></tr>`;
       document.getElementById("seQueries").innerHTML = (d.queries || []).map(row).join("") || `<tr><td class="py-3 text-slate-400" colspan="5">אין נתונים</td></tr>`;
       document.getElementById("sePages").innerHTML = (d.pages || []).map(row).join("") || `<tr><td class="py-3 text-slate-400" colspan="5">אין נתונים</td></tr>`;
