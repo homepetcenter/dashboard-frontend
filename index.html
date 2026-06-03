@@ -14,12 +14,18 @@
     .tab-btn { color:#64748b; border-bottom:3px solid transparent; }
     .tab-btn:hover { color:#1d4ed8; }
     .tab-btn.active { color:#1d4ed8; border-bottom-color:#1d4ed8; font-weight:600; }
+    .card { background:#fff; border-radius:1rem; box-shadow:0 1px 2px rgba(0,0,0,.05); padding:1.1rem 1.25rem; }
+    .kpi-label { color:#64748b; font-size:.8rem; margin-bottom:.25rem; }
+    .kpi-val { font-size:1.7rem; font-weight:700; color:#1d4ed8; line-height:1.1; }
+    .delta { font-size:.78rem; font-weight:600; }
+    .delta.up { color:#16a34a; } .delta.down { color:#dc2626; } .delta.flat { color:#94a3b8; }
+    th { white-space:nowrap; }
   </style>
 </head>
 <body class="bg-slate-100 min-h-screen p-4 md:p-6">
 
   <!-- Header -->
-  <div class="bg-white rounded-2xl shadow-sm p-5 flex flex-wrap items-center justify-between gap-3 mb-4">
+  <div class="card flex flex-wrap items-center justify-between gap-3 mb-4">
     <h1 class="text-2xl font-bold text-slate-800">📊 Analytics Dashboard</h1>
     <div class="flex flex-wrap items-center gap-3">
       <div id="rangeButtons" class="flex rounded-lg overflow-hidden border border-slate-300">
@@ -44,60 +50,56 @@
   </div>
 
   <!-- Tabs -->
-  <div class="bg-white rounded-2xl shadow-sm px-3 mb-4 flex flex-wrap gap-1">
-    <button data-tab="overview"  class="tab-btn px-4 py-3 text-sm">📈 סקירה</button>
-    <button data-tab="sales"     class="tab-btn px-4 py-3 text-sm">💰 מכירות</button>
-    <button data-tab="traffic"   class="tab-btn px-4 py-3 text-sm">🚦 מקורות תנועה</button>
-    <button data-tab="pages"     class="tab-btn px-4 py-3 text-sm">📄 דפים מובילים</button>
-    <button data-tab="search"    class="tab-btn px-4 py-3 text-sm">🔍 חיפוש</button>
+  <div class="card !py-0 px-3 mb-3 flex flex-wrap gap-1">
+    <button data-tab="overview" class="tab-btn px-4 py-3 text-sm">📈 סקירה</button>
+    <button data-tab="sales"    class="tab-btn px-4 py-3 text-sm">💰 מכירות</button>
+    <button data-tab="traffic"  class="tab-btn px-4 py-3 text-sm">🚦 מקורות תנועה</button>
+    <button data-tab="pages"    class="tab-btn px-4 py-3 text-sm">📄 דפים מובילים</button>
+    <button data-tab="search"   class="tab-btn px-4 py-3 text-sm">🔍 חיפוש</button>
   </div>
 
+  <div id="compareNote" class="text-center text-xs text-slate-400 mb-3"></div>
   <div id="status" class="hidden mb-4 text-center text-sm rounded-lg py-2"></div>
 
   <!-- ===== OVERVIEW ===== -->
   <section data-screen="overview">
-    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
-      <div class="bg-white rounded-2xl shadow-sm p-5"><div class="text-slate-500 text-sm mb-1">Sessions</div><div id="ovSessions" class="text-3xl font-bold text-blue-700">—</div></div>
-      <div class="bg-white rounded-2xl shadow-sm p-5"><div class="text-slate-500 text-sm mb-1">Users</div><div id="ovUsers" class="text-3xl font-bold text-blue-700">—</div></div>
-      <div class="bg-white rounded-2xl shadow-sm p-5"><div class="text-slate-500 text-sm mb-1">Bounce Rate</div><div id="ovBounce" class="text-3xl font-bold text-blue-700">—</div></div>
-      <div class="bg-white rounded-2xl shadow-sm p-5"><div class="text-slate-500 text-sm mb-1">Impressions</div><div id="ovImpr" class="text-3xl font-bold text-blue-700">—</div></div>
-      <div class="bg-white rounded-2xl shadow-sm p-5"><div class="text-slate-500 text-sm mb-1">Clicks</div><div id="ovClicks" class="text-3xl font-bold text-blue-700">—</div></div>
-      <div class="bg-white rounded-2xl shadow-sm p-5"><div class="text-slate-500 text-sm mb-1">CTR</div><div id="ovCtr" class="text-3xl font-bold text-blue-700">—</div></div>
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6" id="ovCards">
+      <div class="card"><div class="kpi-label">Sessions</div><div class="flex items-end gap-2"><div id="ovSessions" class="kpi-val">—</div><div id="ovSessions_d" class="delta"></div></div></div>
+      <div class="card"><div class="kpi-label">Users</div><div class="flex items-end gap-2"><div id="ovUsers" class="kpi-val">—</div><div id="ovUsers_d" class="delta"></div></div></div>
+      <div class="card"><div class="kpi-label">משתמשים חדשים</div><div class="flex items-end gap-2"><div id="ovNew" class="kpi-val">—</div><div id="ovNew_d" class="delta"></div></div></div>
+      <div class="card"><div class="kpi-label">Bounce Rate</div><div class="flex items-end gap-2"><div id="ovBounce" class="kpi-val">—</div><div id="ovBounce_d" class="delta"></div></div></div>
+      <div class="card"><div class="kpi-label">צפיות / סשן</div><div class="flex items-end gap-2"><div id="ovPps" class="kpi-val">—</div><div id="ovPps_d" class="delta"></div></div></div>
+      <div class="card"><div class="kpi-label">זמן שהייה ממוצע</div><div class="flex items-end gap-2"><div id="ovDur" class="kpi-val">—</div><div id="ovDur_d" class="delta"></div></div></div>
+      <div class="card"><div class="kpi-label">Impressions</div><div class="flex items-end gap-2"><div id="ovImpr" class="kpi-val">—</div><div id="ovImpr_d" class="delta"></div></div></div>
+      <div class="card"><div class="kpi-label">Clicks</div><div class="flex items-end gap-2"><div id="ovClicks" class="kpi-val">—</div><div id="ovClicks_d" class="delta"></div></div></div>
+      <div class="card"><div class="kpi-label">CTR</div><div class="flex items-end gap-2"><div id="ovCtr" class="kpi-val">—</div><div id="ovCtr_d" class="delta"></div></div></div>
+      <div class="card"><div class="kpi-label">צפיות עמוד</div><div class="flex items-end gap-2"><div id="ovViews" class="kpi-val">—</div><div id="ovViews_d" class="delta"></div></div></div>
     </div>
-    <div class="bg-white rounded-2xl shadow-sm p-5">
-      <div id="ovChartTitle" class="text-slate-600 font-medium mb-3">Sessions</div>
-      <canvas id="ovChart" height="90"></canvas>
-    </div>
+    <div class="card"><div id="ovChartTitle" class="text-slate-600 font-medium mb-3">Sessions</div><canvas id="ovChart" height="90"></canvas></div>
   </section>
 
   <!-- ===== SALES ===== -->
   <section data-screen="sales" class="hidden">
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-      <div class="bg-white rounded-2xl shadow-sm p-5"><div class="text-slate-500 text-sm mb-1">הכנסות (₪)</div><div id="slRevenue" class="text-3xl font-bold text-emerald-600">—</div></div>
-      <div class="bg-white rounded-2xl shadow-sm p-5"><div class="text-slate-500 text-sm mb-1">עסקאות</div><div id="slTx" class="text-3xl font-bold text-emerald-600">—</div></div>
-      <div class="bg-white rounded-2xl shadow-sm p-5"><div class="text-slate-500 text-sm mb-1">עסקה ממוצעת (₪)</div><div id="slAov" class="text-3xl font-bold text-emerald-600">—</div></div>
-      <div class="bg-white rounded-2xl shadow-sm p-5"><div class="text-slate-500 text-sm mb-1">אחוז המרה</div><div id="slConv" class="text-3xl font-bold text-emerald-600">—</div></div>
+      <div class="card"><div class="kpi-label">הכנסות (₪)</div><div class="flex items-end gap-2"><div id="slRevenue" class="kpi-val !text-emerald-600">—</div><div id="slRevenue_d" class="delta"></div></div></div>
+      <div class="card"><div class="kpi-label">עסקאות</div><div class="flex items-end gap-2"><div id="slTx" class="kpi-val !text-emerald-600">—</div><div id="slTx_d" class="delta"></div></div></div>
+      <div class="card"><div class="kpi-label">עסקה ממוצעת (₪)</div><div class="flex items-end gap-2"><div id="slAov" class="kpi-val !text-emerald-600">—</div><div id="slAov_d" class="delta"></div></div></div>
+      <div class="card"><div class="kpi-label">אחוז המרה</div><div class="flex items-end gap-2"><div id="slConv" class="kpi-val !text-emerald-600">—</div><div id="slConv_d" class="delta"></div></div></div>
     </div>
-    <div class="bg-white rounded-2xl shadow-sm p-5">
+    <div class="card">
       <div class="text-slate-600 font-medium mb-3">מוצרים מובילים</div>
-      <table class="w-full text-sm"><thead><tr class="text-slate-400 text-right border-b">
-        <th class="py-2 font-medium">מוצר</th><th class="py-2 font-medium">כמות</th><th class="py-2 font-medium">הכנסה (₪)</th>
-      </tr></thead><tbody id="slProducts"></tbody></table>
+      <table class="w-full text-sm"><thead><tr class="text-slate-400 text-right border-b"><th class="py-2 font-medium">מוצר</th><th class="py-2 font-medium">כמות</th><th class="py-2 font-medium">הכנסה (₪)</th></tr></thead><tbody id="slProducts"></tbody></table>
     </div>
   </section>
 
   <!-- ===== TRAFFIC ===== -->
   <section data-screen="traffic" class="hidden">
-    <div class="grid md:grid-cols-2 gap-4">
-      <div class="bg-white rounded-2xl shadow-sm p-5">
-        <div class="text-slate-600 font-medium mb-3">מקורות תנועה</div>
-        <canvas id="trChart" height="200"></canvas>
-      </div>
-      <div class="bg-white rounded-2xl shadow-sm p-5">
+    <div class="grid md:grid-cols-3 gap-4">
+      <div class="card md:col-span-1"><div class="text-slate-600 font-medium mb-3">מקורות תנועה</div><canvas id="trChart" height="220"></canvas></div>
+      <div class="card md:col-span-1"><div class="text-slate-600 font-medium mb-3">מכשירים</div><canvas id="devChart" height="220"></canvas></div>
+      <div class="card md:col-span-1">
         <div class="text-slate-600 font-medium mb-3">פירוט ערוצים</div>
-        <table class="w-full text-sm"><thead><tr class="text-slate-400 text-right border-b">
-          <th class="py-2 font-medium">ערוץ</th><th class="py-2 font-medium">Sessions</th><th class="py-2 font-medium">%</th>
-        </tr></thead><tbody id="trTable"></tbody></table>
+        <table class="w-full text-sm"><thead><tr class="text-slate-400 text-right border-b"><th class="py-2 font-medium">ערוץ</th><th class="py-2 font-medium">Sessions</th><th class="py-2 font-medium">%</th></tr></thead><tbody id="trTable"></tbody></table>
       </div>
     </div>
   </section>
@@ -105,50 +107,40 @@
   <!-- ===== PAGES ===== -->
   <section data-screen="pages" class="hidden">
     <div class="grid md:grid-cols-2 gap-4">
-      <div class="bg-white rounded-2xl shadow-sm p-5">
-        <div class="text-slate-600 font-medium mb-3">דפים נצפים ביותר</div>
-        <table class="w-full text-sm"><thead><tr class="text-slate-400 text-right border-b">
-          <th class="py-2 font-medium">דף</th><th class="py-2 font-medium">צפיות</th>
-        </tr></thead><tbody id="pgTop"></tbody></table>
-      </div>
-      <div class="bg-white rounded-2xl shadow-sm p-5">
-        <div class="text-slate-600 font-medium mb-3">דפי כניסה מובילים</div>
-        <table class="w-full text-sm"><thead><tr class="text-slate-400 text-right border-b">
-          <th class="py-2 font-medium">דף כניסה</th><th class="py-2 font-medium">Sessions</th>
-        </tr></thead><tbody id="pgLanding"></tbody></table>
-      </div>
+      <div class="card"><div class="text-slate-600 font-medium mb-3">דפים נצפים ביותר</div>
+        <table class="w-full text-sm"><thead><tr class="text-slate-400 text-right border-b"><th class="py-2 font-medium">דף</th><th class="py-2 font-medium">צפיות</th></tr></thead><tbody id="pgTop"></tbody></table></div>
+      <div class="card"><div class="text-slate-600 font-medium mb-3">דפי כניסה מובילים</div>
+        <table class="w-full text-sm"><thead><tr class="text-slate-400 text-right border-b"><th class="py-2 font-medium">דף כניסה</th><th class="py-2 font-medium">Sessions</th></tr></thead><tbody id="pgLanding"></tbody></table></div>
     </div>
   </section>
 
   <!-- ===== SEARCH ===== -->
   <section data-screen="search" class="hidden">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+      <div class="card"><div class="text-slate-600 font-medium mb-2">Impressions</div><canvas id="seImpr" height="110"></canvas></div>
+      <div class="card"><div class="text-slate-600 font-medium mb-2">Clicks</div><canvas id="seClicks" height="110"></canvas></div>
+      <div class="card"><div class="text-slate-600 font-medium mb-2">CTR (%)</div><canvas id="seCtr" height="110"></canvas></div>
+    </div>
     <div class="grid md:grid-cols-2 gap-4">
-      <div class="bg-white rounded-2xl shadow-sm p-5">
-        <div class="text-slate-600 font-medium mb-3">מילות חיפוש מובילות</div>
-        <table class="w-full text-sm"><thead><tr class="text-slate-400 text-right border-b">
-          <th class="py-2 font-medium">מילה</th><th class="py-2 font-medium">קליקים</th><th class="py-2 font-medium">חשיפות</th><th class="py-2 font-medium">CTR</th><th class="py-2 font-medium">מיקום</th>
-        </tr></thead><tbody id="seQueries"></tbody></table>
-      </div>
-      <div class="bg-white rounded-2xl shadow-sm p-5">
-        <div class="text-slate-600 font-medium mb-3">דפים מובילים בחיפוש</div>
-        <table class="w-full text-sm"><thead><tr class="text-slate-400 text-right border-b">
-          <th class="py-2 font-medium">דף</th><th class="py-2 font-medium">קליקים</th><th class="py-2 font-medium">חשיפות</th><th class="py-2 font-medium">CTR</th><th class="py-2 font-medium">מיקום</th>
-        </tr></thead><tbody id="sePages"></tbody></table>
-      </div>
+      <div class="card"><div class="text-slate-600 font-medium mb-3">מילות חיפוש מובילות</div>
+        <table class="w-full text-sm"><thead><tr class="text-slate-400 text-right border-b"><th class="py-2 font-medium">מילה</th><th class="py-2 font-medium">קליקים</th><th class="py-2 font-medium">חשיפות</th><th class="py-2 font-medium">CTR</th><th class="py-2 font-medium">מיקום</th></tr></thead><tbody id="seQueries"></tbody></table></div>
+      <div class="card"><div class="text-slate-600 font-medium mb-3">דפים מובילים בחיפוש</div>
+        <table class="w-full text-sm"><thead><tr class="text-slate-400 text-right border-b"><th class="py-2 font-medium">דף</th><th class="py-2 font-medium">קליקים</th><th class="py-2 font-medium">חשיפות</th><th class="py-2 font-medium">CTR</th><th class="py-2 font-medium">מיקום</th></tr></thead><tbody id="sePages"></tbody></table></div>
     </div>
   </section>
 
-  <div class="text-center text-slate-400 text-xs mt-6">Powered by Railway Backend | Dashboard v3.0</div>
+  <div class="text-center text-slate-400 text-xs mt-6">Powered by Railway Backend | Dashboard v4.0</div>
 
   <script>
     const BASE = "https://dashboard-backend-production-e29c.up.railway.app";
     const fmt = (n) => Number(n || 0).toLocaleString("en-US");
+    const fmtDur = (s) => Math.floor(s / 60) + ":" + String(Math.round(s % 60)).padStart(2, "0");
     const RANGE_LABEL = { "7d": "7 ימים אחרונים", "30d": "30 יום אחרונים", "90d": "90 יום אחרונים", "12m": "שנה אחרונה" };
 
     let currentRange = "30d", currentTab = "overview";
-    let customStart = null, customEnd = null;   // custom date range (overrides preset)
-    let charts = {};                 // chart instances per id
-    const cache = {};                // cache[tab] = {key, data}
+    let customStart = null, customEnd = null;
+    let charts = {};
+    const cache = {};
     const cacheKey = () => document.getElementById("siteSelect").value + "|" + (customStart && customEnd ? customStart + ":" + customEnd : currentRange);
     const periodLabel = () => (customStart && customEnd) ? `${customStart} – ${customEnd}` : (RANGE_LABEL[currentRange] || "");
 
@@ -162,10 +154,24 @@
       if (!d) return d;
       if (d.length === 8) return d.slice(6, 8) + "/" + d.slice(4, 6);
       if (d.length === 6) return d.slice(4, 6) + "/" + d.slice(0, 4);
+      if (d.length === 10) return d.slice(8, 10) + "/" + d.slice(5, 7);  // YYYY-MM-DD
       return d;
     }
-    function shortPath(p) { return p && p.length > 45 ? p.slice(0, 45) + "…" : (p || ""); }
+    const shortPath = (p) => p && p.length > 45 ? p.slice(0, 45) + "…" : (p || "");
     function makeChart(id, config) { if (charts[id]) charts[id].destroy(); charts[id] = new Chart(document.getElementById(id), config); }
+
+    // delta badge: sets text+class on #id_d, comparing cur vs prev
+    function setKpi(id, valueText, cur, prev, lowerBetter) {
+      document.getElementById(id).textContent = valueText;
+      const el = document.getElementById(id + "_d");
+      if (!el) return;
+      if (prev == null || prev === 0) { el.textContent = ""; el.className = "delta flat"; return; }
+      const pct = ((cur - prev) / prev) * 100;
+      const better = lowerBetter ? cur < prev : cur > prev;
+      const arrow = pct > 0 ? "▲" : pct < 0 ? "▼" : "■";
+      el.textContent = `${arrow} ${Math.abs(pct).toFixed(1)}%`;
+      el.className = "delta " + (Math.abs(pct) < 0.05 ? "flat" : better ? "up" : "down");
+    }
 
     async function api(path) {
       const site = document.getElementById("siteSelect").value;
@@ -180,13 +186,18 @@
 
     // ---- Renderers ----
     function renderOverview(d) {
-      const a = d.analytics || {}, s = d.searchConsole || {};
-      document.getElementById("ovSessions").textContent = fmt(a.sessions);
-      document.getElementById("ovUsers").textContent = fmt(a.users);
-      document.getElementById("ovBounce").textContent = (a.bounceRate ?? 0) + "%";
-      document.getElementById("ovImpr").textContent = fmt(s.impressions);
-      document.getElementById("ovClicks").textContent = fmt(s.clicks);
-      document.getElementById("ovCtr").textContent = (s.ctr ?? 0) + "%";
+      const a = d.analytics || {}, s = d.searchConsole || {}, pr = d.prev || {};
+      document.getElementById("compareNote").textContent = d.compareTo ? "בהשוואה לתקופה: " + d.compareTo : "";
+      setKpi("ovSessions", fmt(a.sessions), a.sessions, pr.sessions);
+      setKpi("ovUsers", fmt(a.users), a.users, pr.users);
+      setKpi("ovNew", fmt(a.newUsers), a.newUsers, pr.newUsers);
+      setKpi("ovBounce", (a.bounceRate ?? 0) + "%", a.bounceRate, pr.bounceRate, true);
+      setKpi("ovPps", (a.pagesPerSession ?? 0), a.pagesPerSession, pr.pagesPerSession);
+      setKpi("ovDur", fmtDur(a.avgSessionDuration || 0), a.avgSessionDuration, pr.avgSessionDuration);
+      setKpi("ovImpr", fmt(s.impressions), s.impressions, pr.impressions);
+      setKpi("ovClicks", fmt(s.clicks), s.clicks, pr.clicks);
+      setKpi("ovCtr", (s.ctr ?? 0) + "%", s.ctr, pr.ctr);
+      setKpi("ovViews", fmt(a.pageViews), a.pageViews, pr.pageViews);
       document.getElementById("ovChartTitle").textContent = "Sessions — " + periodLabel();
       const series = a.series || [];
       makeChart("ovChart", {
@@ -196,26 +207,27 @@
       });
     }
     function renderSales(d) {
-      document.getElementById("slRevenue").textContent = fmt(d.revenue);
-      document.getElementById("slTx").textContent = fmt(d.transactions);
-      document.getElementById("slAov").textContent = fmt(d.aov);
-      document.getElementById("slConv").textContent = (d.conversionRate ?? 0) + "%";
+      const pr = d.prev || {};
+      setKpi("slRevenue", fmt(d.revenue), d.revenue, pr.revenue);
+      setKpi("slTx", fmt(d.transactions), d.transactions, pr.transactions);
+      setKpi("slAov", fmt(d.aov), d.aov, pr.aov);
+      setKpi("slConv", (d.conversionRate ?? 0) + "%", d.conversionRate, pr.conversionRate);
       document.getElementById("slProducts").innerHTML = (d.topProducts || []).map((p) =>
         `<tr class="border-b last:border-0"><td class="py-2">${p.name}</td><td class="py-2">${fmt(p.qty)}</td><td class="py-2">${fmt(p.revenue)}</td></tr>`
       ).join("") || `<tr><td class="py-3 text-slate-400" colspan="3">אין נתונים</td></tr>`;
     }
+    const DONUT_COLORS = ["#1d4ed8","#0ea5e9","#10b981","#f59e0b","#ef4444","#8b5cf6","#ec4899","#14b8a6","#64748b","#a3a3a3","#84cc16","#f97316"];
     function renderTraffic(d) {
-      const ch = d.channels || [];
+      const ch = d.channels || [], dev = d.devices || [];
       const total = ch.reduce((s, c) => s + c.sessions, 0) || 1;
-      const colors = ["#1d4ed8","#0ea5e9","#10b981","#f59e0b","#ef4444","#8b5cf6","#ec4899","#14b8a6","#64748b","#a3a3a3","#84cc16","#f97316"];
-      makeChart("trChart", {
-        type: "doughnut",
-        data: { labels: ch.map((c) => c.name), datasets: [{ data: ch.map((c) => c.sessions), backgroundColor: colors }] },
-        options: { responsive: true, plugins: { legend: { position: "bottom" } } },
-      });
+      makeChart("trChart", { type: "doughnut",
+        data: { labels: ch.map((c) => c.name), datasets: [{ data: ch.map((c) => c.sessions), backgroundColor: DONUT_COLORS }] },
+        options: { responsive: true, plugins: { legend: { position: "bottom", labels: { boxWidth: 12, font: { size: 11 } } } } } });
+      makeChart("devChart", { type: "doughnut",
+        data: { labels: dev.map((c) => c.name), datasets: [{ data: dev.map((c) => c.sessions), backgroundColor: ["#1d4ed8","#f59e0b","#10b981","#ec4899"] }] },
+        options: { responsive: true, plugins: { legend: { position: "bottom", labels: { boxWidth: 12, font: { size: 11 } } } } } });
       document.getElementById("trTable").innerHTML = ch.map((c) =>
-        `<tr class="border-b last:border-0"><td class="py-2">${c.name}</td><td class="py-2">${fmt(c.sessions)}</td><td class="py-2">${((c.sessions/total)*100).toFixed(1)}%</td></tr>`
-      ).join("");
+        `<tr class="border-b last:border-0"><td class="py-2">${c.name}</td><td class="py-2">${fmt(c.sessions)}</td><td class="py-2">${((c.sessions/total)*100).toFixed(1)}%</td></tr>`).join("");
     }
     function renderPages(d) {
       document.getElementById("pgTop").innerHTML = (d.topPages || []).map((p) =>
@@ -223,7 +235,17 @@
       document.getElementById("pgLanding").innerHTML = (d.landingPages || []).map((p) =>
         `<tr class="border-b last:border-0"><td class="py-2" title="${p.path}">${shortPath(p.path)}</td><td class="py-2">${fmt(p.sessions)}</td></tr>`).join("");
     }
+    function area(id, labels, data, color) {
+      makeChart(id, { type: "line",
+        data: { labels, datasets: [{ data, borderColor: color, backgroundColor: color + "22", fill: true, tension: 0.35, pointRadius: 0 }] },
+        options: { responsive: true, plugins: { legend: { display: false } }, scales: { x: { display: false } } } });
+    }
     function renderSearch(d) {
+      const ser = d.series || [];
+      const labels = ser.map((r) => niceDate(r.date));
+      area("seImpr", labels, ser.map((r) => r.impressions), "#1d4ed8");
+      area("seClicks", labels, ser.map((r) => r.clicks), "#10b981");
+      area("seCtr", labels, ser.map((r) => r.ctr), "#f59e0b");
       const row = (r) => `<tr class="border-b last:border-0"><td class="py-2" title="${r.key}">${shortPath(r.key)}</td><td class="py-2">${fmt(r.clicks)}</td><td class="py-2">${fmt(r.impressions)}</td><td class="py-2">${r.ctr}%</td><td class="py-2">${r.position}</td></tr>`;
       document.getElementById("seQueries").innerHTML = (d.queries || []).map(row).join("") || `<tr><td class="py-3 text-slate-400" colspan="5">אין נתונים</td></tr>`;
       document.getElementById("sePages").innerHTML = (d.pages || []).map(row).join("") || `<tr><td class="py-3 text-slate-400" colspan="5">אין נתונים</td></tr>`;
@@ -238,8 +260,7 @@
     };
 
     async function loadTab(tab, force) {
-      const t = TABS[tab];
-      const key = cacheKey();
+      const t = TABS[tab], key = cacheKey();
       if (!force && cache[tab] && cache[tab].key === key) { t.render(cache[tab].data); return; }
       setStatus("טוען נתונים...", "info");
       try {
@@ -247,12 +268,9 @@
         cache[tab] = { key, data };
         t.render(data);
         setStatus("", null);
-      } catch (err) {
-        setStatus("שגיאה: " + err.message, "error");
-      }
+      } catch (err) { setStatus("שגיאה: " + err.message, "error"); }
     }
 
-    // ---- Navigation ----
     function showTab(tab) {
       currentTab = tab;
       document.querySelectorAll("[data-screen]").forEach((s) => s.classList.toggle("hidden", s.dataset.screen !== tab));
@@ -262,26 +280,21 @@
     document.querySelectorAll(".tab-btn").forEach((b) => b.addEventListener("click", () => showTab(b.dataset.tab)));
 
     function setActiveRange(r) {
-      currentRange = r;
-      customStart = customEnd = null;   // preset clears custom dates
+      currentRange = r; customStart = customEnd = null;
       document.querySelectorAll(".range-btn").forEach((b) => b.classList.toggle("active", b.dataset.range === r));
     }
-    document.querySelectorAll(".range-btn").forEach((b) => b.addEventListener("click", () => { setActiveRange(b.dataset.range); loadTab(currentTab, true); }));
-
-    // Custom date range
+    document.querySelectorAll(".range-btn").forEach((b) => b.addEventListener("click", () => { setActiveRange(b.dataset.range); Object.keys(cache).forEach(k=>delete cache[k]); loadTab(currentTab, true); }));
     document.getElementById("applyDates").addEventListener("click", () => {
-      const s = document.getElementById("dateStart").value;
-      const e = document.getElementById("dateEnd").value;
+      const s = document.getElementById("dateStart").value, e = document.getElementById("dateEnd").value;
       if (!s || !e) { setStatus("יש לבחור תאריך התחלה וסיום", "error"); return; }
-      if (s > e) { setStatus("תאריך ההתחלה מאוחר מתאריך הסיום", "error"); return; }
+      if (s > e) { setStatus("תאריך ההתחלה מאוחר מהסיום", "error"); return; }
       customStart = s; customEnd = e;
       document.querySelectorAll(".range-btn").forEach((b) => b.classList.remove("active"));
+      Object.keys(cache).forEach(k=>delete cache[k]);
       loadTab(currentTab, true);
     });
+    document.getElementById("siteSelect").addEventListener("change", () => { Object.keys(cache).forEach(k=>delete cache[k]); loadTab(currentTab, true); });
 
-    document.getElementById("siteSelect").addEventListener("change", () => loadTab(currentTab, true));
-
-    // ---- Init ----
     setActiveRange("30d");
     showTab("overview");
   </script>
