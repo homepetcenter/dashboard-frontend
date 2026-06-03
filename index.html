@@ -126,10 +126,20 @@
       <canvas id="sePos" height="80"></canvas>
     </div>
     <div class="grid md:grid-cols-2 gap-4">
-      <div class="card"><div class="text-slate-600 font-medium mb-3">מילות חיפוש מובילות</div>
-        <table class="w-full text-sm"><thead><tr class="text-slate-400 text-right border-b"><th class="py-2 font-medium">מילה</th><th class="py-2 font-medium">קליקים</th><th class="py-2 font-medium">חשיפות</th><th class="py-2 font-medium">CTR</th><th class="py-2 font-medium">מיקום</th></tr></thead><tbody id="seQueries"></tbody></table></div>
-      <div class="card"><div class="text-slate-600 font-medium mb-3">דפים מובילים בחיפוש</div>
-        <table class="w-full text-sm"><thead><tr class="text-slate-400 text-right border-b"><th class="py-2 font-medium">דף</th><th class="py-2 font-medium">קליקים</th><th class="py-2 font-medium">חשיפות</th><th class="py-2 font-medium">CTR</th><th class="py-2 font-medium">מיקום</th></tr></thead><tbody id="sePages"></tbody></table></div>
+      <div class="card">
+        <div class="flex items-center justify-between mb-3 gap-2">
+          <div class="text-slate-600 font-medium">מילות חיפוש מובילות</div>
+          <input id="seQSearch" type="text" placeholder="🔍 חיפוש מילה..." class="border border-slate-300 rounded-lg px-3 py-1 text-sm outline-none focus:ring-2 focus:ring-blue-400" />
+        </div>
+        <div class="max-h-96 overflow-y-auto"><table class="w-full text-sm"><thead class="sticky top-0 bg-white"><tr class="text-slate-400 text-right border-b"><th class="py-2 font-medium">מילה</th><th class="py-2 font-medium">קליקים</th><th class="py-2 font-medium">חשיפות</th><th class="py-2 font-medium">CTR</th><th class="py-2 font-medium">מיקום</th></tr></thead><tbody id="seQueries"></tbody></table></div>
+      </div>
+      <div class="card">
+        <div class="flex items-center justify-between mb-3 gap-2">
+          <div class="text-slate-600 font-medium">דפים מובילים בחיפוש</div>
+          <input id="sePSearch" type="text" placeholder="🔍 חיפוש דף..." class="border border-slate-300 rounded-lg px-3 py-1 text-sm outline-none focus:ring-2 focus:ring-blue-400" />
+        </div>
+        <div class="max-h-96 overflow-y-auto"><table class="w-full text-sm"><thead class="sticky top-0 bg-white"><tr class="text-slate-400 text-right border-b"><th class="py-2 font-medium">דף</th><th class="py-2 font-medium">קליקים</th><th class="py-2 font-medium">חשיפות</th><th class="py-2 font-medium">CTR</th><th class="py-2 font-medium">מיקום</th></tr></thead><tbody id="sePages"></tbody></table></div>
+      </div>
     </div>
   </section>
 
@@ -257,9 +267,17 @@
         data: { labels: pos.map((b) => b.bucket), datasets: [{ data: pos.map((b) => b.count),
           backgroundColor: ["#16a34a","#65a30d","#eab308","#f97316","#dc2626"] }] },
         options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } } });
+      searchData.queries = d.queries || [];
+      searchData.pages = d.pages || [];
+      renderSearchTable("seQueries", searchData.queries, document.getElementById("seQSearch").value);
+      renderSearchTable("sePages", searchData.pages, document.getElementById("sePSearch").value);
+    }
+    const searchData = { queries: [], pages: [] };
+    function renderSearchTable(tbodyId, rows, filter) {
+      const f = (filter || "").trim().toLowerCase();
+      const filtered = f ? rows.filter((r) => (r.key || "").toLowerCase().includes(f)) : rows;
       const row = (r) => `<tr class="border-b last:border-0"><td class="py-2" title="${r.key}">${shortPath(r.key)}</td><td class="py-2">${fmt(r.clicks)}</td><td class="py-2">${fmt(r.impressions)}</td><td class="py-2">${r.ctr}%</td><td class="py-2">${r.position}</td></tr>`;
-      document.getElementById("seQueries").innerHTML = (d.queries || []).map(row).join("") || `<tr><td class="py-3 text-slate-400" colspan="5">אין נתונים</td></tr>`;
-      document.getElementById("sePages").innerHTML = (d.pages || []).map(row).join("") || `<tr><td class="py-3 text-slate-400" colspan="5">אין נתונים</td></tr>`;
+      document.getElementById(tbodyId).innerHTML = filtered.map(row).join("") || `<tr><td class="py-3 text-slate-400" colspan="5">אין תוצאות</td></tr>`;
     }
 
     const TABS = {
@@ -289,6 +307,10 @@
       loadTab(tab);
     }
     document.querySelectorAll(".tab-btn").forEach((b) => b.addEventListener("click", () => showTab(b.dataset.tab)));
+
+    // Live search inside the Search tables
+    document.getElementById("seQSearch").addEventListener("input", (e) => renderSearchTable("seQueries", searchData.queries, e.target.value));
+    document.getElementById("sePSearch").addEventListener("input", (e) => renderSearchTable("sePages", searchData.pages, e.target.value));
 
     function setActiveRange(r) {
       currentRange = r; customStart = customEnd = null;
