@@ -11,24 +11,31 @@
     .range-btn { background:#fff; color:#475569; }
     .range-btn:hover { background:#f1f5f9; }
     .range-btn.active { background:#1d4ed8; color:#fff; }
+    .tab-btn { color:#64748b; border-bottom:3px solid transparent; }
+    .tab-btn:hover { color:#1d4ed8; }
+    .tab-btn.active { color:#1d4ed8; border-bottom-color:#1d4ed8; font-weight:600; }
   </style>
 </head>
 <body class="bg-slate-100 min-h-screen p-4 md:p-6">
 
   <!-- Header -->
-  <div class="bg-white rounded-2xl shadow-sm p-5 flex flex-wrap items-center justify-between gap-3 mb-6">
+  <div class="bg-white rounded-2xl shadow-sm p-5 flex flex-wrap items-center justify-between gap-3 mb-4">
     <h1 class="text-2xl font-bold text-slate-800">📊 Analytics Dashboard</h1>
     <div class="flex flex-wrap items-center gap-3">
-      <!-- Date range -->
       <div id="rangeButtons" class="flex rounded-lg overflow-hidden border border-slate-300">
         <button data-range="7d"  class="range-btn px-3 py-2 text-sm">7 ימים</button>
         <button data-range="30d" class="range-btn px-3 py-2 text-sm">30 יום</button>
         <button data-range="90d" class="range-btn px-3 py-2 text-sm">90 יום</button>
         <button data-range="12m" class="range-btn px-3 py-2 text-sm">שנה</button>
       </div>
-      <!-- Site -->
-      <select id="siteSelect"
-        class="border border-slate-300 rounded-lg px-4 py-2 text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-400">
+      <div class="flex items-center gap-1 border border-slate-300 rounded-lg px-2 py-1">
+        <span class="text-xs text-slate-400">מ-</span>
+        <input id="dateStart" type="date" class="text-sm text-slate-700 outline-none" />
+        <span class="text-xs text-slate-400">עד</span>
+        <input id="dateEnd" type="date" class="text-sm text-slate-700 outline-none" />
+        <button id="applyDates" class="bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-md px-3 py-1">החל</button>
+      </div>
+      <select id="siteSelect" class="border border-slate-300 rounded-lg px-4 py-2 text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-400">
         <option value="homepetcenter">homepetcenter.co.il</option>
         <option value="quickpet">quickpet.co.il</option>
         <option value="tiktakpet">tiktakpet.co.il</option>
@@ -36,133 +43,247 @@
     </div>
   </div>
 
-  <!-- Status -->
+  <!-- Tabs -->
+  <div class="bg-white rounded-2xl shadow-sm px-3 mb-4 flex flex-wrap gap-1">
+    <button data-tab="overview"  class="tab-btn px-4 py-3 text-sm">📈 סקירה</button>
+    <button data-tab="sales"     class="tab-btn px-4 py-3 text-sm">💰 מכירות</button>
+    <button data-tab="traffic"   class="tab-btn px-4 py-3 text-sm">🚦 מקורות תנועה</button>
+    <button data-tab="pages"     class="tab-btn px-4 py-3 text-sm">📄 דפים מובילים</button>
+    <button data-tab="search"    class="tab-btn px-4 py-3 text-sm">🔍 חיפוש</button>
+  </div>
+
   <div id="status" class="hidden mb-4 text-center text-sm rounded-lg py-2"></div>
 
-  <!-- KPI cards -->
-  <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
-    <div class="bg-white rounded-2xl shadow-sm p-5">
-      <div class="text-slate-500 text-sm mb-1">Sessions</div>
-      <div id="kpiSessions" class="text-3xl font-bold text-blue-700">—</div>
+  <!-- ===== OVERVIEW ===== -->
+  <section data-screen="overview">
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+      <div class="bg-white rounded-2xl shadow-sm p-5"><div class="text-slate-500 text-sm mb-1">Sessions</div><div id="ovSessions" class="text-3xl font-bold text-blue-700">—</div></div>
+      <div class="bg-white rounded-2xl shadow-sm p-5"><div class="text-slate-500 text-sm mb-1">Users</div><div id="ovUsers" class="text-3xl font-bold text-blue-700">—</div></div>
+      <div class="bg-white rounded-2xl shadow-sm p-5"><div class="text-slate-500 text-sm mb-1">Bounce Rate</div><div id="ovBounce" class="text-3xl font-bold text-blue-700">—</div></div>
+      <div class="bg-white rounded-2xl shadow-sm p-5"><div class="text-slate-500 text-sm mb-1">Impressions</div><div id="ovImpr" class="text-3xl font-bold text-blue-700">—</div></div>
+      <div class="bg-white rounded-2xl shadow-sm p-5"><div class="text-slate-500 text-sm mb-1">Clicks</div><div id="ovClicks" class="text-3xl font-bold text-blue-700">—</div></div>
+      <div class="bg-white rounded-2xl shadow-sm p-5"><div class="text-slate-500 text-sm mb-1">CTR</div><div id="ovCtr" class="text-3xl font-bold text-blue-700">—</div></div>
     </div>
     <div class="bg-white rounded-2xl shadow-sm p-5">
-      <div class="text-slate-500 text-sm mb-1">Users</div>
-      <div id="kpiUsers" class="text-3xl font-bold text-blue-700">—</div>
+      <div id="ovChartTitle" class="text-slate-600 font-medium mb-3">Sessions</div>
+      <canvas id="ovChart" height="90"></canvas>
     </div>
-    <div class="bg-white rounded-2xl shadow-sm p-5">
-      <div class="text-slate-500 text-sm mb-1">Bounce Rate</div>
-      <div id="kpiBounce" class="text-3xl font-bold text-blue-700">—</div>
-    </div>
-    <div class="bg-white rounded-2xl shadow-sm p-5">
-      <div class="text-slate-500 text-sm mb-1">Impressions</div>
-      <div id="kpiImpr" class="text-3xl font-bold text-blue-700">—</div>
-    </div>
-    <div class="bg-white rounded-2xl shadow-sm p-5">
-      <div class="text-slate-500 text-sm mb-1">Clicks</div>
-      <div id="kpiClicks" class="text-3xl font-bold text-blue-700">—</div>
-    </div>
-    <div class="bg-white rounded-2xl shadow-sm p-5">
-      <div class="text-slate-500 text-sm mb-1">CTR</div>
-      <div id="kpiCtr" class="text-3xl font-bold text-blue-700">—</div>
-    </div>
-  </div>
+  </section>
 
-  <!-- Chart -->
-  <div class="bg-white rounded-2xl shadow-sm p-5 mb-6">
-    <div id="chartTitle" class="text-slate-600 font-medium mb-3">Sessions</div>
-    <canvas id="sessionsChart" height="90"></canvas>
-  </div>
+  <!-- ===== SALES ===== -->
+  <section data-screen="sales" class="hidden">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      <div class="bg-white rounded-2xl shadow-sm p-5"><div class="text-slate-500 text-sm mb-1">הכנסות (₪)</div><div id="slRevenue" class="text-3xl font-bold text-emerald-600">—</div></div>
+      <div class="bg-white rounded-2xl shadow-sm p-5"><div class="text-slate-500 text-sm mb-1">עסקאות</div><div id="slTx" class="text-3xl font-bold text-emerald-600">—</div></div>
+      <div class="bg-white rounded-2xl shadow-sm p-5"><div class="text-slate-500 text-sm mb-1">עסקה ממוצעת (₪)</div><div id="slAov" class="text-3xl font-bold text-emerald-600">—</div></div>
+      <div class="bg-white rounded-2xl shadow-sm p-5"><div class="text-slate-500 text-sm mb-1">אחוז המרה</div><div id="slConv" class="text-3xl font-bold text-emerald-600">—</div></div>
+    </div>
+    <div class="bg-white rounded-2xl shadow-sm p-5">
+      <div class="text-slate-600 font-medium mb-3">מוצרים מובילים</div>
+      <table class="w-full text-sm"><thead><tr class="text-slate-400 text-right border-b">
+        <th class="py-2 font-medium">מוצר</th><th class="py-2 font-medium">כמות</th><th class="py-2 font-medium">הכנסה (₪)</th>
+      </tr></thead><tbody id="slProducts"></tbody></table>
+    </div>
+  </section>
 
-  <div class="text-center text-slate-400 text-xs">Powered by Railway Backend | Dashboard v2.0 (live data)</div>
+  <!-- ===== TRAFFIC ===== -->
+  <section data-screen="traffic" class="hidden">
+    <div class="grid md:grid-cols-2 gap-4">
+      <div class="bg-white rounded-2xl shadow-sm p-5">
+        <div class="text-slate-600 font-medium mb-3">מקורות תנועה</div>
+        <canvas id="trChart" height="200"></canvas>
+      </div>
+      <div class="bg-white rounded-2xl shadow-sm p-5">
+        <div class="text-slate-600 font-medium mb-3">פירוט ערוצים</div>
+        <table class="w-full text-sm"><thead><tr class="text-slate-400 text-right border-b">
+          <th class="py-2 font-medium">ערוץ</th><th class="py-2 font-medium">Sessions</th><th class="py-2 font-medium">%</th>
+        </tr></thead><tbody id="trTable"></tbody></table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== PAGES ===== -->
+  <section data-screen="pages" class="hidden">
+    <div class="grid md:grid-cols-2 gap-4">
+      <div class="bg-white rounded-2xl shadow-sm p-5">
+        <div class="text-slate-600 font-medium mb-3">דפים נצפים ביותר</div>
+        <table class="w-full text-sm"><thead><tr class="text-slate-400 text-right border-b">
+          <th class="py-2 font-medium">דף</th><th class="py-2 font-medium">צפיות</th>
+        </tr></thead><tbody id="pgTop"></tbody></table>
+      </div>
+      <div class="bg-white rounded-2xl shadow-sm p-5">
+        <div class="text-slate-600 font-medium mb-3">דפי כניסה מובילים</div>
+        <table class="w-full text-sm"><thead><tr class="text-slate-400 text-right border-b">
+          <th class="py-2 font-medium">דף כניסה</th><th class="py-2 font-medium">Sessions</th>
+        </tr></thead><tbody id="pgLanding"></tbody></table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== SEARCH ===== -->
+  <section data-screen="search" class="hidden">
+    <div class="grid md:grid-cols-2 gap-4">
+      <div class="bg-white rounded-2xl shadow-sm p-5">
+        <div class="text-slate-600 font-medium mb-3">מילות חיפוש מובילות</div>
+        <table class="w-full text-sm"><thead><tr class="text-slate-400 text-right border-b">
+          <th class="py-2 font-medium">מילה</th><th class="py-2 font-medium">קליקים</th><th class="py-2 font-medium">חשיפות</th><th class="py-2 font-medium">CTR</th><th class="py-2 font-medium">מיקום</th>
+        </tr></thead><tbody id="seQueries"></tbody></table>
+      </div>
+      <div class="bg-white rounded-2xl shadow-sm p-5">
+        <div class="text-slate-600 font-medium mb-3">דפים מובילים בחיפוש</div>
+        <table class="w-full text-sm"><thead><tr class="text-slate-400 text-right border-b">
+          <th class="py-2 font-medium">דף</th><th class="py-2 font-medium">קליקים</th><th class="py-2 font-medium">חשיפות</th><th class="py-2 font-medium">CTR</th><th class="py-2 font-medium">מיקום</th>
+        </tr></thead><tbody id="sePages"></tbody></table>
+      </div>
+    </div>
+  </section>
+
+  <div class="text-center text-slate-400 text-xs mt-6">Powered by Railway Backend | Dashboard v3.0</div>
 
   <script>
-    const API = "https://dashboard-backend-production-e29c.up.railway.app/api/data";
+    const BASE = "https://dashboard-backend-production-e29c.up.railway.app";
     const fmt = (n) => Number(n || 0).toLocaleString("en-US");
     const RANGE_LABEL = { "7d": "7 ימים אחרונים", "30d": "30 יום אחרונים", "90d": "90 יום אחרונים", "12m": "שנה אחרונה" };
-    let chart;
-    let currentRange = "30d";
+
+    let currentRange = "30d", currentTab = "overview";
+    let customStart = null, customEnd = null;   // custom date range (overrides preset)
+    let charts = {};                 // chart instances per id
+    const cache = {};                // cache[tab] = {key, data}
+    const cacheKey = () => document.getElementById("siteSelect").value + "|" + (customStart && customEnd ? customStart + ":" + customEnd : currentRange);
+    const periodLabel = () => (customStart && customEnd) ? `${customStart} – ${customEnd}` : (RANGE_LABEL[currentRange] || "");
 
     function setStatus(msg, type) {
       const el = document.getElementById("status");
       if (!msg) { el.classList.add("hidden"); return; }
       el.textContent = msg;
-      el.className = "mb-4 text-center text-sm rounded-lg py-2 " +
-        (type === "error" ? "bg-red-100 text-red-700" : "bg-blue-50 text-blue-600");
+      el.className = "mb-4 text-center text-sm rounded-lg py-2 " + (type === "error" ? "bg-red-100 text-red-700" : "bg-blue-50 text-blue-600");
     }
-
-    // "20260603" -> "03/06" ; "202606" (yearMonth) -> "06/2026"
     function niceDate(d) {
       if (!d) return d;
       if (d.length === 8) return d.slice(6, 8) + "/" + d.slice(4, 6);
       if (d.length === 6) return d.slice(4, 6) + "/" + d.slice(0, 4);
       return d;
     }
+    function shortPath(p) { return p && p.length > 45 ? p.slice(0, 45) + "…" : (p || ""); }
+    function makeChart(id, config) { if (charts[id]) charts[id].destroy(); charts[id] = new Chart(document.getElementById(id), config); }
 
-    function renderChart(series) {
-      const labels = series.map((p) => niceDate(p.date));
-      const data = series.map((p) => p.sessions);
-      if (chart) chart.destroy();
-      chart = new Chart(document.getElementById("sessionsChart"), {
-        type: "line",
-        data: {
-          labels,
-          datasets: [{
-            label: "Sessions",
-            data,
-            borderColor: "#1d4ed8",
-            backgroundColor: "rgba(29,78,216,0.08)",
-            fill: true,
-            tension: 0.35,
-            pointRadius: 2,
-          }],
-        },
-        options: {
-          responsive: true,
-          plugins: { legend: { display: false } },
-          scales: { y: { beginAtZero: false } },
-        },
-      });
+    async function api(path) {
+      const site = document.getElementById("siteSelect").value;
+      let q = `?site=${encodeURIComponent(site)}`;
+      if (customStart && customEnd) q += `&start=${customStart}&end=${customEnd}`;
+      else q += `&range=${currentRange}`;
+      const res = await fetch(`${BASE}${path}${q}`);
+      const d = await res.json();
+      if (d.error) throw new Error(d.error);
+      return d;
     }
 
-    async function load() {
-      const site = document.getElementById("siteSelect").value;
-      document.getElementById("chartTitle").textContent = "Sessions — " + (RANGE_LABEL[currentRange] || "");
+    // ---- Renderers ----
+    function renderOverview(d) {
+      const a = d.analytics || {}, s = d.searchConsole || {};
+      document.getElementById("ovSessions").textContent = fmt(a.sessions);
+      document.getElementById("ovUsers").textContent = fmt(a.users);
+      document.getElementById("ovBounce").textContent = (a.bounceRate ?? 0) + "%";
+      document.getElementById("ovImpr").textContent = fmt(s.impressions);
+      document.getElementById("ovClicks").textContent = fmt(s.clicks);
+      document.getElementById("ovCtr").textContent = (s.ctr ?? 0) + "%";
+      document.getElementById("ovChartTitle").textContent = "Sessions — " + periodLabel();
+      const series = a.series || [];
+      makeChart("ovChart", {
+        type: "line",
+        data: { labels: series.map((p) => niceDate(p.date)), datasets: [{ label: "Sessions", data: series.map((p) => p.sessions), borderColor: "#1d4ed8", backgroundColor: "rgba(29,78,216,0.08)", fill: true, tension: 0.35, pointRadius: 2 }] },
+        options: { responsive: true, plugins: { legend: { display: false } } },
+      });
+    }
+    function renderSales(d) {
+      document.getElementById("slRevenue").textContent = fmt(d.revenue);
+      document.getElementById("slTx").textContent = fmt(d.transactions);
+      document.getElementById("slAov").textContent = fmt(d.aov);
+      document.getElementById("slConv").textContent = (d.conversionRate ?? 0) + "%";
+      document.getElementById("slProducts").innerHTML = (d.topProducts || []).map((p) =>
+        `<tr class="border-b last:border-0"><td class="py-2">${p.name}</td><td class="py-2">${fmt(p.qty)}</td><td class="py-2">${fmt(p.revenue)}</td></tr>`
+      ).join("") || `<tr><td class="py-3 text-slate-400" colspan="3">אין נתונים</td></tr>`;
+    }
+    function renderTraffic(d) {
+      const ch = d.channels || [];
+      const total = ch.reduce((s, c) => s + c.sessions, 0) || 1;
+      const colors = ["#1d4ed8","#0ea5e9","#10b981","#f59e0b","#ef4444","#8b5cf6","#ec4899","#14b8a6","#64748b","#a3a3a3","#84cc16","#f97316"];
+      makeChart("trChart", {
+        type: "doughnut",
+        data: { labels: ch.map((c) => c.name), datasets: [{ data: ch.map((c) => c.sessions), backgroundColor: colors }] },
+        options: { responsive: true, plugins: { legend: { position: "bottom" } } },
+      });
+      document.getElementById("trTable").innerHTML = ch.map((c) =>
+        `<tr class="border-b last:border-0"><td class="py-2">${c.name}</td><td class="py-2">${fmt(c.sessions)}</td><td class="py-2">${((c.sessions/total)*100).toFixed(1)}%</td></tr>`
+      ).join("");
+    }
+    function renderPages(d) {
+      document.getElementById("pgTop").innerHTML = (d.topPages || []).map((p) =>
+        `<tr class="border-b last:border-0"><td class="py-2" title="${p.path}">${shortPath(p.path)}</td><td class="py-2">${fmt(p.views)}</td></tr>`).join("");
+      document.getElementById("pgLanding").innerHTML = (d.landingPages || []).map((p) =>
+        `<tr class="border-b last:border-0"><td class="py-2" title="${p.path}">${shortPath(p.path)}</td><td class="py-2">${fmt(p.sessions)}</td></tr>`).join("");
+    }
+    function renderSearch(d) {
+      const row = (r) => `<tr class="border-b last:border-0"><td class="py-2" title="${r.key}">${shortPath(r.key)}</td><td class="py-2">${fmt(r.clicks)}</td><td class="py-2">${fmt(r.impressions)}</td><td class="py-2">${r.ctr}%</td><td class="py-2">${r.position}</td></tr>`;
+      document.getElementById("seQueries").innerHTML = (d.queries || []).map(row).join("") || `<tr><td class="py-3 text-slate-400" colspan="5">אין נתונים</td></tr>`;
+      document.getElementById("sePages").innerHTML = (d.pages || []).map(row).join("") || `<tr><td class="py-3 text-slate-400" colspan="5">אין נתונים</td></tr>`;
+    }
+
+    const TABS = {
+      overview: { path: "/api/data",      render: renderOverview },
+      sales:    { path: "/api/ecommerce", render: renderSales },
+      traffic:  { path: "/api/sources",   render: renderTraffic },
+      pages:    { path: "/api/pages",     render: renderPages },
+      search:   { path: "/api/search",    render: renderSearch },
+    };
+
+    async function loadTab(tab, force) {
+      const t = TABS[tab];
+      const key = cacheKey();
+      if (!force && cache[tab] && cache[tab].key === key) { t.render(cache[tab].data); return; }
       setStatus("טוען נתונים...", "info");
-      document.querySelectorAll("[id^=kpi]").forEach((e) => (e.textContent = "…"));
       try {
-        const res = await fetch(API + "?site=" + encodeURIComponent(site) + "&range=" + currentRange);
-        const d = await res.json();
-        if (d.error) throw new Error(d.error);
-        const a = d.analytics || {}, s = d.searchConsole || {};
-        document.getElementById("kpiSessions").textContent = fmt(a.sessions);
-        document.getElementById("kpiUsers").textContent = fmt(a.users);
-        document.getElementById("kpiBounce").textContent = (a.bounceRate ?? 0) + "%";
-        document.getElementById("kpiImpr").textContent = fmt(s.impressions);
-        document.getElementById("kpiClicks").textContent = fmt(s.clicks);
-        document.getElementById("kpiCtr").textContent = (s.ctr ?? 0) + "%";
-        renderChart(a.series || []);
+        const data = await api(t.path);
+        cache[tab] = { key, data };
+        t.render(data);
         setStatus("", null);
       } catch (err) {
-        setStatus("שגיאה בטעינת הנתונים: " + err.message, "error");
-        document.querySelectorAll("[id^=kpi]").forEach((e) => (e.textContent = "—"));
+        setStatus("שגיאה: " + err.message, "error");
       }
     }
 
-    // Range buttons
+    // ---- Navigation ----
+    function showTab(tab) {
+      currentTab = tab;
+      document.querySelectorAll("[data-screen]").forEach((s) => s.classList.toggle("hidden", s.dataset.screen !== tab));
+      document.querySelectorAll(".tab-btn").forEach((b) => b.classList.toggle("active", b.dataset.tab === tab));
+      loadTab(tab);
+    }
+    document.querySelectorAll(".tab-btn").forEach((b) => b.addEventListener("click", () => showTab(b.dataset.tab)));
+
     function setActiveRange(r) {
       currentRange = r;
-      document.querySelectorAll(".range-btn").forEach((b) =>
-        b.classList.toggle("active", b.dataset.range === r)
-      );
+      customStart = customEnd = null;   // preset clears custom dates
+      document.querySelectorAll(".range-btn").forEach((b) => b.classList.toggle("active", b.dataset.range === r));
     }
-    document.querySelectorAll(".range-btn").forEach((b) =>
-      b.addEventListener("click", () => { setActiveRange(b.dataset.range); load(); })
-    );
+    document.querySelectorAll(".range-btn").forEach((b) => b.addEventListener("click", () => { setActiveRange(b.dataset.range); loadTab(currentTab, true); }));
 
-    document.getElementById("siteSelect").addEventListener("change", load);
+    // Custom date range
+    document.getElementById("applyDates").addEventListener("click", () => {
+      const s = document.getElementById("dateStart").value;
+      const e = document.getElementById("dateEnd").value;
+      if (!s || !e) { setStatus("יש לבחור תאריך התחלה וסיום", "error"); return; }
+      if (s > e) { setStatus("תאריך ההתחלה מאוחר מתאריך הסיום", "error"); return; }
+      customStart = s; customEnd = e;
+      document.querySelectorAll(".range-btn").forEach((b) => b.classList.remove("active"));
+      loadTab(currentTab, true);
+    });
 
+    document.getElementById("siteSelect").addEventListener("change", () => loadTab(currentTab, true));
+
+    // ---- Init ----
     setActiveRange("30d");
-    load();
+    showTab("overview");
   </script>
 </body>
 </html>
