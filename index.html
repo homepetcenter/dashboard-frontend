@@ -8,18 +8,12 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <style>
     body { font-family: system-ui, "Segoe UI", Arial, sans-serif; }
-    .range-btn { background:#fff; color:#475569; }
-    .range-btn:hover { background:#f1f5f9; }
-    .range-btn.active { background:#1d4ed8; color:#fff; }
-    .tab-btn { color:#64748b; border-bottom:3px solid transparent; }
-    .tab-btn:hover { color:#1d4ed8; }
-    .tab-btn.active { color:#1d4ed8; border-bottom-color:#1d4ed8; font-weight:600; }
+    .range-btn { background:#fff; color:#475569; } .range-btn:hover { background:#f1f5f9; } .range-btn.active { background:#1d4ed8; color:#fff; }
+    .tab-btn { color:#64748b; border-bottom:3px solid transparent; } .tab-btn:hover { color:#1d4ed8; } .tab-btn.active { color:#1d4ed8; border-bottom-color:#1d4ed8; font-weight:600; }
     .card { background:#fff; border-radius:1rem; box-shadow:0 1px 2px rgba(0,0,0,.05); padding:1.1rem 1.25rem; }
-    .kpi-label { color:#64748b; font-size:.8rem; margin-bottom:.25rem; }
-    .kpi-val { font-size:1.7rem; font-weight:700; color:#1d4ed8; line-height:1.1; }
-    .delta { font-size:.78rem; font-weight:600; }
-    .delta.up { color:#16a34a; } .delta.down { color:#dc2626; } .delta.flat { color:#94a3b8; }
-    th { white-space:nowrap; }
+    .kpi-label { color:#64748b; font-size:.8rem; margin-bottom:.25rem; } .kpi-val { font-size:1.7rem; font-weight:700; color:#1d4ed8; line-height:1.1; }
+    .delta { font-size:.78rem; font-weight:600; } .delta.up { color:#16a34a; } .delta.down { color:#dc2626; } .delta.flat { color:#94a3b8; }
+    table th { white-space:nowrap; } .srt:hover { color:#1d4ed8; }
   </style>
 </head>
 <body class="bg-slate-100 min-h-screen p-4 md:p-6">
@@ -41,16 +35,14 @@
     <h1 class="text-2xl font-bold text-slate-800">📊 Analytics Dashboard</h1>
     <div class="flex flex-wrap items-center gap-3">
       <div id="rangeButtons" class="flex rounded-lg overflow-hidden border border-slate-300">
-        <button data-range="7d"  class="range-btn px-3 py-2 text-sm">7 ימים</button>
+        <button data-range="7d" class="range-btn px-3 py-2 text-sm">7 ימים</button>
         <button data-range="30d" class="range-btn px-3 py-2 text-sm">30 יום</button>
         <button data-range="90d" class="range-btn px-3 py-2 text-sm">90 יום</button>
         <button data-range="12m" class="range-btn px-3 py-2 text-sm">שנה</button>
       </div>
       <div class="flex items-center gap-1 border border-slate-300 rounded-lg px-2 py-1">
-        <span class="text-xs text-slate-400">מ-</span>
-        <input id="dateStart" type="date" class="text-sm text-slate-700 outline-none" />
-        <span class="text-xs text-slate-400">עד</span>
-        <input id="dateEnd" type="date" class="text-sm text-slate-700 outline-none" />
+        <span class="text-xs text-slate-400">מ-</span><input id="dateStart" type="date" class="text-sm text-slate-700 outline-none" />
+        <span class="text-xs text-slate-400">עד</span><input id="dateEnd" type="date" class="text-sm text-slate-700 outline-none" />
         <button id="applyDates" class="bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-md px-3 py-1">החל</button>
       </div>
       <select id="siteSelect" class="border border-slate-300 rounded-lg px-4 py-2 text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-400">
@@ -64,21 +56,21 @@
   <!-- Tabs -->
   <div class="card !py-0 px-3 mb-3 flex flex-wrap gap-1">
     <button data-tab="overview" class="tab-btn px-4 py-3 text-sm">📈 סקירה</button>
-    <button data-tab="compare"  class="tab-btn px-4 py-3 text-sm">📊 השוואה</button>
-    <button data-tab="sales"    class="tab-btn px-4 py-3 text-sm">💰 מכירות</button>
-    <button data-tab="ads"      class="tab-btn px-4 py-3 text-sm">📣 פרסום (ROAS)</button>
-    <button data-tab="traffic"  class="tab-btn px-4 py-3 text-sm">🚦 מקורות תנועה</button>
+    <button data-tab="compare" class="tab-btn px-4 py-3 text-sm">📊 השוואה</button>
+    <button data-tab="sales" class="tab-btn px-4 py-3 text-sm">💰 מכירות</button>
+    <button data-tab="ads" class="tab-btn px-4 py-3 text-sm">📣 פרסום (ROAS)</button>
+    <button data-tab="traffic" class="tab-btn px-4 py-3 text-sm">🚦 מקורות תנועה</button>
     <button data-tab="audience" class="tab-btn px-4 py-3 text-sm">🌍 קהל</button>
-    <button data-tab="pages"    class="tab-btn px-4 py-3 text-sm">📄 דפים מובילים</button>
-    <button data-tab="search"   class="tab-btn px-4 py-3 text-sm">🔍 חיפוש</button>
+    <button data-tab="pages" class="tab-btn px-4 py-3 text-sm">📄 דפים מובילים</button>
+    <button data-tab="search" class="tab-btn px-4 py-3 text-sm">🔍 חיפוש</button>
   </div>
 
   <div id="compareNote" class="text-center text-xs text-slate-400 mb-3"></div>
   <div id="status" class="hidden mb-4 text-center text-sm rounded-lg py-2"></div>
 
-  <!-- ===== OVERVIEW ===== -->
+  <!-- OVERVIEW -->
   <section data-screen="overview">
-    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6" id="ovCards">
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
       <div class="card"><div class="kpi-label">Sessions</div><div class="flex items-end gap-2"><div id="ovSessions" class="kpi-val">—</div><div id="ovSessions_d" class="delta"></div></div></div>
       <div class="card"><div class="kpi-label">Users</div><div class="flex items-end gap-2"><div id="ovUsers" class="kpi-val">—</div><div id="ovUsers_d" class="delta"></div></div></div>
       <div class="card"><div class="kpi-label">משתמשים חדשים</div><div class="flex items-end gap-2"><div id="ovNew" class="kpi-val">—</div><div id="ovNew_d" class="delta"></div></div></div>
@@ -93,45 +85,16 @@
     <div class="card"><div id="ovChartTitle" class="text-slate-600 font-medium mb-3">Sessions</div><canvas id="ovChart" height="90"></canvas></div>
   </section>
 
-  <!-- ===== COMPARE ===== -->
+  <!-- COMPARE -->
   <section data-screen="compare" class="hidden">
-    <div class="card mb-4 overflow-x-auto">
-      <div class="text-slate-600 font-medium mb-3">השוואה בין האתרים</div>
-      <table class="w-full text-sm text-center">
-        <thead><tr class="text-slate-400 border-b">
-          <th class="py-2 font-medium text-right">אתר</th><th class="py-2 font-medium">Sessions</th><th class="py-2 font-medium">Users</th>
-          <th class="py-2 font-medium">הכנסות (₪)</th><th class="py-2 font-medium">עסקאות</th><th class="py-2 font-medium">המרה</th><th class="py-2 font-medium">Bounce</th>
-        </tr></thead><tbody id="cmpTable"></tbody>
-        <tfoot id="cmpTotal" class="border-t-2 font-bold text-slate-700"></tfoot>
-      </table>
-    </div>
+    <div class="card mb-4"><div class="text-slate-600 font-medium mb-3">השוואה בין האתרים</div><div id="cmpMount"></div></div>
     <div class="grid md:grid-cols-2 gap-4">
       <div class="card"><div class="text-slate-600 font-medium mb-3">Sessions לפי אתר</div><canvas id="cmpSessions" height="160"></canvas></div>
       <div class="card"><div class="text-slate-600 font-medium mb-3">הכנסות לפי אתר</div><canvas id="cmpRevenue" height="160"></canvas></div>
     </div>
   </section>
 
-  <!-- ===== ADS / ROAS ===== -->
-  <section data-screen="ads" class="hidden">
-    <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-      <div class="card"><div class="kpi-label">עלות פרסום (₪)</div><div id="adCost" class="kpi-val !text-rose-600">—</div></div>
-      <div class="card"><div class="kpi-label">הכנסה מפרסום (₪)</div><div id="adRev" class="kpi-val !text-emerald-600">—</div></div>
-      <div class="card"><div class="kpi-label">ROAS</div><div id="adRoas" class="kpi-val">—</div></div>
-      <div class="card"><div class="kpi-label">קליקים</div><div id="adClicks" class="kpi-val">—</div></div>
-      <div class="card"><div class="kpi-label">עלות לקליק (₪)</div><div id="adCpc" class="kpi-val">—</div></div>
-    </div>
-    <div class="card overflow-x-auto">
-      <div class="text-slate-600 font-medium mb-3">קמפיינים</div>
-      <table class="w-full text-sm text-center">
-        <thead><tr class="text-slate-400 border-b">
-          <th class="py-2 font-medium text-right">קמפיין</th><th class="py-2 font-medium">עלות (₪)</th><th class="py-2 font-medium">קליקים</th>
-          <th class="py-2 font-medium">הכנסה (₪)</th><th class="py-2 font-medium">עסקאות</th><th class="py-2 font-medium">ROAS</th>
-        </tr></thead><tbody id="adTable"></tbody>
-      </table>
-    </div>
-  </section>
-
-  <!-- ===== SALES ===== -->
+  <!-- SALES -->
   <section data-screen="sales" class="hidden">
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
       <div class="card"><div class="kpi-label">הכנסות (₪)</div><div class="flex items-end gap-2"><div id="slRevenue" class="kpi-val !text-emerald-600">—</div><div id="slRevenue_d" class="delta"></div></div></div>
@@ -140,317 +103,237 @@
       <div class="card"><div class="kpi-label">אחוז המרה</div><div class="flex items-end gap-2"><div id="slConv" class="kpi-val !text-emerald-600">—</div><div id="slConv_d" class="delta"></div></div></div>
     </div>
     <div class="grid md:grid-cols-2 gap-4 mb-4">
-      <div class="card">
-        <div class="flex items-center justify-between mb-3">
-          <div class="text-slate-600 font-medium">משפך מכירות</div>
-          <div class="text-sm">נטישת עגלה: <span id="slAbandon" class="font-bold text-rose-600">—</span></div>
-        </div>
-        <canvas id="slFunnel" height="160"></canvas>
-      </div>
-      <div class="card">
-        <div class="text-slate-600 font-medium mb-3">הכנסות לפי ערוץ</div>
-        <table class="w-full text-sm"><thead><tr class="text-slate-400 text-right border-b"><th class="py-2 font-medium">ערוץ</th><th class="py-2 font-medium">הכנסה (₪)</th><th class="py-2 font-medium">%</th></tr></thead><tbody id="slChannels"></tbody></table>
-      </div>
+      <div class="card"><div class="flex items-center justify-between mb-3"><div class="text-slate-600 font-medium">משפך מכירות</div><div class="text-sm">נטישת עגלה: <span id="slAbandon" class="font-bold text-rose-600">—</span></div></div><canvas id="slFunnel" height="160"></canvas></div>
+      <div class="card"><div class="text-slate-600 font-medium mb-3">הכנסות לפי ערוץ</div><div id="slChannelsMount"></div></div>
     </div>
-    <div class="card">
-      <div class="text-slate-600 font-medium mb-3">מוצרים מובילים</div>
-      <table class="w-full text-sm"><thead><tr class="text-slate-400 text-right border-b"><th class="py-2 font-medium">מוצר</th><th class="py-2 font-medium">כמות</th><th class="py-2 font-medium">הכנסה (₪)</th></tr></thead><tbody id="slProducts"></tbody></table>
-    </div>
+    <div class="card"><div class="text-slate-600 font-medium mb-3">מוצרים מובילים</div><div id="slProductsMount"></div></div>
   </section>
 
-  <!-- ===== TRAFFIC ===== -->
+  <!-- ADS -->
+  <section data-screen="ads" class="hidden">
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+      <div class="card"><div class="kpi-label">עלות פרסום (₪)</div><div id="adCost" class="kpi-val !text-rose-600">—</div></div>
+      <div class="card"><div class="kpi-label">הכנסה מפרסום (₪)</div><div id="adRev" class="kpi-val !text-emerald-600">—</div></div>
+      <div class="card"><div class="kpi-label">ROAS</div><div id="adRoas" class="kpi-val">—</div></div>
+      <div class="card"><div class="kpi-label">קליקים</div><div id="adClicks" class="kpi-val">—</div></div>
+      <div class="card"><div class="kpi-label">עלות לקליק (₪)</div><div id="adCpc" class="kpi-val">—</div></div>
+    </div>
+    <div class="card mb-4"><div class="text-slate-600 font-medium mb-3">קמפיינים</div><div id="adCampaignsMount"></div></div>
+    <div class="card"><div class="text-slate-600 font-medium mb-3">קבוצות מודעות</div><div id="adGroupsMount"></div></div>
+  </section>
+
+  <!-- TRAFFIC -->
   <section data-screen="traffic" class="hidden">
     <div class="grid md:grid-cols-3 gap-4">
-      <div class="card md:col-span-1"><div class="text-slate-600 font-medium mb-3">מקורות תנועה</div><canvas id="trChart" height="220"></canvas></div>
-      <div class="card md:col-span-1"><div class="text-slate-600 font-medium mb-3">מכשירים</div><canvas id="devChart" height="220"></canvas></div>
-      <div class="card md:col-span-1">
-        <div class="text-slate-600 font-medium mb-3">פירוט ערוצים</div>
-        <table class="w-full text-sm"><thead><tr class="text-slate-400 text-right border-b"><th class="py-2 font-medium">ערוץ</th><th class="py-2 font-medium">Sessions</th><th class="py-2 font-medium">%</th></tr></thead><tbody id="trTable"></tbody></table>
-      </div>
+      <div class="card"><div class="text-slate-600 font-medium mb-3">מקורות תנועה</div><canvas id="trChart" height="220"></canvas></div>
+      <div class="card"><div class="text-slate-600 font-medium mb-3">מכשירים</div><canvas id="devChart" height="220"></canvas></div>
+      <div class="card"><div class="text-slate-600 font-medium mb-3">פירוט ערוצים</div><div id="trMount"></div></div>
     </div>
   </section>
 
-  <!-- ===== PAGES ===== -->
-  <section data-screen="pages" class="hidden">
-    <div class="grid md:grid-cols-2 gap-4">
-      <div class="card"><div class="text-slate-600 font-medium mb-3">דפים נצפים ביותר</div>
-        <table class="w-full text-sm"><thead><tr class="text-slate-400 text-right border-b"><th class="py-2 font-medium">דף</th><th class="py-2 font-medium">צפיות</th></tr></thead><tbody id="pgTop"></tbody></table></div>
-      <div class="card"><div class="text-slate-600 font-medium mb-3">דפי כניסה מובילים</div>
-        <table class="w-full text-sm"><thead><tr class="text-slate-400 text-right border-b"><th class="py-2 font-medium">דף כניסה</th><th class="py-2 font-medium">Sessions</th></tr></thead><tbody id="pgLanding"></tbody></table></div>
-    </div>
-  </section>
-
-  <!-- ===== AUDIENCE ===== -->
+  <!-- AUDIENCE -->
   <section data-screen="audience" class="hidden">
     <div class="grid md:grid-cols-2 gap-4 mb-4">
-      <div class="card"><div class="text-slate-600 font-medium mb-3">מדינות מובילות</div>
-        <table class="w-full text-sm"><thead><tr class="text-slate-400 text-right border-b"><th class="py-2 font-medium">מדינה</th><th class="py-2 font-medium">Sessions</th></tr></thead><tbody id="audCountries"></tbody></table></div>
-      <div class="card"><div class="text-slate-600 font-medium mb-3">ערים מובילות</div>
-        <table class="w-full text-sm"><thead><tr class="text-slate-400 text-right border-b"><th class="py-2 font-medium">עיר</th><th class="py-2 font-medium">Sessions</th></tr></thead><tbody id="audCities"></tbody></table></div>
+      <div class="card"><div class="text-slate-600 font-medium mb-3">מדינות מובילות</div><div id="audCountriesMount"></div></div>
+      <div class="card"><div class="text-slate-600 font-medium mb-3">ערים מובילות</div><div id="audCitiesMount"></div></div>
     </div>
     <div class="card mb-4"><div class="text-slate-600 font-medium mb-3">פעילות לפי שעה ביום</div><canvas id="audHours" height="80"></canvas></div>
     <div class="card"><div class="text-slate-600 font-medium mb-3">פעילות לפי יום בשבוע</div><canvas id="audDays" height="70"></canvas></div>
   </section>
 
-  <!-- ===== SEARCH ===== -->
+  <!-- PAGES -->
+  <section data-screen="pages" class="hidden">
+    <div class="grid md:grid-cols-2 gap-4">
+      <div class="card"><div class="text-slate-600 font-medium mb-3">דפים נצפים ביותר</div><div id="pgTopMount"></div></div>
+      <div class="card"><div class="text-slate-600 font-medium mb-3">דפי כניסה מובילים</div><div id="pgLandingMount"></div></div>
+    </div>
+  </section>
+
+  <!-- SEARCH -->
   <section data-screen="search" class="hidden">
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
       <div class="card"><div class="text-slate-600 font-medium mb-2">Impressions</div><canvas id="seImpr" height="110"></canvas></div>
       <div class="card"><div class="text-slate-600 font-medium mb-2">Clicks</div><canvas id="seClicks" height="110"></canvas></div>
       <div class="card"><div class="text-slate-600 font-medium mb-2">CTR (%)</div><canvas id="seCtr" height="110"></canvas></div>
     </div>
-    <div class="card mb-4">
-      <div class="text-slate-600 font-medium mb-2">התפלגות מיקומים בחיפוש <span id="seKwTotal" class="text-slate-400 text-sm"></span></div>
-      <canvas id="sePos" height="80"></canvas>
-    </div>
+    <div class="card mb-4"><div class="text-slate-600 font-medium mb-2">התפלגות מיקומים <span id="seKwTotal" class="text-slate-400 text-sm"></span></div><canvas id="sePos" height="80"></canvas></div>
     <div class="grid md:grid-cols-2 gap-4">
-      <div class="card">
-        <div class="flex items-center justify-between mb-3 gap-2">
-          <div class="text-slate-600 font-medium">מילות חיפוש מובילות</div>
-          <input id="seQSearch" type="text" placeholder="🔍 חיפוש מילה..." class="border border-slate-300 rounded-lg px-3 py-1 text-sm outline-none focus:ring-2 focus:ring-blue-400" />
-        </div>
-        <div class="max-h-96 overflow-y-auto"><table class="w-full text-sm"><thead class="sticky top-0 bg-white"><tr class="text-slate-400 text-right border-b"><th class="py-2 font-medium">מילה</th><th class="py-2 font-medium">קליקים</th><th class="py-2 font-medium">חשיפות</th><th class="py-2 font-medium">CTR</th><th class="py-2 font-medium">מיקום</th></tr></thead><tbody id="seQueries"></tbody></table></div>
-      </div>
-      <div class="card">
-        <div class="flex items-center justify-between mb-3 gap-2">
-          <div class="text-slate-600 font-medium">דפים מובילים בחיפוש</div>
-          <input id="sePSearch" type="text" placeholder="🔍 חיפוש דף..." class="border border-slate-300 rounded-lg px-3 py-1 text-sm outline-none focus:ring-2 focus:ring-blue-400" />
-        </div>
-        <div class="max-h-96 overflow-y-auto"><table class="w-full text-sm"><thead class="sticky top-0 bg-white"><tr class="text-slate-400 text-right border-b"><th class="py-2 font-medium">דף</th><th class="py-2 font-medium">קליקים</th><th class="py-2 font-medium">חשיפות</th><th class="py-2 font-medium">CTR</th><th class="py-2 font-medium">מיקום</th></tr></thead><tbody id="sePages"></tbody></table></div>
-      </div>
+      <div class="card"><div class="text-slate-600 font-medium mb-3">מילות חיפוש מובילות</div><div id="seQMount"></div></div>
+      <div class="card"><div class="text-slate-600 font-medium mb-3">דפים מובילים בחיפוש</div><div id="sePMount"></div></div>
     </div>
   </section>
 
-  <div class="text-center text-slate-400 text-xs mt-6">Powered by Railway Backend | Dashboard v4.0</div>
+  <div class="text-center text-slate-400 text-xs mt-6">Powered by Railway Backend | Dashboard v6.0</div>
 
   <script>
     const BASE = "https://dashboard-backend-production-e29c.up.railway.app";
     const fmt = (n) => Number(n || 0).toLocaleString("en-US");
     const fmtDur = (s) => Math.floor(s / 60) + ":" + String(Math.round(s % 60)).padStart(2, "0");
     const RANGE_LABEL = { "7d": "7 ימים אחרונים", "30d": "30 יום אחרונים", "90d": "90 יום אחרונים", "12m": "שנה אחרונה" };
-
-    let currentRange = "30d", currentTab = "overview";
-    let customStart = null, customEnd = null;
-    let charts = {};
-    const cache = {};
+    let currentRange = "30d", currentTab = "overview", customStart = null, customEnd = null;
+    let charts = {}; const cache = {};
     const cacheKey = () => document.getElementById("siteSelect").value + "|" + (customStart && customEnd ? customStart + ":" + customEnd : currentRange);
     const periodLabel = () => (customStart && customEnd) ? `${customStart} – ${customEnd}` : (RANGE_LABEL[currentRange] || "");
 
     function setStatus(msg, type) {
       const el = document.getElementById("status");
       if (!msg) { el.classList.add("hidden"); return; }
-      el.textContent = msg;
-      el.className = "mb-4 text-center text-sm rounded-lg py-2 " + (type === "error" ? "bg-red-100 text-red-700" : "bg-blue-50 text-blue-600");
+      el.textContent = msg; el.className = "mb-4 text-center text-sm rounded-lg py-2 " + (type === "error" ? "bg-red-100 text-red-700" : "bg-blue-50 text-blue-600");
     }
-    function niceDate(d) {
-      if (!d) return d;
-      if (d.length === 8) return d.slice(6, 8) + "/" + d.slice(4, 6);
-      if (d.length === 6) return d.slice(4, 6) + "/" + d.slice(0, 4);
-      if (d.length === 10) return d.slice(8, 10) + "/" + d.slice(5, 7);  // YYYY-MM-DD
-      return d;
-    }
-    const shortPath = (p) => p && p.length > 45 ? p.slice(0, 45) + "…" : (p || "");
+    function niceDate(d) { if (!d) return d; if (d.length === 8) return d.slice(6,8)+"/"+d.slice(4,6); if (d.length === 6) return d.slice(4,6)+"/"+d.slice(0,4); if (d.length === 10) return d.slice(8,10)+"/"+d.slice(5,7); return d; }
+    const shortPath = (p) => p && p.length > 45 ? p.slice(0,45)+"…" : (p || "");
     function makeChart(id, config) { if (charts[id]) charts[id].destroy(); charts[id] = new Chart(document.getElementById(id), config); }
 
-    // delta badge: sets text+class on #id_d, comparing cur vs prev
-    function setKpi(id, valueText, cur, prev, lowerBetter) {
-      document.getElementById(id).textContent = valueText;
-      const el = document.getElementById(id + "_d");
-      if (!el) return;
-      if (prev == null || prev === 0) { el.textContent = ""; el.className = "delta flat"; return; }
-      const pct = ((cur - prev) / prev) * 100;
-      const better = lowerBetter ? cur < prev : cur > prev;
-      const arrow = pct > 0 ? "▲" : pct < 0 ? "▼" : "■";
-      el.textContent = `${arrow} ${Math.abs(pct).toFixed(1)}%`;
-      el.className = "delta " + (Math.abs(pct) < 0.05 ? "flat" : better ? "up" : "down");
+    // ===== Generic sortable + filterable table =====
+    const tables = {};
+    function cellHtml(val, col) {
+      if (col.render) return col.render(val);
+      if (val == null) return "";
+      if (col.type === "num" || col.type === "money") return fmt(val);
+      if (col.type === "pct") return val + "%";
+      if (col.type === "x") return val + "x";
+      if (col.long) return `<span title="${val}">${shortPath(String(val))}</span>`;
+      return val;
     }
+    function mountTable(id, columns, rows, opts = {}) {
+      tables[id] = { columns, rows: rows || [], sort: opts.defaultSort || null, filter: "", opts };
+      drawTable(id);
+    }
+    function drawTable(id) {
+      const st = tables[id], el = document.getElementById(id); if (!el) return;
+      let rows = st.rows.slice();
+      if (st.filter) { const f = st.filter.toLowerCase(); rows = rows.filter((r) => st.columns.some((c) => String(r[c.key] ?? "").toLowerCase().includes(f))); }
+      if (st.sort) { const { key, dir } = st.sort; rows.sort((a, b) => { let x = a[key], y = b[key]; if (typeof x === "number" && typeof y === "number") return dir === "asc" ? x - y : y - x; x = String(x ?? ""); y = String(y ?? ""); return dir === "asc" ? x.localeCompare(y, "he") : y.localeCompare(x, "he"); }); }
+      const head = st.columns.map((c) => `<th data-k="${c.key}" class="srt py-2 font-medium cursor-pointer select-none ${c.align === "right" ? "text-right" : ""}">${c.label}${st.sort && st.sort.key === c.key ? (st.sort.dir === "asc" ? " ▲" : " ▼") : ""}</th>`).join("");
+      const body = rows.length ? rows.map((r) => `<tr class="border-b last:border-0">${st.columns.map((c) => `<td class="py-2 ${c.align === "right" ? "text-right" : ""}">${cellHtml(r[c.key], c)}</td>`).join("")}</tr>`).join("") : `<tr><td class="py-3 text-slate-400" colspan="${st.columns.length}">אין תוצאות</td></tr>`;
+      el.innerHTML = `${st.opts.search === false ? "" : `<input type="text" placeholder="🔍 חיפוש..." class="tbl-search mb-2 border border-slate-300 rounded-lg px-3 py-1 text-sm outline-none focus:ring-2 focus:ring-blue-400 w-full" value="${st.filter.replace(/"/g, "&quot;")}">`}<div class="${st.opts.scroll ? "max-h-96 overflow-y-auto" : ""}"><table class="w-full text-sm"><thead class="${st.opts.scroll ? "sticky top-0 bg-white" : ""}"><tr class="text-slate-400 border-b">${head}</tr></thead><tbody>${body}</tbody></table></div>`;
+      const inp = el.querySelector(".tbl-search");
+      if (inp) inp.addEventListener("input", (e) => { st.filter = e.target.value; const pos = e.target.selectionStart; drawTable(id); const ni = el.querySelector(".tbl-search"); ni.focus(); try { ni.setSelectionRange(pos, pos); } catch (_) {} });
+      el.querySelectorAll("th[data-k]").forEach((th) => th.addEventListener("click", () => { const k = th.dataset.k; if (st.sort && st.sort.key === k) st.sort.dir = st.sort.dir === "asc" ? "desc" : "asc"; else st.sort = { key: k, dir: "desc" }; drawTable(id); }));
+    }
+    function pctCol(rows, key, into) { const tot = rows.reduce((s, r) => s + (r[key] || 0), 0) || 1; rows.forEach((r) => (r[into] = Number(((r[key] / tot) * 100).toFixed(1)))); }
 
+    // ===== Auth / API =====
     let accessKey = localStorage.getItem("dashKey") || "";
-
     async function api(path) {
       const site = document.getElementById("siteSelect").value;
       let q = `?site=${encodeURIComponent(site)}`;
-      if (customStart && customEnd) q += `&start=${customStart}&end=${customEnd}`;
-      else q += `&range=${currentRange}`;
+      if (customStart && customEnd) q += `&start=${customStart}&end=${customEnd}`; else q += `&range=${currentRange}`;
       const res = await fetch(`${BASE}${path}${q}`, { headers: { "X-Access-Key": accessKey } });
       if (res.status === 401) { showLogin(); throw new Error("נדרשת סיסמה"); }
-      const d = await res.json();
-      if (d.error) throw new Error(d.error);
-      return d;
+      const d = await res.json(); if (d.error) throw new Error(d.error); return d;
     }
-
-    // ---- Login gate ----
     function showLogin() { document.getElementById("loginOverlay").classList.remove("hidden"); }
     function hideLogin() { document.getElementById("loginOverlay").classList.add("hidden"); }
     async function tryLogin(pw) {
-      const errEl = document.getElementById("pwError");
-      errEl.classList.add("hidden");
+      const errEl = document.getElementById("pwError"); errEl.classList.add("hidden");
       try {
         const res = await fetch(`${BASE}/api/data?site=homepetcenter&range=7d`, { headers: { "X-Access-Key": pw } });
         if (res.status === 401) { errEl.classList.remove("hidden"); return; }
-        accessKey = pw;
-        localStorage.setItem("dashKey", pw);
-        hideLogin();
-        Object.keys(cache).forEach((k) => delete cache[k]);
-        loadTab(currentTab, true);
+        accessKey = pw; localStorage.setItem("dashKey", pw); hideLogin();
+        Object.keys(cache).forEach((k) => delete cache[k]); loadTab(currentTab, true);
       } catch (e) { errEl.classList.remove("hidden"); }
     }
     document.getElementById("pwBtn").addEventListener("click", () => tryLogin(document.getElementById("pwInput").value));
     document.getElementById("pwInput").addEventListener("keydown", (e) => { if (e.key === "Enter") tryLogin(document.getElementById("pwInput").value); });
 
-    // ---- Renderers ----
+    function setKpi(id, valueText, cur, prev, lowerBetter) {
+      document.getElementById(id).textContent = valueText;
+      const el = document.getElementById(id + "_d"); if (!el) return;
+      if (prev == null || prev === 0) { el.textContent = ""; el.className = "delta flat"; return; }
+      const pct = ((cur - prev) / prev) * 100, better = lowerBetter ? cur < prev : cur > prev;
+      const arrow = pct > 0 ? "▲" : pct < 0 ? "▼" : "■";
+      el.textContent = `${arrow} ${Math.abs(pct).toFixed(1)}%`;
+      el.className = "delta " + (Math.abs(pct) < 0.05 ? "flat" : better ? "up" : "down");
+    }
+
+    // ===== Renderers =====
     function renderOverview(d) {
       const a = d.analytics || {}, s = d.searchConsole || {}, pr = d.prev || {};
       document.getElementById("compareNote").textContent = d.compareTo ? "בהשוואה לתקופה: " + d.compareTo : "";
-      setKpi("ovSessions", fmt(a.sessions), a.sessions, pr.sessions);
-      setKpi("ovUsers", fmt(a.users), a.users, pr.users);
-      setKpi("ovNew", fmt(a.newUsers), a.newUsers, pr.newUsers);
-      setKpi("ovBounce", (a.bounceRate ?? 0) + "%", a.bounceRate, pr.bounceRate, true);
-      setKpi("ovPps", (a.pagesPerSession ?? 0), a.pagesPerSession, pr.pagesPerSession);
-      setKpi("ovDur", fmtDur(a.avgSessionDuration || 0), a.avgSessionDuration, pr.avgSessionDuration);
-      setKpi("ovImpr", fmt(s.impressions), s.impressions, pr.impressions);
-      setKpi("ovClicks", fmt(s.clicks), s.clicks, pr.clicks);
-      setKpi("ovCtr", (s.ctr ?? 0) + "%", s.ctr, pr.ctr);
-      setKpi("ovViews", fmt(a.pageViews), a.pageViews, pr.pageViews);
+      setKpi("ovSessions", fmt(a.sessions), a.sessions, pr.sessions); setKpi("ovUsers", fmt(a.users), a.users, pr.users);
+      setKpi("ovNew", fmt(a.newUsers), a.newUsers, pr.newUsers); setKpi("ovBounce", (a.bounceRate ?? 0)+"%", a.bounceRate, pr.bounceRate, true);
+      setKpi("ovPps", (a.pagesPerSession ?? 0), a.pagesPerSession, pr.pagesPerSession); setKpi("ovDur", fmtDur(a.avgSessionDuration||0), a.avgSessionDuration, pr.avgSessionDuration);
+      setKpi("ovImpr", fmt(s.impressions), s.impressions, pr.impressions); setKpi("ovClicks", fmt(s.clicks), s.clicks, pr.clicks);
+      setKpi("ovCtr", (s.ctr ?? 0)+"%", s.ctr, pr.ctr); setKpi("ovViews", fmt(a.pageViews), a.pageViews, pr.pageViews);
       document.getElementById("ovChartTitle").textContent = "Sessions — " + periodLabel();
       const series = a.series || [];
-      makeChart("ovChart", {
-        type: "line",
-        data: { labels: series.map((p) => niceDate(p.date)), datasets: [{ label: "Sessions", data: series.map((p) => p.sessions), borderColor: "#1d4ed8", backgroundColor: "rgba(29,78,216,0.08)", fill: true, tension: 0.35, pointRadius: 2 }] },
-        options: { responsive: true, plugins: { legend: { display: false } } },
-      });
+      makeChart("ovChart", { type: "line", data: { labels: series.map((p)=>niceDate(p.date)), datasets: [{ label:"Sessions", data: series.map((p)=>p.sessions), borderColor:"#1d4ed8", backgroundColor:"rgba(29,78,216,0.08)", fill:true, tension:0.35, pointRadius:2 }] }, options: { responsive:true, plugins:{legend:{display:false}} } });
+    }
+    function renderCompare(d) {
+      const NAMES = { homepetcenter:"homepetcenter", quickpet:"quickpet", tiktakpet:"tiktakpet" };
+      const rows = (d.sites||[]).filter((s)=>!s.error).map((s)=>({ site: NAMES[s.site]||s.site, sessions:s.sessions, users:s.users, revenue:s.revenue, transactions:s.transactions, conv:s.conversionRate, bounce:s.bounceRate }));
+      mountTable("cmpMount", [
+        {key:"site",label:"אתר",align:"right"},{key:"sessions",label:"Sessions",type:"num"},{key:"users",label:"Users",type:"num"},
+        {key:"revenue",label:"הכנסות (₪)",type:"num"},{key:"transactions",label:"עסקאות",type:"num"},{key:"conv",label:"המרה",type:"pct"},{key:"bounce",label:"Bounce",type:"pct"},
+      ], rows, { search:false, defaultSort:{key:"revenue",dir:"desc"} });
+      makeChart("cmpSessions", { type:"bar", data:{ labels:rows.map((r)=>r.site), datasets:[{ data:rows.map((r)=>r.sessions), backgroundColor:["#1d4ed8","#0ea5e9","#10b981"] }] }, options:{responsive:true,plugins:{legend:{display:false}}} });
+      makeChart("cmpRevenue", { type:"bar", data:{ labels:rows.map((r)=>r.site), datasets:[{ data:rows.map((r)=>r.revenue), backgroundColor:["#16a34a","#65a30d","#f59e0b"] }] }, options:{responsive:true,plugins:{legend:{display:false}}} });
     }
     function renderSales(d) {
       const pr = d.prev || {};
-      setKpi("slRevenue", fmt(d.revenue), d.revenue, pr.revenue);
-      setKpi("slTx", fmt(d.transactions), d.transactions, pr.transactions);
-      setKpi("slAov", fmt(d.aov), d.aov, pr.aov);
-      setKpi("slConv", (d.conversionRate ?? 0) + "%", d.conversionRate, pr.conversionRate);
-      document.getElementById("slProducts").innerHTML = (d.topProducts || []).map((p) =>
-        `<tr class="border-b last:border-0"><td class="py-2">${p.name}</td><td class="py-2">${fmt(p.qty)}</td><td class="py-2">${fmt(p.revenue)}</td></tr>`
-      ).join("") || `<tr><td class="py-3 text-slate-400" colspan="3">אין נתונים</td></tr>`;
-      // Funnel
+      setKpi("slRevenue", fmt(d.revenue), d.revenue, pr.revenue); setKpi("slTx", fmt(d.transactions), d.transactions, pr.transactions);
+      setKpi("slAov", fmt(d.aov), d.aov, pr.aov); setKpi("slConv", (d.conversionRate ?? 0)+"%", d.conversionRate, pr.conversionRate);
+      mountTable("slProductsMount", [ {key:"name",label:"מוצר",align:"right",long:true},{key:"qty",label:"כמות",type:"num"},{key:"revenue",label:"הכנסה (₪)",type:"num"} ], (d.topProducts||[]).slice(), { defaultSort:{key:"revenue",dir:"desc"}, scroll:true });
       const f = d.funnel || {};
       document.getElementById("slAbandon").textContent = (f.cartAbandonRate ?? 0) + "%";
-      makeChart("slFunnel", { type: "bar",
-        data: { labels: ["צפיות (Sessions)", "הוספה לסל", "Checkout", "רכישה"],
-          datasets: [{ data: [f.sessions, f.addToCart, f.checkout, f.purchase], backgroundColor: ["#93c5fd","#60a5fa","#3b82f6","#1d4ed8"] }] },
-        options: { indexAxis: "y", responsive: true, plugins: { legend: { display: false } } } });
-      // Channel revenue
-      const ch = d.channelRevenue || [];
-      const tot = ch.reduce((s, c) => s + c.revenue, 0) || 1;
-      document.getElementById("slChannels").innerHTML = ch.map((c) =>
-        `<tr class="border-b last:border-0"><td class="py-2">${c.name}</td><td class="py-2">${fmt(c.revenue)}</td><td class="py-2">${((c.revenue/tot)*100).toFixed(1)}%</td></tr>`).join("");
-    }
-    function renderCompare(d) {
-      const sites = d.sites || [];
-      const NAMES = { homepetcenter: "homepetcenter", quickpet: "quickpet", tiktakpet: "tiktakpet" };
-      document.getElementById("cmpTable").innerHTML = sites.map((s) => s.error
-        ? `<tr class="border-b"><td class="py-2 text-right">${NAMES[s.site]||s.site}</td><td colspan="6" class="py-2 text-slate-400">אין גישה</td></tr>`
-        : `<tr class="border-b"><td class="py-2 text-right font-medium">${NAMES[s.site]||s.site}</td><td class="py-2">${fmt(s.sessions)}</td><td class="py-2">${fmt(s.users)}</td><td class="py-2">${fmt(s.revenue)}</td><td class="py-2">${fmt(s.transactions)}</td><td class="py-2">${s.conversionRate}%</td><td class="py-2">${s.bounceRate}%</td></tr>`).join("");
-      const valid = sites.filter((s) => !s.error);
-      const sum = (k) => valid.reduce((a, s) => a + (s[k] || 0), 0);
-      document.getElementById("cmpTotal").innerHTML = `<tr><td class="py-2 text-right">סה"כ</td><td class="py-2">${fmt(sum("sessions"))}</td><td class="py-2">${fmt(sum("users"))}</td><td class="py-2">${fmt(sum("revenue"))}</td><td class="py-2">${fmt(sum("transactions"))}</td><td class="py-2">—</td><td class="py-2">—</td></tr>`;
-      makeChart("cmpSessions", { type: "bar", data: { labels: valid.map((s)=>NAMES[s.site]||s.site), datasets: [{ data: valid.map((s)=>s.sessions), backgroundColor: ["#1d4ed8","#0ea5e9","#10b981"] }] }, options: { responsive: true, plugins: { legend: { display: false } } } });
-      makeChart("cmpRevenue", { type: "bar", data: { labels: valid.map((s)=>NAMES[s.site]||s.site), datasets: [{ data: valid.map((s)=>s.revenue), backgroundColor: ["#16a34a","#65a30d","#f59e0b"] }] }, options: { responsive: true, plugins: { legend: { display: false } } } });
+      makeChart("slFunnel", { type:"bar", data:{ labels:["צפיות","הוספה לסל","Checkout","רכישה"], datasets:[{ data:[f.sessions,f.addToCart,f.checkout,f.purchase], backgroundColor:["#93c5fd","#60a5fa","#3b82f6","#1d4ed8"] }] }, options:{ indexAxis:"y", responsive:true, plugins:{legend:{display:false}} } });
+      const ch = (d.channelRevenue||[]).slice(); pctCol(ch, "revenue", "pct");
+      mountTable("slChannelsMount", [ {key:"name",label:"ערוץ",align:"right"},{key:"revenue",label:"הכנסה (₪)",type:"num"},{key:"pct",label:"%",type:"pct"} ], ch, { search:false, defaultSort:{key:"revenue",dir:"desc"} });
     }
     function renderAds(d) {
       const t = d.totals || {};
-      document.getElementById("adCost").textContent = fmt(t.cost);
-      document.getElementById("adRev").textContent = fmt(t.revenue);
-      document.getElementById("adRoas").textContent = (t.roas ?? 0) + "x";
-      document.getElementById("adClicks").textContent = fmt(t.clicks);
-      document.getElementById("adCpc").textContent = (t.cpc ?? 0);
-      document.getElementById("adTable").innerHTML = (d.campaigns || []).map((c) => {
-        const roasColor = c.roas >= 3 ? "text-emerald-600" : c.roas >= 1 ? "text-amber-600" : "text-rose-600";
-        return `<tr class="border-b last:border-0"><td class="py-2 text-right" title="${c.name}">${shortPath(c.name)}</td><td class="py-2">${fmt(c.cost)}</td><td class="py-2">${fmt(c.clicks)}</td><td class="py-2">${fmt(c.revenue)}</td><td class="py-2">${fmt(c.transactions)}</td><td class="py-2 font-bold ${roasColor}">${c.roas}x</td></tr>`;
-      }).join("") || `<tr><td class="py-3 text-slate-400" colspan="6">אין נתוני פרסום בתקופה זו</td></tr>`;
+      document.getElementById("adCost").textContent = fmt(t.cost); document.getElementById("adRev").textContent = fmt(t.revenue);
+      document.getElementById("adRoas").textContent = (t.roas ?? 0)+"x"; document.getElementById("adClicks").textContent = fmt(t.clicks); document.getElementById("adCpc").textContent = (t.cpc ?? 0);
+      const roasCell = (v) => { const c = v>=3?"text-emerald-600":v>=1?"text-amber-600":"text-rose-600"; return `<span class="font-bold ${c}">${v}x</span>`; };
+      const cols = [ {key:"name",label:"שם",align:"right",long:true},{key:"cost",label:"עלות (₪)",type:"num"},{key:"clicks",label:"קליקים",type:"num"},{key:"revenue",label:"הכנסה (₪)",type:"num"},{key:"transactions",label:"עסקאות",type:"num"},{key:"roas",label:"ROAS",render:roasCell} ];
+      mountTable("adCampaignsMount", cols, (d.campaigns||[]).slice(), { defaultSort:{key:"cost",dir:"desc"}, scroll:true });
+      mountTable("adGroupsMount", cols, (d.adGroups||[]).slice(), { defaultSort:{key:"cost",dir:"desc"}, scroll:true });
+    }
+    const DONUT = ["#1d4ed8","#0ea5e9","#10b981","#f59e0b","#ef4444","#8b5cf6","#ec4899","#14b8a6","#64748b","#a3a3a3","#84cc16","#f97316"];
+    function renderTraffic(d) {
+      const ch = (d.channels||[]).slice(), dev = d.devices || [];
+      makeChart("trChart", { type:"doughnut", data:{ labels:ch.map((c)=>c.name), datasets:[{ data:ch.map((c)=>c.sessions), backgroundColor:DONUT }] }, options:{responsive:true,plugins:{legend:{position:"bottom",labels:{boxWidth:12,font:{size:11}}}}} });
+      makeChart("devChart", { type:"doughnut", data:{ labels:dev.map((c)=>c.name), datasets:[{ data:dev.map((c)=>c.sessions), backgroundColor:["#1d4ed8","#f59e0b","#10b981","#ec4899"] }] }, options:{responsive:true,plugins:{legend:{position:"bottom",labels:{boxWidth:12,font:{size:11}}}}} });
+      pctCol(ch, "sessions", "pct");
+      mountTable("trMount", [ {key:"name",label:"ערוץ",align:"right"},{key:"sessions",label:"Sessions",type:"num"},{key:"pct",label:"%",type:"pct"} ], ch, { search:false, defaultSort:{key:"sessions",dir:"desc"} });
     }
     const DAY_NAMES = ["ראשון","שני","שלישי","רביעי","חמישי","שישי","שבת"];
     function renderAudience(d) {
-      document.getElementById("audCountries").innerHTML = (d.countries || []).map((c) =>
-        `<tr class="border-b last:border-0"><td class="py-2">${c.name}</td><td class="py-2">${fmt(c.sessions)}</td></tr>`).join("");
-      document.getElementById("audCities").innerHTML = (d.cities || []).map((c) =>
-        `<tr class="border-b last:border-0"><td class="py-2">${c.name}</td><td class="py-2">${fmt(c.sessions)}</td></tr>`).join("");
-      const hours = d.byHour || [];
-      makeChart("audHours", { type: "bar", data: { labels: hours.map((h)=>h.hour+":00"), datasets: [{ data: hours.map((h)=>h.sessions), backgroundColor: "#1d4ed8" }] }, options: { responsive: true, plugins: { legend: { display: false } } } });
-      const days = d.byDay || [];
-      makeChart("audDays", { type: "bar", data: { labels: days.map((x)=>DAY_NAMES[x.day]), datasets: [{ data: days.map((x)=>x.sessions), backgroundColor: "#10b981" }] }, options: { responsive: true, plugins: { legend: { display: false } } } });
-    }
-    const DONUT_COLORS = ["#1d4ed8","#0ea5e9","#10b981","#f59e0b","#ef4444","#8b5cf6","#ec4899","#14b8a6","#64748b","#a3a3a3","#84cc16","#f97316"];
-    function renderTraffic(d) {
-      const ch = d.channels || [], dev = d.devices || [];
-      const total = ch.reduce((s, c) => s + c.sessions, 0) || 1;
-      makeChart("trChart", { type: "doughnut",
-        data: { labels: ch.map((c) => c.name), datasets: [{ data: ch.map((c) => c.sessions), backgroundColor: DONUT_COLORS }] },
-        options: { responsive: true, plugins: { legend: { position: "bottom", labels: { boxWidth: 12, font: { size: 11 } } } } } });
-      makeChart("devChart", { type: "doughnut",
-        data: { labels: dev.map((c) => c.name), datasets: [{ data: dev.map((c) => c.sessions), backgroundColor: ["#1d4ed8","#f59e0b","#10b981","#ec4899"] }] },
-        options: { responsive: true, plugins: { legend: { position: "bottom", labels: { boxWidth: 12, font: { size: 11 } } } } } });
-      document.getElementById("trTable").innerHTML = ch.map((c) =>
-        `<tr class="border-b last:border-0"><td class="py-2">${c.name}</td><td class="py-2">${fmt(c.sessions)}</td><td class="py-2">${((c.sessions/total)*100).toFixed(1)}%</td></tr>`).join("");
+      mountTable("audCountriesMount", [ {key:"name",label:"מדינה",align:"right"},{key:"sessions",label:"Sessions",type:"num"} ], (d.countries||[]).slice(), { defaultSort:{key:"sessions",dir:"desc"}, scroll:true });
+      mountTable("audCitiesMount", [ {key:"name",label:"עיר",align:"right"},{key:"sessions",label:"Sessions",type:"num"} ], (d.cities||[]).slice(), { defaultSort:{key:"sessions",dir:"desc"}, scroll:true });
+      const hours = d.byHour || []; makeChart("audHours", { type:"bar", data:{ labels:hours.map((h)=>h.hour+":00"), datasets:[{ data:hours.map((h)=>h.sessions), backgroundColor:"#1d4ed8" }] }, options:{responsive:true,plugins:{legend:{display:false}}} });
+      const days = d.byDay || []; makeChart("audDays", { type:"bar", data:{ labels:days.map((x)=>DAY_NAMES[x.day]), datasets:[{ data:days.map((x)=>x.sessions), backgroundColor:"#10b981" }] }, options:{responsive:true,plugins:{legend:{display:false}}} });
     }
     function renderPages(d) {
-      document.getElementById("pgTop").innerHTML = (d.topPages || []).map((p) =>
-        `<tr class="border-b last:border-0"><td class="py-2" title="${p.path}">${shortPath(p.path)}</td><td class="py-2">${fmt(p.views)}</td></tr>`).join("");
-      document.getElementById("pgLanding").innerHTML = (d.landingPages || []).map((p) =>
-        `<tr class="border-b last:border-0"><td class="py-2" title="${p.path}">${shortPath(p.path)}</td><td class="py-2">${fmt(p.sessions)}</td></tr>`).join("");
+      mountTable("pgTopMount", [ {key:"path",label:"דף",align:"right",long:true},{key:"views",label:"צפיות",type:"num"} ], (d.topPages||[]).slice(), { defaultSort:{key:"views",dir:"desc"}, scroll:true });
+      mountTable("pgLandingMount", [ {key:"path",label:"דף כניסה",align:"right",long:true},{key:"sessions",label:"Sessions",type:"num"} ], (d.landingPages||[]).slice(), { defaultSort:{key:"sessions",dir:"desc"}, scroll:true });
     }
-    function area(id, labels, data, color) {
-      makeChart(id, { type: "line",
-        data: { labels, datasets: [{ data, borderColor: color, backgroundColor: color + "22", fill: true, tension: 0.35, pointRadius: 0 }] },
-        options: { responsive: true, plugins: { legend: { display: false } }, scales: { x: { display: false } } } });
-    }
+    function area(id, labels, data, color) { makeChart(id, { type:"line", data:{ labels, datasets:[{ data, borderColor:color, backgroundColor:color+"22", fill:true, tension:0.35, pointRadius:0 }] }, options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{display:false}}} }); }
     function renderSearch(d) {
-      const ser = d.series || [];
-      const labels = ser.map((r) => niceDate(r.date));
-      area("seImpr", labels, ser.map((r) => r.impressions), "#1d4ed8");
-      area("seClicks", labels, ser.map((r) => r.clicks), "#10b981");
-      area("seCtr", labels, ser.map((r) => r.ctr), "#f59e0b");
-      // Position distribution
+      const ser = d.series || [], labels = ser.map((r)=>niceDate(r.date));
+      area("seImpr", labels, ser.map((r)=>r.impressions), "#1d4ed8"); area("seClicks", labels, ser.map((r)=>r.clicks), "#10b981"); area("seCtr", labels, ser.map((r)=>r.ctr), "#f59e0b");
       const pos = d.positions || [];
       document.getElementById("seKwTotal").textContent = d.totalKeywords ? `(סה"כ ${fmt(d.totalKeywords)} מילים)` : "";
-      makeChart("sePos", { type: "bar",
-        data: { labels: pos.map((b) => b.bucket), datasets: [{ data: pos.map((b) => b.count),
-          backgroundColor: ["#16a34a","#65a30d","#eab308","#f97316","#dc2626"] }] },
-        options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } } });
-      searchData.queries = d.queries || [];
-      searchData.pages = d.pages || [];
-      renderSearchTable("seQueries", searchData.queries, document.getElementById("seQSearch").value);
-      renderSearchTable("sePages", searchData.pages, document.getElementById("sePSearch").value);
-    }
-    const searchData = { queries: [], pages: [] };
-    function renderSearchTable(tbodyId, rows, filter) {
-      const f = (filter || "").trim().toLowerCase();
-      const filtered = f ? rows.filter((r) => (r.key || "").toLowerCase().includes(f)) : rows;
-      const row = (r) => `<tr class="border-b last:border-0"><td class="py-2" title="${r.key}">${shortPath(r.key)}</td><td class="py-2">${fmt(r.clicks)}</td><td class="py-2">${fmt(r.impressions)}</td><td class="py-2">${r.ctr}%</td><td class="py-2">${r.position}</td></tr>`;
-      document.getElementById(tbodyId).innerHTML = filtered.map(row).join("") || `<tr><td class="py-3 text-slate-400" colspan="5">אין תוצאות</td></tr>`;
+      makeChart("sePos", { type:"bar", data:{ labels:pos.map((b)=>b.bucket), datasets:[{ data:pos.map((b)=>b.count), backgroundColor:["#16a34a","#65a30d","#eab308","#f97316","#dc2626"] }] }, options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}} });
+      const cols = [ {key:"key",label:"שם",align:"right",long:true},{key:"clicks",label:"קליקים",type:"num"},{key:"impressions",label:"חשיפות",type:"num"},{key:"ctr",label:"CTR",type:"pct"},{key:"position",label:"מיקום"} ];
+      mountTable("seQMount", cols, (d.queries||[]).slice(), { defaultSort:{key:"clicks",dir:"desc"}, scroll:true });
+      mountTable("sePMount", cols, (d.pages||[]).slice(), { defaultSort:{key:"clicks",dir:"desc"}, scroll:true });
     }
 
     const TABS = {
-      overview: { path: "/api/data",      render: renderOverview },
-      compare:  { path: "/api/compare",   render: renderCompare },
-      sales:    { path: "/api/ecommerce", render: renderSales },
-      ads:      { path: "/api/ads",       render: renderAds },
-      traffic:  { path: "/api/sources",   render: renderTraffic },
-      audience: { path: "/api/audience",  render: renderAudience },
-      pages:    { path: "/api/pages",     render: renderPages },
-      search:   { path: "/api/search",    render: renderSearch },
+      overview:{path:"/api/data",render:renderOverview}, compare:{path:"/api/compare",render:renderCompare},
+      sales:{path:"/api/ecommerce",render:renderSales}, ads:{path:"/api/ads",render:renderAds},
+      traffic:{path:"/api/sources",render:renderTraffic}, audience:{path:"/api/audience",render:renderAudience},
+      pages:{path:"/api/pages",render:renderPages}, search:{path:"/api/search",render:renderSearch},
     };
-
     async function loadTab(tab, force) {
       const t = TABS[tab], key = cacheKey();
       if (!force && cache[tab] && cache[tab].key === key) { t.render(cache[tab].data); return; }
       setStatus("טוען נתונים...", "info");
-      try {
-        const data = await api(t.path);
-        cache[tab] = { key, data };
-        t.render(data);
-        setStatus("", null);
-        hideLogin();
-      } catch (err) { setStatus("שגיאה: " + err.message, "error"); }
+      try { const data = await api(t.path); cache[tab] = { key, data }; t.render(data); setStatus("", null); hideLogin(); }
+      catch (err) { setStatus("שגיאה: " + err.message, "error"); }
     }
-
     function showTab(tab) {
       currentTab = tab;
       document.querySelectorAll("[data-screen]").forEach((s) => s.classList.toggle("hidden", s.dataset.screen !== tab));
@@ -458,29 +341,17 @@
       loadTab(tab);
     }
     document.querySelectorAll(".tab-btn").forEach((b) => b.addEventListener("click", () => showTab(b.dataset.tab)));
-
-    // Live search inside the Search tables
-    document.getElementById("seQSearch").addEventListener("input", (e) => renderSearchTable("seQueries", searchData.queries, e.target.value));
-    document.getElementById("sePSearch").addEventListener("input", (e) => renderSearchTable("sePages", searchData.pages, e.target.value));
-
-    function setActiveRange(r) {
-      currentRange = r; customStart = customEnd = null;
-      document.querySelectorAll(".range-btn").forEach((b) => b.classList.toggle("active", b.dataset.range === r));
-    }
-    document.querySelectorAll(".range-btn").forEach((b) => b.addEventListener("click", () => { setActiveRange(b.dataset.range); Object.keys(cache).forEach(k=>delete cache[k]); loadTab(currentTab, true); }));
+    function setActiveRange(r) { currentRange = r; customStart = customEnd = null; document.querySelectorAll(".range-btn").forEach((b)=>b.classList.toggle("active", b.dataset.range===r)); }
+    document.querySelectorAll(".range-btn").forEach((b)=>b.addEventListener("click",()=>{ setActiveRange(b.dataset.range); Object.keys(cache).forEach((k)=>delete cache[k]); loadTab(currentTab,true); }));
     document.getElementById("applyDates").addEventListener("click", () => {
       const s = document.getElementById("dateStart").value, e = document.getElementById("dateEnd").value;
-      if (!s || !e) { setStatus("יש לבחור תאריך התחלה וסיום", "error"); return; }
-      if (s > e) { setStatus("תאריך ההתחלה מאוחר מהסיום", "error"); return; }
-      customStart = s; customEnd = e;
-      document.querySelectorAll(".range-btn").forEach((b) => b.classList.remove("active"));
-      Object.keys(cache).forEach(k=>delete cache[k]);
-      loadTab(currentTab, true);
+      if (!s || !e) { setStatus("יש לבחור תאריך התחלה וסיום","error"); return; }
+      if (s > e) { setStatus("תאריך ההתחלה מאוחר מהסיום","error"); return; }
+      customStart = s; customEnd = e; document.querySelectorAll(".range-btn").forEach((b)=>b.classList.remove("active"));
+      Object.keys(cache).forEach((k)=>delete cache[k]); loadTab(currentTab,true);
     });
-    document.getElementById("siteSelect").addEventListener("change", () => { Object.keys(cache).forEach(k=>delete cache[k]); loadTab(currentTab, true); });
-
-    setActiveRange("30d");
-    showTab("overview");
+    document.getElementById("siteSelect").addEventListener("change", () => { Object.keys(cache).forEach((k)=>delete cache[k]); loadTab(currentTab,true); });
+    setActiveRange("30d"); showTab("overview");
   </script>
 </body>
 </html>
