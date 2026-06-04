@@ -181,7 +181,9 @@
       el.textContent = msg; el.className = "mb-4 text-center text-sm rounded-lg py-2 " + (type === "error" ? "bg-red-100 text-red-700" : "bg-blue-50 text-blue-600");
     }
     function niceDate(d) { if (!d) return d; if (d.length === 8) return d.slice(6,8)+"/"+d.slice(4,6); if (d.length === 6) return d.slice(4,6)+"/"+d.slice(0,4); if (d.length === 10) return d.slice(8,10)+"/"+d.slice(5,7); return d; }
-    const shortPath = (p) => p && p.length > 45 ? p.slice(0,45)+"…" : (p || "");
+    const shortPath = (p) => p && p.length > 50 ? p.slice(0,50)+"…" : (p || "");
+    function safeDecode(s) { try { return decodeURIComponent(String(s).replace(/\+/g, " ")); } catch (e) { return String(s); } }
+    function prettyUrl(s) { if (!s) return s; let v = safeDecode(s).replace(/^https?:\/\/[^/]+/, ""); return v || "/"; }
     function makeChart(id, config) { if (charts[id]) charts[id].destroy(); charts[id] = new Chart(document.getElementById(id), config); }
 
     // ===== Generic sortable + filterable table =====
@@ -192,7 +194,17 @@
       if (col.type === "num" || col.type === "money") return fmt(val);
       if (col.type === "pct") return val + "%";
       if (col.type === "x") return val + "x";
-      if (col.long) return `<span title="${val}">${shortPath(String(val))}</span>`;
+      if (col.long) {
+        const dec = col.url ? prettyUrl(val) : safeDecode(val);
+        const t = dec.replace(/"/g, "&quot;");
+        if (col.url) {
+          const SITE_ORIGIN = { homepetcenter:"https://homepetcenter.co.il", quickpet:"https://quickpet.co.il", tiktakpet:"https://tiktakpet.co.il" };
+          let href = String(val);
+          if (!/^https?:\/\//.test(href)) href = (SITE_ORIGIN[document.getElementById("siteSelect").value] || "") + (href.startsWith("/") ? href : "/" + href);
+          return `<a href="${href}" target="_blank" rel="noopener" class="text-blue-600 hover:underline" title="${t}">${shortPath(dec)}</a>`;
+        }
+        return `<span title="${t}">${shortPath(dec)}</span>`;
+      }
       return val;
     }
     function mountTable(id, columns, rows, opts = {}) {
@@ -306,8 +318,8 @@
       const days = d.byDay || []; makeChart("audDays", { type:"bar", data:{ labels:days.map((x)=>DAY_NAMES[x.day]), datasets:[{ data:days.map((x)=>x.sessions), backgroundColor:"#10b981" }] }, options:{responsive:true,plugins:{legend:{display:false}}} });
     }
     function renderPages(d) {
-      mountTable("pgTopMount", [ {key:"path",label:"דף",align:"right",long:true},{key:"views",label:"צפיות",type:"num"} ], (d.topPages||[]).slice(), { defaultSort:{key:"views",dir:"desc"}, scroll:true });
-      mountTable("pgLandingMount", [ {key:"path",label:"דף כניסה",align:"right",long:true},{key:"sessions",label:"Sessions",type:"num"} ], (d.landingPages||[]).slice(), { defaultSort:{key:"sessions",dir:"desc"}, scroll:true });
+      mountTable("pgTopMount", [ {key:"path",label:"דף",align:"right",long:true,url:true},{key:"views",label:"צפיות",type:"num"} ], (d.topPages||[]).slice(), { defaultSort:{key:"views",dir:"desc"}, scroll:true });
+      mountTable("pgLandingMount", [ {key:"path",label:"דף כניסה",align:"right",long:true,url:true},{key:"sessions",label:"Sessions",type:"num"} ], (d.landingPages||[]).slice(), { defaultSort:{key:"sessions",dir:"desc"}, scroll:true });
     }
     function area(id, labels, data, color) { makeChart(id, { type:"line", data:{ labels, datasets:[{ data, borderColor:color, backgroundColor:color+"22", fill:true, tension:0.35, pointRadius:0 }] }, options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{display:false}}} }); }
     function renderSearch(d) {
@@ -316,9 +328,11 @@
       const pos = d.positions || [];
       document.getElementById("seKwTotal").textContent = d.totalKeywords ? `(סה"כ ${fmt(d.totalKeywords)} מילים)` : "";
       makeChart("sePos", { type:"bar", data:{ labels:pos.map((b)=>b.bucket), datasets:[{ data:pos.map((b)=>b.count), backgroundColor:["#16a34a","#65a30d","#eab308","#f97316","#dc2626"] }] }, options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}} });
-      const cols = [ {key:"key",label:"שם",align:"right",long:true},{key:"clicks",label:"קליקים",type:"num"},{key:"impressions",label:"חשיפות",type:"num"},{key:"ctr",label:"CTR",type:"pct"},{key:"position",label:"מיקום"} ];
-      mountTable("seQMount", cols, (d.queries||[]).slice(), { defaultSort:{key:"clicks",dir:"desc"}, scroll:true });
-      mountTable("sePMount", cols, (d.pages||[]).slice(), { defaultSort:{key:"clicks",dir:"desc"}, scroll:true });
+      const metricCols = [ {key:"clicks",label:"קליקים",type:"num"},{key:"impressions",label:"חשיפות",type:"num"},{key:"ctr",label:"CTR",type:"pct"},{key:"position",label:"מיקום"} ];
+      const qCols = [ {key:"key",label:"מילה",align:"right",long:true}, ...metricCols ];
+      const pCols = [ {key:"key",label:"דף",align:"right",long:true,url:true}, ...metricCols ];
+      mountTable("seQMount", qCols, (d.queries||[]).slice(), { defaultSort:{key:"clicks",dir:"desc"}, scroll:true });
+      mountTable("sePMount", pCols, (d.pages||[]).slice(), { defaultSort:{key:"clicks",dir:"desc"}, scroll:true });
     }
 
     const TABS = {
