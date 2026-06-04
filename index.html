@@ -24,6 +24,18 @@
 </head>
 <body class="bg-slate-100 min-h-screen p-4 md:p-6">
 
+  <!-- Login overlay -->
+  <div id="loginOverlay" class="fixed inset-0 z-50 bg-slate-800/60 backdrop-blur-sm flex items-center justify-center">
+    <div class="bg-white rounded-2xl shadow-xl p-8 w-80 text-center">
+      <div class="text-4xl mb-3">🔒</div>
+      <h2 class="text-xl font-bold text-slate-800 mb-1">Analytics Dashboard</h2>
+      <p class="text-slate-500 text-sm mb-5">הזיני סיסמה כדי להיכנס</p>
+      <input id="pwInput" type="password" placeholder="סיסמה" class="w-full border border-slate-300 rounded-lg px-4 py-2 mb-3 text-center outline-none focus:ring-2 focus:ring-blue-400" />
+      <div id="pwError" class="text-red-600 text-sm mb-3 hidden">סיסמה שגויה</div>
+      <button id="pwBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-lg py-2 font-medium">כניסה</button>
+    </div>
+  </div>
+
   <!-- Header -->
   <div class="card flex flex-wrap items-center justify-between gap-3 mb-4">
     <h1 class="text-2xl font-bold text-slate-800">📊 Analytics Dashboard</h1>
@@ -187,16 +199,38 @@
       el.className = "delta " + (Math.abs(pct) < 0.05 ? "flat" : better ? "up" : "down");
     }
 
+    let accessKey = localStorage.getItem("dashKey") || "";
+
     async function api(path) {
       const site = document.getElementById("siteSelect").value;
       let q = `?site=${encodeURIComponent(site)}`;
       if (customStart && customEnd) q += `&start=${customStart}&end=${customEnd}`;
       else q += `&range=${currentRange}`;
-      const res = await fetch(`${BASE}${path}${q}`);
+      const res = await fetch(`${BASE}${path}${q}`, { headers: { "X-Access-Key": accessKey } });
+      if (res.status === 401) { showLogin(); throw new Error("נדרשת סיסמה"); }
       const d = await res.json();
       if (d.error) throw new Error(d.error);
       return d;
     }
+
+    // ---- Login gate ----
+    function showLogin() { document.getElementById("loginOverlay").classList.remove("hidden"); }
+    function hideLogin() { document.getElementById("loginOverlay").classList.add("hidden"); }
+    async function tryLogin(pw) {
+      const errEl = document.getElementById("pwError");
+      errEl.classList.add("hidden");
+      try {
+        const res = await fetch(`${BASE}/api/data?site=homepetcenter&range=7d`, { headers: { "X-Access-Key": pw } });
+        if (res.status === 401) { errEl.classList.remove("hidden"); return; }
+        accessKey = pw;
+        localStorage.setItem("dashKey", pw);
+        hideLogin();
+        Object.keys(cache).forEach((k) => delete cache[k]);
+        loadTab(currentTab, true);
+      } catch (e) { errEl.classList.remove("hidden"); }
+    }
+    document.getElementById("pwBtn").addEventListener("click", () => tryLogin(document.getElementById("pwInput").value));
+    document.getElementById("pwInput").addEventListener("keydown", (e) => { if (e.key === "Enter") tryLogin(document.getElementById("pwInput").value); });
 
     // ---- Renderers ----
     function renderOverview(d) {
@@ -297,6 +331,7 @@
         cache[tab] = { key, data };
         t.render(data);
         setStatus("", null);
+        hideLogin();
       } catch (err) { setStatus("שגיאה: " + err.message, "error"); }
     }
 
