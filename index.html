@@ -116,11 +116,8 @@
       <div class="card"><div class="flex items-center justify-between mb-3"><div class="text-slate-600 font-medium">משפך מכירות</div><div class="text-sm">נטישת עגלה: <span id="slAbandon" class="font-bold text-rose-600">—</span></div></div><canvas id="slFunnel" height="160"></canvas></div>
       <div class="card"><div class="text-slate-600 font-medium mb-3">הכנסות לפי ערוץ</div><div id="slChannelsMount"></div></div>
     </div>
-    <div class="card mb-4"><div class="text-slate-600 font-medium mb-3">מוצרים מובילים</div><div id="slProductsMount"></div></div>
-    <div class="grid md:grid-cols-2 gap-4">
-      <div class="card"><div class="text-slate-600 font-medium mb-3">קטגוריות מובילות</div><div id="slCategoriesMount"></div></div>
-      <div class="card"><div class="text-slate-600 font-medium mb-3">משפך מוצר (צפייה→סל→רכישה)</div><div id="slProdFunnelMount"></div></div>
-    </div>
+    <div class="card mb-4"><div class="text-slate-600 font-medium mb-3">מוצרים (צפייה→סל→רכישה→הכנסה)</div><div id="slProductsMount"></div></div>
+    <div class="card"><div class="text-slate-600 font-medium mb-3">קטגוריות מובילות</div><div id="slCategoriesMount"></div></div>
   </section>
 
   <!-- ADS -->
@@ -243,7 +240,7 @@
       if (st.sort) { const { key, dir } = st.sort; rows.sort((a, b) => { let x = a[key], y = b[key]; if (typeof x === "number" && typeof y === "number") return dir === "asc" ? x - y : y - x; x = String(x ?? ""); y = String(y ?? ""); return dir === "asc" ? x.localeCompare(y, "he") : y.localeCompare(x, "he"); }); }
       const head = st.columns.map((c) => `<th data-k="${c.key}" class="srt py-2 font-medium cursor-pointer select-none ${c.align === "right" ? "text-right" : ""}">${c.label}${st.sort && st.sort.key === c.key ? (st.sort.dir === "asc" ? " ▲" : " ▼") : ""}</th>`).join("");
       const body = rows.length ? rows.map((r) => `<tr class="border-b last:border-0">${st.columns.map((c) => `<td class="py-2 ${c.align === "right" ? "text-right" : ""}">${cellHtml(r[c.key], c)}</td>`).join("")}</tr>`).join("") : `<tr><td class="py-3 text-slate-400" colspan="${st.columns.length}">אין תוצאות</td></tr>`;
-      el.innerHTML = `${st.opts.search === false ? "" : `<input type="text" placeholder="🔍 חיפוש..." class="tbl-search mb-2 border border-slate-300 rounded-lg px-3 py-1 text-sm outline-none focus:ring-2 focus:ring-blue-400 w-full" value="${st.filter.replace(/"/g, "&quot;")}">`}<div class="${st.opts.scroll ? "max-h-[40rem] overflow-y-auto" : ""}"><table class="w-full text-sm"><thead class="${st.opts.scroll ? "sticky top-0 bg-white" : ""}"><tr class="text-slate-400 border-b">${head}</tr></thead><tbody>${body}</tbody></table></div>`;
+      el.innerHTML = `${st.opts.search === false ? "" : `<input type="text" placeholder="🔍 חיפוש..." class="tbl-search mb-2 border border-slate-300 rounded-lg px-3 py-1 text-sm outline-none focus:ring-2 focus:ring-blue-400 w-full" value="${st.filter.replace(/"/g, "&quot;")}">`}<div class="overflow-x-auto ${st.opts.scroll ? "max-h-[40rem] overflow-y-auto" : ""}"><table class="w-full text-sm whitespace-nowrap"><thead class="${st.opts.scroll ? "sticky top-0 bg-white" : ""}"><tr class="text-slate-400 border-b">${head}</tr></thead><tbody>${body}</tbody></table></div>`;
       const inp = el.querySelector(".tbl-search");
       if (inp) inp.addEventListener("input", (e) => { st.filter = e.target.value; const pos = e.target.selectionStart; drawTable(id); const ni = el.querySelector(".tbl-search"); ni.focus(); try { ni.setSelectionRange(pos, pos); } catch (_) {} });
       el.querySelectorAll("th[data-k]").forEach((th) => th.addEventListener("click", () => { const k = th.dataset.k; if (st.sort && st.sort.key === k) st.sort.dir = st.sort.dir === "asc" ? "desc" : "asc"; else st.sort = { key: k, dir: "desc" }; drawTable(id); }));
@@ -311,14 +308,13 @@
       const pr = d.prev || {};
       setKpi("slRevenue", fmt(d.revenue), d.revenue, pr.revenue); setKpi("slTx", fmt(d.transactions), d.transactions, pr.transactions);
       setKpi("slAov", fmt(d.aov), d.aov, pr.aov); setKpi("slConv", (d.conversionRate ?? 0)+"%", d.conversionRate, pr.conversionRate);
-      mountTable("slProductsMount", [ {key:"name",label:"מוצר",align:"right",long:true},{key:"qty",label:"כמות",type:"num"},{key:"revenue",label:"הכנסה (₪)",type:"num"} ], (d.topProducts||[]).slice(), { defaultSort:{key:"revenue",dir:"desc"}, scroll:true });
+      mountTable("slProductsMount", [ {key:"name",label:"מוצר",align:"right",long:true},{key:"viewed",label:"צפיות",type:"num"},{key:"carted",label:"לסל",type:"num"},{key:"purchased",label:"נרכש",type:"num"},{key:"revenue",label:"הכנסה (₪)",type:"num"},{key:"buyRate",label:"% רכישה",type:"pct"} ], (d.products||[]).slice(), { defaultSort:{key:"revenue",dir:"desc"}, scroll:true });
       const f = d.funnel || {};
       document.getElementById("slAbandon").textContent = (f.cartAbandonRate ?? 0) + "%";
       makeChart("slFunnel", { type:"bar", data:{ labels:["צפיות","הוספה לסל","Checkout","רכישה"], datasets:[{ data:[f.sessions,f.addToCart,f.checkout,f.purchase], backgroundColor:["#93c5fd","#60a5fa","#3b82f6","#1d4ed8"] }] }, options:{ indexAxis:"y", responsive:true, plugins:{legend:{display:false}} } });
       const ch = (d.channelRevenue||[]).slice(); pctCol(ch, "revenue", "pct");
       mountTable("slChannelsMount", [ {key:"name",label:"ערוץ",align:"right"},{key:"revenue",label:"הכנסה (₪)",type:"num"},{key:"pct",label:"%",type:"pct"} ], ch, { search:false, defaultSort:{key:"revenue",dir:"desc"} });
       mountTable("slCategoriesMount", [ {key:"name",label:"קטגוריה",align:"right",long:true},{key:"qty",label:"כמות",type:"num"},{key:"revenue",label:"הכנסה (₪)",type:"num"} ], (d.categories||[]).slice(), { defaultSort:{key:"revenue",dir:"desc"}, scroll:true });
-      mountTable("slProdFunnelMount", [ {key:"name",label:"מוצר",align:"right",long:true},{key:"viewed",label:"צפיות",type:"num"},{key:"carted",label:"לסל",type:"num"},{key:"purchased",label:"נרכש",type:"num"},{key:"buyRate",label:"% רכישה",type:"pct"} ], (d.productFunnel||[]).slice(), { defaultSort:{key:"viewed",dir:"desc"}, scroll:true });
     }
     function renderTrends(d) {
       const ser = d.series || [], labels = ser.map((r)=>niceDate(r.date));
@@ -332,7 +328,7 @@
       document.getElementById("adCost").textContent = fmt(t.cost); document.getElementById("adRev").textContent = fmt(t.revenue);
       document.getElementById("adRoas").textContent = (t.roas ?? 0)+"x"; document.getElementById("adClicks").textContent = fmt(t.clicks); document.getElementById("adCpc").textContent = (t.cpc ?? 0);
       const roasCell = (v) => { const c = v>=3?"text-emerald-600":v>=1?"text-amber-600":"text-rose-600"; return `<span class="font-bold ${c}">${v}x</span>`; };
-      const cols = [ {key:"name",label:"שם",align:"right",long:true},{key:"cost",label:"עלות (₪)",type:"num"},{key:"clicks",label:"קליקים",type:"num"},{key:"revenue",label:"הכנסה (₪)",type:"num"},{key:"transactions",label:"עסקאות",type:"num"},{key:"roas",label:"ROAS",render:roasCell} ];
+      const cols = [ {key:"name",label:"שם",align:"right",long:true},{key:"cost",label:"עלות (₪)",type:"num"},{key:"impressions",label:"חשיפות",type:"num"},{key:"clicks",label:"קליקים",type:"num"},{key:"ctr",label:"CTR",type:"pct"},{key:"cpc",label:"CPC (₪)"},{key:"revenue",label:"הכנסה (₪)",type:"num"},{key:"transactions",label:"עסקאות",type:"num"},{key:"cpa",label:"CPA (₪)"},{key:"convRate",label:"המרה",type:"pct"},{key:"roas",label:"ROAS",render:roasCell} ];
       mountTable("adCampaignsMount", cols, (d.campaigns||[]).slice(), { defaultSort:{key:"cost",dir:"desc"}, scroll:true });
       mountTable("adGroupsMount", cols, (d.adGroups||[]).slice(), { defaultSort:{key:"cost",dir:"desc"}, scroll:true });
     }
@@ -342,7 +338,7 @@
       makeChart("trChart", { type:"doughnut", data:{ labels:ch.map((c)=>c.name), datasets:[{ data:ch.map((c)=>c.sessions), backgroundColor:DONUT }] }, options:{responsive:true,plugins:{legend:{position:"bottom",labels:{boxWidth:12,font:{size:11}}}}} });
       makeChart("devChart", { type:"doughnut", data:{ labels:dev.map((c)=>c.name), datasets:[{ data:dev.map((c)=>c.sessions), backgroundColor:["#1d4ed8","#f59e0b","#10b981","#ec4899"] }] }, options:{responsive:true,plugins:{legend:{position:"bottom",labels:{boxWidth:12,font:{size:11}}}}} });
       pctCol(ch, "sessions", "pct");
-      mountTable("trMount", [ {key:"name",label:"ערוץ",align:"right"},{key:"sessions",label:"Sessions",type:"num"},{key:"pct",label:"%",type:"pct"} ], ch, { search:false, defaultSort:{key:"sessions",dir:"desc"} });
+      mountTable("trMount", [ {key:"name",label:"ערוץ",align:"right"},{key:"sessions",label:"Sessions",type:"num"},{key:"users",label:"Users",type:"num"},{key:"revenue",label:"הכנסה (₪)",type:"num"},{key:"transactions",label:"עסקאות",type:"num"},{key:"convRate",label:"המרה",type:"pct"},{key:"pct",label:"% תנועה",type:"pct"} ], ch, { search:false, defaultSort:{key:"sessions",dir:"desc"}, scroll:true });
     }
     const DAY_NAMES = ["ראשון","שני","שלישי","רביעי","חמישי","שישי","שבת"];
     function renderAudience(d) {
@@ -356,7 +352,7 @@
     }
     function renderPages(d) {
       mountTable("pgTopMount", [ {key:"path",label:"דף",align:"right",long:true,url:true},{key:"views",label:"צפיות",type:"num"} ], (d.topPages||[]).slice(), { defaultSort:{key:"views",dir:"desc"}, scroll:true });
-      mountTable("pgLandingMount", [ {key:"path",label:"דף כניסה",align:"right",long:true,url:true},{key:"sessions",label:"Sessions",type:"num"} ], (d.landingPages||[]).slice(), { defaultSort:{key:"sessions",dir:"desc"}, scroll:true });
+      mountTable("pgLandingMount", [ {key:"path",label:"דף כניסה",align:"right",long:true,url:true},{key:"sessions",label:"Sessions",type:"num"},{key:"bounceRate",label:"Bounce",type:"pct"},{key:"revenue",label:"הכנסה (₪)",type:"num"},{key:"transactions",label:"עסקאות",type:"num"},{key:"convRate",label:"המרה",type:"pct"} ], (d.landingPages||[]).slice(), { defaultSort:{key:"sessions",dir:"desc"}, scroll:true });
     }
     function area(id, labels, data, color) { makeChart(id, { type:"line", data:{ labels, datasets:[{ data, borderColor:color, backgroundColor:color+"22", fill:true, tension:0.35, pointRadius:0 }] }, options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{display:false}}} }); }
     function renderSearch(d) {
