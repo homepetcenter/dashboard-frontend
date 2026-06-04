@@ -57,6 +57,7 @@
   <div class="card !py-0 px-3 mb-3 flex flex-wrap gap-1">
     <button data-tab="overview" class="tab-btn px-4 py-3 text-sm">📈 סקירה</button>
     <button data-tab="compare" class="tab-btn px-4 py-3 text-sm">📊 השוואה</button>
+    <button data-tab="trends" class="tab-btn px-4 py-3 text-sm">📉 מגמות</button>
     <button data-tab="sales" class="tab-btn px-4 py-3 text-sm">💰 מכירות</button>
     <button data-tab="ads" class="tab-btn px-4 py-3 text-sm">📣 פרסום (ROAS)</button>
     <button data-tab="traffic" class="tab-btn px-4 py-3 text-sm">🚦 מקורות תנועה</button>
@@ -94,6 +95,15 @@
     </div>
   </section>
 
+  <!-- TRENDS -->
+  <section data-screen="trends" class="hidden">
+    <div class="card mb-4"><div class="text-slate-600 font-medium mb-2">הכנסות יומיות (₪)</div><canvas id="trRevenue" height="80"></canvas></div>
+    <div class="grid md:grid-cols-2 gap-4">
+      <div class="card"><div class="text-slate-600 font-medium mb-2">אחוז המרה (%)</div><canvas id="trConv" height="110"></canvas></div>
+      <div class="card"><div class="text-slate-600 font-medium mb-2">עסקה ממוצעת (₪)</div><canvas id="trAov" height="110"></canvas></div>
+    </div>
+  </section>
+
   <!-- SALES -->
   <section data-screen="sales" class="hidden">
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
@@ -106,7 +116,11 @@
       <div class="card"><div class="flex items-center justify-between mb-3"><div class="text-slate-600 font-medium">משפך מכירות</div><div class="text-sm">נטישת עגלה: <span id="slAbandon" class="font-bold text-rose-600">—</span></div></div><canvas id="slFunnel" height="160"></canvas></div>
       <div class="card"><div class="text-slate-600 font-medium mb-3">הכנסות לפי ערוץ</div><div id="slChannelsMount"></div></div>
     </div>
-    <div class="card"><div class="text-slate-600 font-medium mb-3">מוצרים מובילים</div><div id="slProductsMount"></div></div>
+    <div class="card mb-4"><div class="text-slate-600 font-medium mb-3">מוצרים מובילים</div><div id="slProductsMount"></div></div>
+    <div class="grid md:grid-cols-2 gap-4">
+      <div class="card"><div class="text-slate-600 font-medium mb-3">קטגוריות מובילות</div><div id="slCategoriesMount"></div></div>
+      <div class="card"><div class="text-slate-600 font-medium mb-3">משפך מוצר (צפייה→סל→רכישה)</div><div id="slProdFunnelMount"></div></div>
+    </div>
   </section>
 
   <!-- ADS -->
@@ -137,6 +151,10 @@
       <div class="card"><div class="text-slate-600 font-medium mb-3">מדינות מובילות</div><div id="audCountriesMount"></div></div>
       <div class="card"><div class="text-slate-600 font-medium mb-3">ערים מובילות</div><div id="audCitiesMount"></div></div>
     </div>
+    <div class="grid md:grid-cols-2 gap-4 mb-4">
+      <div class="card"><div class="text-slate-600 font-medium mb-3">חדשים מול חוזרים</div><canvas id="audNvr" height="180"></canvas></div>
+      <div class="card"><div class="text-slate-600 font-medium mb-3">המרה: חדשים מול חוזרים</div><div id="audNvrMount"></div></div>
+    </div>
     <div class="card mb-4"><div class="text-slate-600 font-medium mb-3">פעילות לפי שעה ביום</div><canvas id="audHours" height="80"></canvas></div>
     <div class="card"><div class="text-slate-600 font-medium mb-3">פעילות לפי יום בשבוע</div><canvas id="audDays" height="70"></canvas></div>
   </section>
@@ -156,7 +174,14 @@
       <div class="card"><div class="text-slate-600 font-medium mb-2">Clicks</div><canvas id="seClicks" height="110"></canvas></div>
       <div class="card"><div class="text-slate-600 font-medium mb-2">CTR (%)</div><canvas id="seCtr" height="110"></canvas></div>
     </div>
-    <div class="card mb-4"><div class="text-slate-600 font-medium mb-2">התפלגות מיקומים <span id="seKwTotal" class="text-slate-400 text-sm"></span></div><canvas id="sePos" height="80"></canvas></div>
+    <div class="grid md:grid-cols-3 gap-4 mb-4">
+      <div class="card md:col-span-1"><div class="text-slate-600 font-medium mb-2">ממותג מול לא-ממותג (קליקים)</div><canvas id="seBrand" height="160"></canvas></div>
+      <div class="card md:col-span-2"><div class="text-slate-600 font-medium mb-2">התפלגות מיקומים <span id="seKwTotal" class="text-slate-400 text-sm"></span></div><canvas id="sePos" height="70"></canvas></div>
+    </div>
+    <div class="grid md:grid-cols-2 gap-4 mb-4">
+      <div class="card"><div class="text-slate-600 font-medium mb-3">📈 עלו בדירוג</div><div id="seWinnersMount"></div></div>
+      <div class="card"><div class="text-slate-600 font-medium mb-3">📉 ירדו בדירוג</div><div id="seLosersMount"></div></div>
+    </div>
     <div class="grid md:grid-cols-2 gap-4">
       <div class="card"><div class="text-slate-600 font-medium mb-3">מילות חיפוש מובילות</div><div id="seQMount"></div></div>
       <div class="card"><div class="text-slate-600 font-medium mb-3">דפים מובילים בחיפוש</div><div id="sePMount"></div></div>
@@ -292,6 +317,15 @@
       makeChart("slFunnel", { type:"bar", data:{ labels:["צפיות","הוספה לסל","Checkout","רכישה"], datasets:[{ data:[f.sessions,f.addToCart,f.checkout,f.purchase], backgroundColor:["#93c5fd","#60a5fa","#3b82f6","#1d4ed8"] }] }, options:{ indexAxis:"y", responsive:true, plugins:{legend:{display:false}} } });
       const ch = (d.channelRevenue||[]).slice(); pctCol(ch, "revenue", "pct");
       mountTable("slChannelsMount", [ {key:"name",label:"ערוץ",align:"right"},{key:"revenue",label:"הכנסה (₪)",type:"num"},{key:"pct",label:"%",type:"pct"} ], ch, { search:false, defaultSort:{key:"revenue",dir:"desc"} });
+      mountTable("slCategoriesMount", [ {key:"name",label:"קטגוריה",align:"right",long:true},{key:"qty",label:"כמות",type:"num"},{key:"revenue",label:"הכנסה (₪)",type:"num"} ], (d.categories||[]).slice(), { defaultSort:{key:"revenue",dir:"desc"}, scroll:true });
+      mountTable("slProdFunnelMount", [ {key:"name",label:"מוצר",align:"right",long:true},{key:"viewed",label:"צפיות",type:"num"},{key:"carted",label:"לסל",type:"num"},{key:"purchased",label:"נרכש",type:"num"},{key:"buyRate",label:"% רכישה",type:"pct"} ], (d.productFunnel||[]).slice(), { defaultSort:{key:"viewed",dir:"desc"}, scroll:true });
+    }
+    function renderTrends(d) {
+      const ser = d.series || [], labels = ser.map((r)=>niceDate(r.date));
+      const line = (id, data, color) => makeChart(id, { type:"line", data:{ labels, datasets:[{ data, borderColor:color, backgroundColor:color+"22", fill:true, tension:0.35, pointRadius:0 }] }, options:{responsive:true,plugins:{legend:{display:false}}} });
+      line("trRevenue", ser.map((r)=>r.revenue), "#16a34a");
+      line("trConv", ser.map((r)=>r.conversionRate), "#1d4ed8");
+      line("trAov", ser.map((r)=>r.aov), "#f59e0b");
     }
     function renderAds(d) {
       const t = d.totals || {};
@@ -316,6 +350,9 @@
       mountTable("audCitiesMount", [ {key:"name",label:"עיר",align:"right"},{key:"sessions",label:"Sessions",type:"num"} ], (d.cities||[]).slice(), { defaultSort:{key:"sessions",dir:"desc"}, scroll:true });
       const hours = d.byHour || []; makeChart("audHours", { type:"bar", data:{ labels:hours.map((h)=>h.hour+":00"), datasets:[{ data:hours.map((h)=>h.sessions), backgroundColor:"#1d4ed8" }] }, options:{responsive:true,plugins:{legend:{display:false}}} });
       const days = d.byDay || []; makeChart("audDays", { type:"bar", data:{ labels:days.map((x)=>DAY_NAMES[x.day]), datasets:[{ data:days.map((x)=>x.sessions), backgroundColor:"#10b981" }] }, options:{responsive:true,plugins:{legend:{display:false}}} });
+      const nvr = d.newReturning || [];
+      makeChart("audNvr", { type:"doughnut", data:{ labels:nvr.map((x)=>x.type), datasets:[{ data:nvr.map((x)=>x.users), backgroundColor:["#1d4ed8","#10b981"] }] }, options:{responsive:true,plugins:{legend:{position:"bottom"}}} });
+      mountTable("audNvrMount", [ {key:"type",label:"סוג",align:"right"},{key:"users",label:"משתמשים",type:"num"},{key:"transactions",label:"עסקאות",type:"num"},{key:"conversionRate",label:"המרה",type:"pct"} ], nvr.slice(), { search:false });
     }
     function renderPages(d) {
       mountTable("pgTopMount", [ {key:"path",label:"דף",align:"right",long:true,url:true},{key:"views",label:"צפיות",type:"num"} ], (d.topPages||[]).slice(), { defaultSort:{key:"views",dir:"desc"}, scroll:true });
@@ -333,10 +370,16 @@
       const pCols = [ {key:"key",label:"דף",align:"right",long:true,url:true}, ...metricCols ];
       mountTable("seQMount", qCols, (d.queries||[]).slice(), { defaultSort:{key:"clicks",dir:"desc"}, scroll:true });
       mountTable("sePMount", pCols, (d.pages||[]).slice(), { defaultSort:{key:"clicks",dir:"desc"}, scroll:true });
+      const br = d.branded || { branded:{clicks:0}, nonBranded:{clicks:0} };
+      makeChart("seBrand", { type:"doughnut", data:{ labels:["ממותג","לא-ממותג"], datasets:[{ data:[br.branded.clicks, br.nonBranded.clicks], backgroundColor:["#1d4ed8","#94a3b8"] }] }, options:{responsive:true,plugins:{legend:{position:"bottom"}}} });
+      const moveCols = [ {key:"key",label:"מילה",align:"right",long:true},{key:"prevPosition",label:"קודם"},{key:"position",label:"עכשיו"},{key:"change",label:"שינוי",render:(v)=>`<span class="font-bold ${v>0?'text-emerald-600':'text-rose-600'}">${v>0?'▲':'▼'} ${Math.abs(v)}</span>`} ];
+      mountTable("seWinnersMount", moveCols, (d.winners||[]).slice(), { scroll:true, defaultSort:{key:"change",dir:"desc"} });
+      mountTable("seLosersMount", moveCols, (d.losers||[]).slice(), { scroll:true, defaultSort:{key:"change",dir:"asc"} });
     }
 
     const TABS = {
       overview:{path:"/api/data",render:renderOverview}, compare:{path:"/api/compare",render:renderCompare},
+      trends:{path:"/api/trends",render:renderTrends},
       sales:{path:"/api/ecommerce",render:renderSales}, ads:{path:"/api/ads",render:renderAds},
       traffic:{path:"/api/sources",render:renderTraffic}, audience:{path:"/api/audience",render:renderAudience},
       pages:{path:"/api/pages",render:renderPages}, search:{path:"/api/search",render:renderSearch},
