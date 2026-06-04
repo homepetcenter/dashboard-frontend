@@ -64,8 +64,11 @@
   <!-- Tabs -->
   <div class="card !py-0 px-3 mb-3 flex flex-wrap gap-1">
     <button data-tab="overview" class="tab-btn px-4 py-3 text-sm">📈 סקירה</button>
+    <button data-tab="compare"  class="tab-btn px-4 py-3 text-sm">📊 השוואה</button>
     <button data-tab="sales"    class="tab-btn px-4 py-3 text-sm">💰 מכירות</button>
+    <button data-tab="ads"      class="tab-btn px-4 py-3 text-sm">📣 פרסום (ROAS)</button>
     <button data-tab="traffic"  class="tab-btn px-4 py-3 text-sm">🚦 מקורות תנועה</button>
+    <button data-tab="audience" class="tab-btn px-4 py-3 text-sm">🌍 קהל</button>
     <button data-tab="pages"    class="tab-btn px-4 py-3 text-sm">📄 דפים מובילים</button>
     <button data-tab="search"   class="tab-btn px-4 py-3 text-sm">🔍 חיפוש</button>
   </div>
@@ -90,6 +93,44 @@
     <div class="card"><div id="ovChartTitle" class="text-slate-600 font-medium mb-3">Sessions</div><canvas id="ovChart" height="90"></canvas></div>
   </section>
 
+  <!-- ===== COMPARE ===== -->
+  <section data-screen="compare" class="hidden">
+    <div class="card mb-4 overflow-x-auto">
+      <div class="text-slate-600 font-medium mb-3">השוואה בין האתרים</div>
+      <table class="w-full text-sm text-center">
+        <thead><tr class="text-slate-400 border-b">
+          <th class="py-2 font-medium text-right">אתר</th><th class="py-2 font-medium">Sessions</th><th class="py-2 font-medium">Users</th>
+          <th class="py-2 font-medium">הכנסות (₪)</th><th class="py-2 font-medium">עסקאות</th><th class="py-2 font-medium">המרה</th><th class="py-2 font-medium">Bounce</th>
+        </tr></thead><tbody id="cmpTable"></tbody>
+        <tfoot id="cmpTotal" class="border-t-2 font-bold text-slate-700"></tfoot>
+      </table>
+    </div>
+    <div class="grid md:grid-cols-2 gap-4">
+      <div class="card"><div class="text-slate-600 font-medium mb-3">Sessions לפי אתר</div><canvas id="cmpSessions" height="160"></canvas></div>
+      <div class="card"><div class="text-slate-600 font-medium mb-3">הכנסות לפי אתר</div><canvas id="cmpRevenue" height="160"></canvas></div>
+    </div>
+  </section>
+
+  <!-- ===== ADS / ROAS ===== -->
+  <section data-screen="ads" class="hidden">
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+      <div class="card"><div class="kpi-label">עלות פרסום (₪)</div><div id="adCost" class="kpi-val !text-rose-600">—</div></div>
+      <div class="card"><div class="kpi-label">הכנסה מפרסום (₪)</div><div id="adRev" class="kpi-val !text-emerald-600">—</div></div>
+      <div class="card"><div class="kpi-label">ROAS</div><div id="adRoas" class="kpi-val">—</div></div>
+      <div class="card"><div class="kpi-label">קליקים</div><div id="adClicks" class="kpi-val">—</div></div>
+      <div class="card"><div class="kpi-label">עלות לקליק (₪)</div><div id="adCpc" class="kpi-val">—</div></div>
+    </div>
+    <div class="card overflow-x-auto">
+      <div class="text-slate-600 font-medium mb-3">קמפיינים</div>
+      <table class="w-full text-sm text-center">
+        <thead><tr class="text-slate-400 border-b">
+          <th class="py-2 font-medium text-right">קמפיין</th><th class="py-2 font-medium">עלות (₪)</th><th class="py-2 font-medium">קליקים</th>
+          <th class="py-2 font-medium">הכנסה (₪)</th><th class="py-2 font-medium">עסקאות</th><th class="py-2 font-medium">ROAS</th>
+        </tr></thead><tbody id="adTable"></tbody>
+      </table>
+    </div>
+  </section>
+
   <!-- ===== SALES ===== -->
   <section data-screen="sales" class="hidden">
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
@@ -97,6 +138,19 @@
       <div class="card"><div class="kpi-label">עסקאות</div><div class="flex items-end gap-2"><div id="slTx" class="kpi-val !text-emerald-600">—</div><div id="slTx_d" class="delta"></div></div></div>
       <div class="card"><div class="kpi-label">עסקה ממוצעת (₪)</div><div class="flex items-end gap-2"><div id="slAov" class="kpi-val !text-emerald-600">—</div><div id="slAov_d" class="delta"></div></div></div>
       <div class="card"><div class="kpi-label">אחוז המרה</div><div class="flex items-end gap-2"><div id="slConv" class="kpi-val !text-emerald-600">—</div><div id="slConv_d" class="delta"></div></div></div>
+    </div>
+    <div class="grid md:grid-cols-2 gap-4 mb-4">
+      <div class="card">
+        <div class="flex items-center justify-between mb-3">
+          <div class="text-slate-600 font-medium">משפך מכירות</div>
+          <div class="text-sm">נטישת עגלה: <span id="slAbandon" class="font-bold text-rose-600">—</span></div>
+        </div>
+        <canvas id="slFunnel" height="160"></canvas>
+      </div>
+      <div class="card">
+        <div class="text-slate-600 font-medium mb-3">הכנסות לפי ערוץ</div>
+        <table class="w-full text-sm"><thead><tr class="text-slate-400 text-right border-b"><th class="py-2 font-medium">ערוץ</th><th class="py-2 font-medium">הכנסה (₪)</th><th class="py-2 font-medium">%</th></tr></thead><tbody id="slChannels"></tbody></table>
+      </div>
     </div>
     <div class="card">
       <div class="text-slate-600 font-medium mb-3">מוצרים מובילים</div>
@@ -124,6 +178,18 @@
       <div class="card"><div class="text-slate-600 font-medium mb-3">דפי כניסה מובילים</div>
         <table class="w-full text-sm"><thead><tr class="text-slate-400 text-right border-b"><th class="py-2 font-medium">דף כניסה</th><th class="py-2 font-medium">Sessions</th></tr></thead><tbody id="pgLanding"></tbody></table></div>
     </div>
+  </section>
+
+  <!-- ===== AUDIENCE ===== -->
+  <section data-screen="audience" class="hidden">
+    <div class="grid md:grid-cols-2 gap-4 mb-4">
+      <div class="card"><div class="text-slate-600 font-medium mb-3">מדינות מובילות</div>
+        <table class="w-full text-sm"><thead><tr class="text-slate-400 text-right border-b"><th class="py-2 font-medium">מדינה</th><th class="py-2 font-medium">Sessions</th></tr></thead><tbody id="audCountries"></tbody></table></div>
+      <div class="card"><div class="text-slate-600 font-medium mb-3">ערים מובילות</div>
+        <table class="w-full text-sm"><thead><tr class="text-slate-400 text-right border-b"><th class="py-2 font-medium">עיר</th><th class="py-2 font-medium">Sessions</th></tr></thead><tbody id="audCities"></tbody></table></div>
+    </div>
+    <div class="card mb-4"><div class="text-slate-600 font-medium mb-3">פעילות לפי שעה ביום</div><canvas id="audHours" height="80"></canvas></div>
+    <div class="card"><div class="text-slate-600 font-medium mb-3">פעילות לפי יום בשבוע</div><canvas id="audDays" height="70"></canvas></div>
   </section>
 
   <!-- ===== SEARCH ===== -->
@@ -263,6 +329,53 @@
       document.getElementById("slProducts").innerHTML = (d.topProducts || []).map((p) =>
         `<tr class="border-b last:border-0"><td class="py-2">${p.name}</td><td class="py-2">${fmt(p.qty)}</td><td class="py-2">${fmt(p.revenue)}</td></tr>`
       ).join("") || `<tr><td class="py-3 text-slate-400" colspan="3">אין נתונים</td></tr>`;
+      // Funnel
+      const f = d.funnel || {};
+      document.getElementById("slAbandon").textContent = (f.cartAbandonRate ?? 0) + "%";
+      makeChart("slFunnel", { type: "bar",
+        data: { labels: ["צפיות (Sessions)", "הוספה לסל", "Checkout", "רכישה"],
+          datasets: [{ data: [f.sessions, f.addToCart, f.checkout, f.purchase], backgroundColor: ["#93c5fd","#60a5fa","#3b82f6","#1d4ed8"] }] },
+        options: { indexAxis: "y", responsive: true, plugins: { legend: { display: false } } } });
+      // Channel revenue
+      const ch = d.channelRevenue || [];
+      const tot = ch.reduce((s, c) => s + c.revenue, 0) || 1;
+      document.getElementById("slChannels").innerHTML = ch.map((c) =>
+        `<tr class="border-b last:border-0"><td class="py-2">${c.name}</td><td class="py-2">${fmt(c.revenue)}</td><td class="py-2">${((c.revenue/tot)*100).toFixed(1)}%</td></tr>`).join("");
+    }
+    function renderCompare(d) {
+      const sites = d.sites || [];
+      const NAMES = { homepetcenter: "homepetcenter", quickpet: "quickpet", tiktakpet: "tiktakpet" };
+      document.getElementById("cmpTable").innerHTML = sites.map((s) => s.error
+        ? `<tr class="border-b"><td class="py-2 text-right">${NAMES[s.site]||s.site}</td><td colspan="6" class="py-2 text-slate-400">אין גישה</td></tr>`
+        : `<tr class="border-b"><td class="py-2 text-right font-medium">${NAMES[s.site]||s.site}</td><td class="py-2">${fmt(s.sessions)}</td><td class="py-2">${fmt(s.users)}</td><td class="py-2">${fmt(s.revenue)}</td><td class="py-2">${fmt(s.transactions)}</td><td class="py-2">${s.conversionRate}%</td><td class="py-2">${s.bounceRate}%</td></tr>`).join("");
+      const valid = sites.filter((s) => !s.error);
+      const sum = (k) => valid.reduce((a, s) => a + (s[k] || 0), 0);
+      document.getElementById("cmpTotal").innerHTML = `<tr><td class="py-2 text-right">סה"כ</td><td class="py-2">${fmt(sum("sessions"))}</td><td class="py-2">${fmt(sum("users"))}</td><td class="py-2">${fmt(sum("revenue"))}</td><td class="py-2">${fmt(sum("transactions"))}</td><td class="py-2">—</td><td class="py-2">—</td></tr>`;
+      makeChart("cmpSessions", { type: "bar", data: { labels: valid.map((s)=>NAMES[s.site]||s.site), datasets: [{ data: valid.map((s)=>s.sessions), backgroundColor: ["#1d4ed8","#0ea5e9","#10b981"] }] }, options: { responsive: true, plugins: { legend: { display: false } } } });
+      makeChart("cmpRevenue", { type: "bar", data: { labels: valid.map((s)=>NAMES[s.site]||s.site), datasets: [{ data: valid.map((s)=>s.revenue), backgroundColor: ["#16a34a","#65a30d","#f59e0b"] }] }, options: { responsive: true, plugins: { legend: { display: false } } } });
+    }
+    function renderAds(d) {
+      const t = d.totals || {};
+      document.getElementById("adCost").textContent = fmt(t.cost);
+      document.getElementById("adRev").textContent = fmt(t.revenue);
+      document.getElementById("adRoas").textContent = (t.roas ?? 0) + "x";
+      document.getElementById("adClicks").textContent = fmt(t.clicks);
+      document.getElementById("adCpc").textContent = (t.cpc ?? 0);
+      document.getElementById("adTable").innerHTML = (d.campaigns || []).map((c) => {
+        const roasColor = c.roas >= 3 ? "text-emerald-600" : c.roas >= 1 ? "text-amber-600" : "text-rose-600";
+        return `<tr class="border-b last:border-0"><td class="py-2 text-right" title="${c.name}">${shortPath(c.name)}</td><td class="py-2">${fmt(c.cost)}</td><td class="py-2">${fmt(c.clicks)}</td><td class="py-2">${fmt(c.revenue)}</td><td class="py-2">${fmt(c.transactions)}</td><td class="py-2 font-bold ${roasColor}">${c.roas}x</td></tr>`;
+      }).join("") || `<tr><td class="py-3 text-slate-400" colspan="6">אין נתוני פרסום בתקופה זו</td></tr>`;
+    }
+    const DAY_NAMES = ["ראשון","שני","שלישי","רביעי","חמישי","שישי","שבת"];
+    function renderAudience(d) {
+      document.getElementById("audCountries").innerHTML = (d.countries || []).map((c) =>
+        `<tr class="border-b last:border-0"><td class="py-2">${c.name}</td><td class="py-2">${fmt(c.sessions)}</td></tr>`).join("");
+      document.getElementById("audCities").innerHTML = (d.cities || []).map((c) =>
+        `<tr class="border-b last:border-0"><td class="py-2">${c.name}</td><td class="py-2">${fmt(c.sessions)}</td></tr>`).join("");
+      const hours = d.byHour || [];
+      makeChart("audHours", { type: "bar", data: { labels: hours.map((h)=>h.hour+":00"), datasets: [{ data: hours.map((h)=>h.sessions), backgroundColor: "#1d4ed8" }] }, options: { responsive: true, plugins: { legend: { display: false } } } });
+      const days = d.byDay || [];
+      makeChart("audDays", { type: "bar", data: { labels: days.map((x)=>DAY_NAMES[x.day]), datasets: [{ data: days.map((x)=>x.sessions), backgroundColor: "#10b981" }] }, options: { responsive: true, plugins: { legend: { display: false } } } });
     }
     const DONUT_COLORS = ["#1d4ed8","#0ea5e9","#10b981","#f59e0b","#ef4444","#8b5cf6","#ec4899","#14b8a6","#64748b","#a3a3a3","#84cc16","#f97316"];
     function renderTraffic(d) {
@@ -316,8 +429,11 @@
 
     const TABS = {
       overview: { path: "/api/data",      render: renderOverview },
+      compare:  { path: "/api/compare",   render: renderCompare },
       sales:    { path: "/api/ecommerce", render: renderSales },
+      ads:      { path: "/api/ads",       render: renderAds },
       traffic:  { path: "/api/sources",   render: renderTraffic },
+      audience: { path: "/api/audience",  render: renderAudience },
       pages:    { path: "/api/pages",     render: renderPages },
       search:   { path: "/api/search",    render: renderSearch },
     };
