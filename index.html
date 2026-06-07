@@ -55,6 +55,7 @@
 
   <!-- Tabs -->
   <div class="card !py-0 px-3 mb-3 flex flex-wrap gap-1">
+    <button data-tab="insights" class="tab-btn px-4 py-3 text-sm">💡 תובנות</button>
     <button data-tab="overview" class="tab-btn px-4 py-3 text-sm">📈 סקירה</button>
     <button data-tab="compare" class="tab-btn px-4 py-3 text-sm">📊 השוואה</button>
     <button data-tab="trends" class="tab-btn px-4 py-3 text-sm">📉 מגמות</button>
@@ -68,6 +69,12 @@
 
   <div id="compareNote" class="text-center text-xs text-slate-400 mb-3"></div>
   <div id="status" class="hidden mb-4 text-center text-sm rounded-lg py-2"></div>
+
+  <!-- INSIGHTS -->
+  <section data-screen="insights" class="hidden">
+    <div id="insSummary" class="flex flex-wrap gap-3 mb-4"></div>
+    <div id="insList" class="space-y-3"></div>
+  </section>
 
   <!-- OVERVIEW -->
   <section data-screen="overview">
@@ -282,6 +289,19 @@
     }
 
     // ===== Renderers =====
+    function renderInsights(d) {
+      const C = d.counts || {};
+      document.getElementById("insSummary").innerHTML = [
+        `<div class="card flex items-center gap-2"><span class="text-2xl">🔴</span><div><div class="text-2xl font-bold text-rose-600">${C.bad||0}</div><div class="text-xs text-slate-500">דחוף</div></div></div>`,
+        `<div class="card flex items-center gap-2"><span class="text-2xl">🟡</span><div><div class="text-2xl font-bold text-amber-500">${C.warn||0}</div><div class="text-xs text-slate-500">הזדמנויות</div></div></div>`,
+        `<div class="card flex items-center gap-2"><span class="text-2xl">🟢</span><div><div class="text-2xl font-bold text-emerald-600">${C.good||0}</div><div class="text-xs text-slate-500">חוזקות</div></div></div>`,
+      ].join("");
+      const STYLE = { bad:{b:"border-rose-400",bg:"bg-rose-50",i:"🔴"}, warn:{b:"border-amber-400",bg:"bg-amber-50",i:"🟡"}, good:{b:"border-emerald-400",bg:"bg-emerald-50",i:"🟢"} };
+      document.getElementById("insList").innerHTML = (d.insights||[]).map((x) => {
+        const s = STYLE[x.level] || STYLE.warn;
+        return `<div class="card border-r-4 ${s.b} ${s.bg}"><div class="font-bold text-slate-800 mb-1">${s.i} ${x.title}</div><div class="text-sm text-slate-600">💡 ${x.rec}</div></div>`;
+      }).join("") || `<div class="card text-slate-400">אין תובנות</div>`;
+    }
     function renderOverview(d) {
       const a = d.analytics || {}, s = d.searchConsole || {}, pr = d.prev || {};
       document.getElementById("compareNote").textContent = d.compareTo ? "בהשוואה לתקופה: " + d.compareTo : "";
@@ -374,6 +394,7 @@
     }
 
     const TABS = {
+      insights:{path:"/api/insights",render:renderInsights},
       overview:{path:"/api/data",render:renderOverview}, compare:{path:"/api/compare",render:renderCompare},
       trends:{path:"/api/trends",render:renderTrends},
       sales:{path:"/api/ecommerce",render:renderSales}, ads:{path:"/api/ads",render:renderAds},
