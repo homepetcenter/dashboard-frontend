@@ -250,15 +250,37 @@
     }
     function drawTable(id) {
       const st = tables[id], el = document.getElementById(id); if (!el) return;
+      if (!st.expanded) st.expanded = new Set();
+      const hasExpand = typeof st.opts.expand === "function";
+      const idKey = st.columns[0].key;
       let rows = st.rows.slice();
       if (st.filter) { const f = st.filter.toLowerCase(); rows = rows.filter((r) => st.columns.some((c) => String(r[c.key] ?? "").toLowerCase().includes(f))); }
       if (st.sort) { const { key, dir } = st.sort; rows.sort((a, b) => { let x = a[key], y = b[key]; if (typeof x === "number" && typeof y === "number") return dir === "asc" ? x - y : y - x; x = String(x ?? ""); y = String(y ?? ""); return dir === "asc" ? x.localeCompare(y, "he") : y.localeCompare(x, "he"); }); }
-      const head = st.columns.map((c) => `<th data-k="${c.key}" class="srt py-2 font-medium cursor-pointer select-none ${c.align === "right" ? "text-right" : ""}">${c.label}${st.sort && st.sort.key === c.key ? (st.sort.dir === "asc" ? " ▲" : " ▼") : ""}</th>`).join("");
-      const body = rows.length ? rows.map((r) => `<tr class="border-b last:border-0">${st.columns.map((c) => `<td class="py-2 ${c.align === "right" ? "text-right" : ""}">${cellHtml(r[c.key], c)}</td>`).join("")}</tr>`).join("") : `<tr><td class="py-3 text-slate-400" colspan="${st.columns.length}">אין תוצאות</td></tr>`;
-      el.innerHTML = `${st.opts.search === false ? "" : `<input type="text" placeholder="🔍 חיפוש..." class="tbl-search mb-2 border border-slate-300 rounded-lg px-3 py-1 text-sm outline-none focus:ring-2 focus:ring-blue-400 w-full" value="${st.filter.replace(/"/g, "&quot;")}">`}<div class="overflow-x-auto ${st.opts.scroll ? "max-h-[40rem] overflow-y-auto" : ""}"><table class="w-full text-sm whitespace-nowrap"><thead class="${st.opts.scroll ? "sticky top-0 bg-white" : ""}"><tr class="text-slate-400 border-b">${head}</tr></thead><tbody>${body}</tbody></table></div>`;
+      const colCount = st.columns.length + (hasExpand ? 1 : 0);
+      const head = (hasExpand ? `<th class="w-6"></th>` : "") + st.columns.map((c) => `<th data-k="${c.key}" class="srt py-2 font-medium cursor-pointer select-none ${c.align === "right" ? "text-right" : ""}">${c.label}${st.sort && st.sort.key === c.key ? (st.sort.dir === "asc" ? " ▲" : " ▼") : ""}</th>`).join("");
+      let body = "";
+      if (!rows.length) body = `<tr><td class="py-3 text-slate-400" colspan="${colCount}">אין תוצאות</td></tr>`;
+      else rows.forEach((r) => {
+        const rid = String(r[idKey]); const open = st.expanded.has(rid);
+        const toggle = hasExpand ? `<td class="py-2 text-slate-400 cursor-pointer exp-tg" data-rid="${rid.replace(/"/g, "&quot;")}">${open ? "▾" : "▸"}</td>` : "";
+        body += `<tr class="border-b ${hasExpand ? "cursor-pointer exp-row hover:bg-slate-50" : ""}" data-rid="${rid.replace(/"/g, "&quot;")}">${toggle}${st.columns.map((c) => `<td class="py-2 ${c.align === "right" ? "text-right" : ""}">${cellHtml(r[c.key], c)}</td>`).join("")}</tr>`;
+        if (hasExpand && open) body += `<tr class="bg-slate-50"><td colspan="${colCount}" class="py-2 px-3">${st.opts.expand(r)}</td></tr>`;
+      });
+      let foot = "";
+      const hasNumCol = st.columns.some((c, i) => i > 0 && (c.type === "num" || c.type === "money"));
+      if (st.opts.totals !== false && rows.length && hasNumCol) {
+        const cells = (hasExpand ? `<td></td>` : "") + st.columns.map((c, i) => {
+          if (i === 0) return `<td class="py-2 ${c.align === "right" ? "text-right" : ""}">סה"כ (${fmt(rows.length)})</td>`;
+          if (c.type === "num" || c.type === "money") return `<td class="py-2">${fmt(rows.reduce((s, r) => s + (Number(r[c.key]) || 0), 0))}</td>`;
+          return `<td></td>`;
+        }).join("");
+        foot = `<tfoot class="border-t-2 font-bold text-slate-700 ${st.opts.scroll ? "sticky bottom-0 bg-white" : ""}"><tr>${cells}</tr></tfoot>`;
+      }
+      el.innerHTML = `${st.opts.search === false ? "" : `<input type="text" placeholder="🔍 חיפוש..." class="tbl-search mb-2 border border-slate-300 rounded-lg px-3 py-1 text-sm outline-none focus:ring-2 focus:ring-blue-400 w-full" value="${st.filter.replace(/"/g, "&quot;")}">`}<div class="overflow-x-auto ${st.opts.scroll ? "max-h-[40rem] overflow-y-auto" : ""}"><table class="w-full text-sm whitespace-nowrap"><thead class="${st.opts.scroll ? "sticky top-0 bg-white" : ""}"><tr class="text-slate-400 border-b">${head}</tr></thead><tbody>${body}</tbody>${foot}</table></div>`;
       const inp = el.querySelector(".tbl-search");
       if (inp) inp.addEventListener("input", (e) => { st.filter = e.target.value; const pos = e.target.selectionStart; drawTable(id); const ni = el.querySelector(".tbl-search"); ni.focus(); try { ni.setSelectionRange(pos, pos); } catch (_) {} });
       el.querySelectorAll("th[data-k]").forEach((th) => th.addEventListener("click", () => { const k = th.dataset.k; if (st.sort && st.sort.key === k) st.sort.dir = st.sort.dir === "asc" ? "desc" : "asc"; else st.sort = { key: k, dir: "desc" }; drawTable(id); }));
+      if (hasExpand) el.querySelectorAll(".exp-row").forEach((tr) => tr.addEventListener("click", () => { const rid = tr.dataset.rid; if (st.expanded.has(rid)) st.expanded.delete(rid); else st.expanded.add(rid); drawTable(id); }));
     }
     function pctCol(rows, key, into) { const tot = rows.reduce((s, r) => s + (r[key] || 0), 0) || 1; rows.forEach((r) => (r[into] = Number(((r[key] / tot) * 100).toFixed(1)))); }
 
@@ -403,7 +425,8 @@
       mountTable("seCtrOppMount", kwCols, (d.ctrOpportunities||[]).slice(), { scroll:true, defaultSort:{key:"impressions",dir:"desc"} });
       mountTable("seStrikingMount", kwCols, (d.strikingDistance||[]).slice(), { scroll:true, defaultSort:{key:"impressions",dir:"desc"} });
       mountTable("seQuestionsMount", kwCols, (d.questions||[]).slice(), { scroll:true, defaultSort:{key:"impressions",dir:"desc"} });
-      mountTable("seCannibalMount", [ {key:"key",label:"מילה",align:"right",long:true},{key:"pages",label:"דפים מתחרים",type:"num"},{key:"impressions",label:"חשיפות",type:"num"},{key:"clicks",label:"קליקים",type:"num"} ], (d.cannibalization||[]).slice(), { scroll:true, defaultSort:{key:"impressions",dir:"desc"} });
+      const cannibExpand = (r) => `<div class="text-xs text-slate-600 space-y-1">${(r.detail||[]).map((pg)=>`• <a href="${pg.page}" target="_blank" rel="noopener" class="text-blue-600 hover:underline">${prettyUrl(pg.page)}</a> <span class="text-slate-400">— מיקום ${pg.position}, ${fmt(pg.clicks)} קליקים, ${fmt(pg.impressions)} חשיפות</span>`).join("<br>")}</div>`;
+      mountTable("seCannibalMount", [ {key:"key",label:"מילה",align:"right",long:true},{key:"pages",label:"דפים",type:"num"},{key:"impressions",label:"חשיפות",type:"num"},{key:"clicks",label:"קליקים",type:"num"} ], (d.cannibalization||[]).slice(), { scroll:true, defaultSort:{key:"impressions",dir:"desc"}, expand:cannibExpand });
     }
 
     const TABS = {
