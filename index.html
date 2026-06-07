@@ -183,6 +183,14 @@
       <div class="card md:col-span-2"><div class="text-slate-600 font-medium mb-2">התפלגות מיקומים <span id="seKwTotal" class="text-slate-400 text-sm"></span></div><canvas id="sePos" height="70"></canvas></div>
     </div>
     <div class="grid md:grid-cols-2 gap-4 mb-4">
+      <div class="card"><div class="text-slate-600 font-medium mb-1">🎯 הזדמנויות CTR</div><div class="text-xs text-slate-400 mb-2">הרבה חשיפות, מעט קליקים — שפרי כותרת ותיאור</div><div id="seCtrOppMount"></div></div>
+      <div class="card"><div class="text-slate-600 font-medium mb-1">🏃 Striking Distance (מיקום 5-15)</div><div class="text-xs text-slate-400 mb-2">קרוב לעמוד 1 — דחיפה קטנה תכפיל תנועה</div><div id="seStrikingMount"></div></div>
+    </div>
+    <div class="grid md:grid-cols-2 gap-4 mb-4">
+      <div class="card"><div class="text-slate-600 font-medium mb-1">❓ מילות שאלה / כוונה</div><div class="text-xs text-slate-400 mb-2">רעיונות לתוכן, מאמרים ובלוג</div><div id="seQuestionsMount"></div></div>
+      <div class="card"><div class="text-slate-600 font-medium mb-1">⚠️ קניבליזציה</div><div class="text-xs text-slate-400 mb-2">מילים שכמה דפים מתחרים עליהן — מבלבל את גוגל</div><div id="seCannibalMount"></div></div>
+    </div>
+    <div class="grid md:grid-cols-2 gap-4 mb-4">
       <div class="card"><div class="text-slate-600 font-medium mb-3">📈 עלו בדירוג</div><div id="seWinnersMount"></div></div>
       <div class="card"><div class="text-slate-600 font-medium mb-3">📉 ירדו בדירוג</div><div id="seLosersMount"></div></div>
     </div>
@@ -391,6 +399,11 @@
       const moveCols = [ {key:"key",label:"מילה",align:"right",long:true},{key:"prevPosition",label:"קודם"},{key:"position",label:"עכשיו"},{key:"change",label:"שינוי",render:(v)=>`<span class="font-bold ${v>0?'text-emerald-600':'text-rose-600'}">${v>0?'▲':'▼'} ${Math.abs(v)}</span>`} ];
       mountTable("seWinnersMount", moveCols, (d.winners||[]).slice(), { scroll:true, defaultSort:{key:"change",dir:"desc"} });
       mountTable("seLosersMount", moveCols, (d.losers||[]).slice(), { scroll:true, defaultSort:{key:"change",dir:"asc"} });
+      const kwCols = [ {key:"key",label:"מילה",align:"right",long:true},{key:"impressions",label:"חשיפות",type:"num"},{key:"clicks",label:"קליקים",type:"num"},{key:"ctr",label:"CTR",type:"pct"},{key:"position",label:"מיקום"} ];
+      mountTable("seCtrOppMount", kwCols, (d.ctrOpportunities||[]).slice(), { scroll:true, defaultSort:{key:"impressions",dir:"desc"} });
+      mountTable("seStrikingMount", kwCols, (d.strikingDistance||[]).slice(), { scroll:true, defaultSort:{key:"impressions",dir:"desc"} });
+      mountTable("seQuestionsMount", kwCols, (d.questions||[]).slice(), { scroll:true, defaultSort:{key:"impressions",dir:"desc"} });
+      mountTable("seCannibalMount", [ {key:"key",label:"מילה",align:"right",long:true},{key:"pages",label:"דפים מתחרים",type:"num"},{key:"impressions",label:"חשיפות",type:"num"},{key:"clicks",label:"קליקים",type:"num"} ], (d.cannibalization||[]).slice(), { scroll:true, defaultSort:{key:"impressions",dir:"desc"} });
     }
 
     const TABS = {
