@@ -160,6 +160,7 @@
       <div class="card"><div class="text-slate-600 font-medium mb-3">חדשים מול חוזרים</div><canvas id="audNvr" height="180"></canvas></div>
       <div class="card"><div class="text-slate-600 font-medium mb-3">המרה: חדשים מול חוזרים</div><div id="audNvrMount"></div></div>
     </div>
+    <div class="card mb-4"><div class="text-slate-600 font-medium mb-1">🔎 חיפושים פנימיים באתר</div><div class="text-xs text-slate-400 mb-2">מה גולשים מחפשים בתיבת החיפוש שלך — ביקוש ישיר!</div><div id="audSearchMount"></div></div>
     <div class="card mb-4"><div class="text-slate-600 font-medium mb-3">פעילות לפי שעה ביום</div><canvas id="audHours" height="80"></canvas></div>
     <div class="card"><div class="text-slate-600 font-medium mb-3">פעילות לפי יום בשבוע</div><canvas id="audDays" height="70"></canvas></div>
   </section>
@@ -409,6 +410,7 @@
       const nvr = d.newReturning || [];
       makeChart("audNvr", { type:"doughnut", data:{ labels:nvr.map((x)=>x.type), datasets:[{ data:nvr.map((x)=>x.users), backgroundColor:["#1d4ed8","#10b981"] }] }, options:{responsive:true,plugins:{legend:{position:"bottom"}}} });
       mountTable("audNvrMount", [ {key:"type",label:"סוג",align:"right"},{key:"users",label:"משתמשים",type:"num"},{key:"transactions",label:"עסקאות",type:"num"},{key:"conversionRate",label:"המרה",type:"pct"} ], nvr.slice(), { search:false });
+      mountTable("audSearchMount", [ {key:"term",label:"מונח חיפוש",align:"right",long:true},{key:"count",label:"חיפושים",type:"num"},{key:"users",label:"משתמשים",type:"num"} ], (d.siteSearch||[]).slice(), { defaultSort:{key:"count",dir:"desc"}, scroll:true });
     }
     function renderPages(d) {
       mountTable("pgTopMount", [ {key:"path",label:"דף",align:"right",long:true,url:true},{key:"views",label:"צפיות",type:"num"} ], (d.topPages||[]).slice(), { defaultSort:{key:"views",dir:"desc"}, scroll:true });
