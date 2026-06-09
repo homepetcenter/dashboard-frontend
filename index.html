@@ -75,6 +75,8 @@
     <button data-tab="ads" class="tab-btn px-4 py-3 text-sm">📣 פרסום (ROAS)</button>
     <button data-tab="traffic" class="tab-btn px-4 py-3 text-sm">🚦 מקורות תנועה</button>
     <button data-tab="audience" class="tab-btn px-4 py-3 text-sm">🌍 קהל</button>
+    <button data-tab="retention" class="tab-btn px-4 py-3 text-sm">🔁 Retention</button>
+    <button data-tab="events" class="tab-btn px-4 py-3 text-sm">🔔 אירועים</button>
     <button data-tab="pages" class="tab-btn px-4 py-3 text-sm">📄 דפים מובילים</button>
     <button data-tab="search" class="tab-btn px-4 py-3 text-sm">🔍 חיפוש</button>
   </div>
@@ -159,6 +161,13 @@
       <div class="card"><div class="flex items-center justify-between mb-3"><div class="text-slate-600 font-medium">משפך מכירות</div><div class="text-sm">נטישת עגלה: <span id="slAbandon" class="font-bold text-rose-600">—</span></div></div><canvas id="slFunnel" height="160"></canvas></div>
       <div class="card"><div class="text-slate-600 font-medium mb-3">הכנסות לפי ערוץ</div><div id="slChannelsMount"></div></div>
     </div>
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
+      <div class="card"><div class="kpi-label">הכנסה למשתמש (ARPU)</div><div id="cvArpu" class="kpi-val !text-emerald-600">—</div></div>
+      <div class="card"><div class="kpi-label">קונים</div><div id="cvBuyers" class="kpi-val">—</div></div>
+      <div class="card"><div class="kpi-label">הכנסה לקונה</div><div id="cvRevBuyer" class="kpi-val">—</div></div>
+      <div class="card"><div class="kpi-label">הזמנות לקונה</div><div id="cvOrders" class="kpi-val">—</div></div>
+      <div class="card"><div class="kpi-label">% קונים חוזרים</div><div id="cvReturn" class="kpi-val">—</div></div>
+    </div>
     <div class="card mb-4"><div class="text-slate-600 font-medium mb-3">משפך Checkout מפורט</div><div id="slCheckoutFunnel"></div></div>
     <div class="card mb-4"><div class="text-slate-600 font-medium mb-3">מוצרים (צפייה→סל→רכישה→הכנסה)</div><div id="slProductsMount"></div></div>
     <div class="card"><div class="text-slate-600 font-medium mb-3">קטגוריות מובילות</div><div id="slCategoriesMount"></div></div>
@@ -188,6 +197,12 @@
 
   <!-- AUDIENCE -->
   <section data-screen="audience" class="hidden">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+      <div class="card"><div class="kpi-label">Engagement Rate</div><div id="engRate" class="kpi-val">—</div></div>
+      <div class="card"><div class="kpi-label">סשנים מעורבים</div><div id="engSessions" class="kpi-val">—</div></div>
+      <div class="card"><div class="kpi-label">אירועים לסשן</div><div id="engEvents" class="kpi-val">—</div></div>
+      <div class="card"><div class="kpi-label">זמן מעורבות/משתמש</div><div id="engTime" class="kpi-val">—</div></div>
+    </div>
     <div class="grid md:grid-cols-2 gap-4 mb-4">
       <div class="card"><div class="text-slate-600 font-medium mb-3">מדינות מובילות</div><div id="audCountriesMount"></div></div>
       <div class="card"><div class="text-slate-600 font-medium mb-3">ערים מובילות</div><div id="audCitiesMount"></div></div>
@@ -207,6 +222,16 @@
       <div class="card"><div class="text-slate-600 font-medium mb-3">גיל (אם זמין)</div><canvas id="audAge" height="150"></canvas></div>
       <div class="card"><div class="text-slate-600 font-medium mb-3">מגדר (אם זמין)</div><canvas id="audGender" height="150"></canvas></div>
     </div>
+  </section>
+
+  <!-- RETENTION -->
+  <section data-screen="retention" class="hidden">
+    <div class="card"><div class="text-slate-600 font-medium mb-1">Retention שבועי (קוהורטות)</div><div class="text-xs text-slate-400 mb-3">כל שורה = קבוצת משתמשים שהגיעה לראשונה באותו שבוע. העמודות = כמה חזרו בשבועות שאחרי.</div><div id="retentionGrid" class="overflow-x-auto"></div></div>
+  </section>
+
+  <!-- EVENTS -->
+  <section data-screen="events" class="hidden">
+    <div class="card"><div class="text-slate-600 font-medium mb-3">כל האירועים באתר</div><div id="eventsMount"></div></div>
   </section>
 
   <!-- PAGES -->
@@ -363,6 +388,19 @@
     }
 
     // ===== Renderers =====
+    function renderEvents(d) {
+      mountTable("eventsMount", [ {key:"name",label:"אירוע",align:"right"},{key:"count",label:"כמות",type:"num"},{key:"users",label:"משתמשים",type:"num"} ], (d.events||[]).slice(), { defaultSort:{key:"count",dir:"desc"}, scroll:true });
+    }
+    function renderRetention(d) {
+      const rows = d.retention || [];
+      const cell = (pct) => { const bg = pct >= 20 ? "#1d4ed8" : pct >= 10 ? "#3b82f6" : pct >= 5 ? "#93c5fd" : pct > 0 ? "#dbeafe" : "#f8fafc"; const col = pct >= 10 ? "#fff" : "#334155"; return `background:${bg};color:${col};`; };
+      let html = `<table class="text-sm text-center border-collapse"><thead><tr class="text-slate-400"><th class="py-2 px-3 text-right">קוהורטה (שבוע)</th><th class="py-2 px-3">גודל</th>${[0,1,2,3,4,5].map((n)=>`<th class="py-2 px-3">שבוע ${n}</th>`).join("")}</tr></thead><tbody>`;
+      rows.forEach((r) => {
+        html += `<tr><td class="py-1 px-3 text-right text-slate-600">${niceDate(r.cohort.replace(/-/g,""))}</td><td class="py-1 px-3 font-medium">${fmt(r.size)}</td>${r.weeks.map((w)=>`<td class="py-1 px-3" style="${cell(w.pct)}">${w.users?w.pct+"%":""}</td>`).join("")}</tr>`;
+      });
+      html += `</tbody></table>`;
+      document.getElementById("retentionGrid").innerHTML = rows.length ? html : `<div class="text-slate-400">אין מספיק נתונים</div>`;
+    }
     function renderInsights(d) {
       const C = d.counts || {};
       document.getElementById("insSummary").innerHTML = [
@@ -403,6 +441,12 @@
       setKpi("slRevenue", fmt(d.revenue), d.revenue, pr.revenue); setKpi("slTx", fmt(d.transactions), d.transactions, pr.transactions);
       setKpi("slAov", fmt(d.aov), d.aov, pr.aov); setKpi("slConv", (d.conversionRate ?? 0)+"%", d.conversionRate, pr.conversionRate);
       mountTable("slProductsMount", [ {key:"name",label:"מוצר",align:"right",long:true},{key:"viewed",label:"צפיות",type:"num"},{key:"carted",label:"לסל",type:"num"},{key:"purchased",label:"נרכש",type:"num"},{key:"revenue",label:"הכנסה (₪)",type:"num"},{key:"buyRate",label:"% רכישה",type:"pct"} ], (d.products||[]).slice(), { defaultSort:{key:"revenue",dir:"desc"}, scroll:true });
+      const cv = d.customerValue || {};
+      document.getElementById("cvArpu").textContent = fmt(cv.arpu);
+      document.getElementById("cvBuyers").textContent = fmt(cv.buyers);
+      document.getElementById("cvRevBuyer").textContent = fmt(cv.revenuePerBuyer);
+      document.getElementById("cvOrders").textContent = (cv.ordersPerBuyer ?? 0);
+      document.getElementById("cvReturn").textContent = (cv.returningBuyerShare ?? 0) + "%";
       const f = d.funnel || {};
       document.getElementById("slAbandon").textContent = (f.cartAbandonRate ?? 0) + "%";
       makeChart("slFunnel", { type:"bar", data:{ labels:["צפיות","הוספה לסל","Checkout","רכישה"], datasets:[{ data:[f.sessions,f.addToCart,f.checkout,f.purchase], backgroundColor:["#93c5fd","#60a5fa","#3b82f6","#1d4ed8"] }] }, options:{ indexAxis:"y", responsive:true, plugins:{legend:{display:false}} } });
@@ -453,6 +497,11 @@
       makeChart("audNvr", { type:"doughnut", data:{ labels:nvr.map((x)=>x.type), datasets:[{ data:nvr.map((x)=>x.users), backgroundColor:["#1d4ed8","#10b981"] }] }, options:{responsive:true,plugins:{legend:{position:"bottom"}}} });
       mountTable("audNvrMount", [ {key:"type",label:"סוג",align:"right"},{key:"users",label:"משתמשים",type:"num"},{key:"transactions",label:"עסקאות",type:"num"},{key:"conversionRate",label:"המרה",type:"pct"} ], nvr.slice(), { search:false });
       mountTable("audSearchMount", [ {key:"term",label:"מונח חיפוש",align:"right",long:true},{key:"count",label:"חיפושים",type:"num"},{key:"users",label:"משתמשים",type:"num"} ], (d.siteSearch||[]).slice(), { defaultSort:{key:"count",dir:"desc"}, scroll:true });
+      const eng = d.engagement || {};
+      document.getElementById("engRate").textContent = (eng.engagementRate ?? 0) + "%";
+      document.getElementById("engSessions").textContent = fmt(eng.engagedSessions);
+      document.getElementById("engEvents").textContent = (eng.eventsPerSession ?? 0);
+      document.getElementById("engTime").textContent = fmtDur(eng.avgEngagementPerUser || 0);
       mountTable("audBrowsersMount", [ {key:"name",label:"דפדפן",align:"right"},{key:"sessions",label:"Sessions",type:"num"} ], (d.browsers||[]).slice(), { search:false, defaultSort:{key:"sessions",dir:"desc"} });
       mountTable("audOsMount", [ {key:"name",label:"מערכת",align:"right"},{key:"sessions",label:"Sessions",type:"num"} ], (d.os||[]).slice(), { search:false, defaultSort:{key:"sessions",dir:"desc"} });
       const age = d.age || []; makeChart("audAge", { type:"bar", data:{ labels:age.map((x)=>x.name), datasets:[{ data:age.map((x)=>x.users), backgroundColor:"#8b5cf6" }] }, options:{responsive:true,plugins:{legend:{display:false}}} });
@@ -517,6 +566,7 @@
       trends:{path:"/api/trends",render:renderTrends},
       sales:{path:"/api/ecommerce",render:renderSales}, ads:{path:"/api/ads",render:renderAds},
       traffic:{path:"/api/sources",render:renderTraffic}, audience:{path:"/api/audience",render:renderAudience},
+      retention:{path:"/api/retention",render:renderRetention}, events:{path:"/api/events",render:renderEvents},
       pages:{path:"/api/pages",render:renderPages}, search:{path:"/api/search",render:renderSearch},
     };
     async function loadTab(tab, force) {
