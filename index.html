@@ -123,6 +123,7 @@
       <div class="card"><div class="flex items-center justify-between mb-3"><div class="text-slate-600 font-medium">משפך מכירות</div><div class="text-sm">נטישת עגלה: <span id="slAbandon" class="font-bold text-rose-600">—</span></div></div><canvas id="slFunnel" height="160"></canvas></div>
       <div class="card"><div class="text-slate-600 font-medium mb-3">הכנסות לפי ערוץ</div><div id="slChannelsMount"></div></div>
     </div>
+    <div class="card mb-4"><div class="text-slate-600 font-medium mb-3">משפך Checkout מפורט</div><div id="slCheckoutFunnel"></div></div>
     <div class="card mb-4"><div class="text-slate-600 font-medium mb-3">מוצרים (צפייה→סל→רכישה→הכנסה)</div><div id="slProductsMount"></div></div>
     <div class="card"><div class="text-slate-600 font-medium mb-3">קטגוריות מובילות</div><div id="slCategoriesMount"></div></div>
   </section>
@@ -365,6 +366,15 @@
       const ch = (d.channelRevenue||[]).slice(); pctCol(ch, "revenue", "pct");
       mountTable("slChannelsMount", [ {key:"name",label:"ערוץ",align:"right"},{key:"revenue",label:"הכנסה (₪)",type:"num"},{key:"pct",label:"%",type:"pct"} ], ch, { search:false, defaultSort:{key:"revenue",dir:"desc"} });
       mountTable("slCategoriesMount", [ {key:"name",label:"קטגוריה",align:"right",long:true},{key:"qty",label:"כמות",type:"num"},{key:"revenue",label:"הכנסה (₪)",type:"num"} ], (d.categories||[]).slice(), { defaultSort:{key:"revenue",dir:"desc"}, scroll:true });
+      // Detailed checkout funnel
+      const steps = d.checkoutFunnel || [];
+      const maxC = Math.max(1, ...steps.filter((s)=>s.tracked).map((s)=>s.count));
+      document.getElementById("slCheckoutFunnel").innerHTML = steps.map((s) => {
+        if (!s.tracked) return `<div class="flex items-center gap-3 mb-2 opacity-50"><div class="w-32 text-sm">${s.label}</div><div class="flex-1 text-xs text-slate-400 border border-dashed border-slate-300 rounded px-2 py-1">לא נמדד — להפעיל ב-GTM</div></div>`;
+        const w = Math.max(3, (s.count / maxC) * 100).toFixed(0);
+        const drop = s.dropFromPrev != null ? `<span class="text-rose-600 text-xs font-medium">▼ ${s.dropFromPrev}%</span>` : "";
+        return `<div class="flex items-center gap-3 mb-2"><div class="w-32 text-sm text-slate-700">${s.label}</div><div class="flex-1 bg-slate-100 rounded h-7 relative overflow-hidden"><div class="bg-blue-600 h-7 rounded" style="width:${w}%"></div><span class="absolute inset-0 flex items-center px-2 text-xs font-bold text-slate-800">${fmt(s.count)}</span></div><div class="w-14 text-left">${drop}</div></div>`;
+      }).join("");
     }
     function renderTrends(d) {
       const ser = d.series || [], labels = ser.map((r)=>niceDate(r.date));
