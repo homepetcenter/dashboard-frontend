@@ -57,6 +57,8 @@
   <div class="card !py-0 px-3 mb-3 flex flex-wrap gap-1">
     <button data-tab="insights" class="tab-btn px-4 py-3 text-sm">💡 תובנות</button>
     <button data-tab="overview" class="tab-btn px-4 py-3 text-sm">📈 סקירה</button>
+    <button data-tab="realtime" class="tab-btn px-4 py-3 text-sm">⏱️ זמן אמת</button>
+    <button data-tab="goals" class="tab-btn px-4 py-3 text-sm">🎯 יעדים</button>
     <button data-tab="compare" class="tab-btn px-4 py-3 text-sm">📊 השוואה</button>
     <button data-tab="trends" class="tab-btn px-4 py-3 text-sm">📉 מגמות</button>
     <button data-tab="sales" class="tab-btn px-4 py-3 text-sm">💰 מכירות</button>
@@ -74,6 +76,30 @@
   <section data-screen="insights" class="hidden">
     <div id="insSummary" class="flex flex-wrap gap-3 mb-4"></div>
     <div id="insList" class="space-y-3"></div>
+  </section>
+
+  <!-- REALTIME -->
+  <section data-screen="realtime" class="hidden">
+    <div class="card mb-4 text-center"><div class="kpi-label">משתמשים פעילים עכשיו</div><div id="rtActive" class="text-5xl font-bold text-emerald-600">—</div><div class="text-xs text-slate-400 mt-1">מתעדכן כל 20 שניות · 30 הדקות האחרונות</div></div>
+    <div class="grid md:grid-cols-3 gap-4">
+      <div class="card"><div class="text-slate-600 font-medium mb-3">לפי מכשיר</div><div id="rtDeviceMount"></div></div>
+      <div class="card"><div class="text-slate-600 font-medium mb-3">לפי מדינה</div><div id="rtCountryMount"></div></div>
+      <div class="card"><div class="text-slate-600 font-medium mb-3">מה קורה עכשיו (אירועים)</div><div id="rtEventMount"></div></div>
+    </div>
+  </section>
+
+  <!-- GOALS -->
+  <section data-screen="goals" class="hidden">
+    <div class="card mb-4">
+      <div class="text-slate-600 font-medium mb-3">הגדרת יעדים (לתקופה הנבחרת)</div>
+      <div class="flex flex-wrap gap-4 items-end">
+        <div><label class="text-xs text-slate-500 block mb-1">יעד הכנסות (₪)</label><input id="goalRevenue" type="number" class="border border-slate-300 rounded-lg px-3 py-2 w-40 outline-none focus:ring-2 focus:ring-blue-400" /></div>
+        <div><label class="text-xs text-slate-500 block mb-1">יעד עסקאות</label><input id="goalTx" type="number" class="border border-slate-300 rounded-lg px-3 py-2 w-40 outline-none focus:ring-2 focus:ring-blue-400" /></div>
+        <button id="goalSave" class="bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-5 py-2">שמירה</button>
+      </div>
+      <div class="text-xs text-slate-400 mt-2">היעדים נשמרים בנפרד לכל אתר ומושווים לנתוני התקופה שבחרת למעלה.</div>
+    </div>
+    <div id="goalProgress" class="space-y-4"></div>
   </section>
 
   <!-- OVERVIEW -->
@@ -162,7 +188,15 @@
     </div>
     <div class="card mb-4"><div class="text-slate-600 font-medium mb-1">🔎 חיפושים פנימיים באתר</div><div class="text-xs text-slate-400 mb-2">מה גולשים מחפשים בתיבת החיפוש שלך — ביקוש ישיר!</div><div id="audSearchMount"></div></div>
     <div class="card mb-4"><div class="text-slate-600 font-medium mb-3">פעילות לפי שעה ביום</div><canvas id="audHours" height="80"></canvas></div>
-    <div class="card"><div class="text-slate-600 font-medium mb-3">פעילות לפי יום בשבוע</div><canvas id="audDays" height="70"></canvas></div>
+    <div class="card mb-4"><div class="text-slate-600 font-medium mb-3">פעילות לפי יום בשבוע</div><canvas id="audDays" height="70"></canvas></div>
+    <div class="grid md:grid-cols-2 gap-4 mb-4">
+      <div class="card"><div class="text-slate-600 font-medium mb-3">דפדפנים</div><div id="audBrowsersMount"></div></div>
+      <div class="card"><div class="text-slate-600 font-medium mb-3">מערכת הפעלה</div><div id="audOsMount"></div></div>
+    </div>
+    <div class="grid md:grid-cols-2 gap-4">
+      <div class="card"><div class="text-slate-600 font-medium mb-3">גיל (אם זמין)</div><canvas id="audAge" height="150"></canvas></div>
+      <div class="card"><div class="text-slate-600 font-medium mb-3">מגדר (אם זמין)</div><canvas id="audGender" height="150"></canvas></div>
+    </div>
   </section>
 
   <!-- PAGES -->
@@ -411,7 +445,33 @@
       makeChart("audNvr", { type:"doughnut", data:{ labels:nvr.map((x)=>x.type), datasets:[{ data:nvr.map((x)=>x.users), backgroundColor:["#1d4ed8","#10b981"] }] }, options:{responsive:true,plugins:{legend:{position:"bottom"}}} });
       mountTable("audNvrMount", [ {key:"type",label:"סוג",align:"right"},{key:"users",label:"משתמשים",type:"num"},{key:"transactions",label:"עסקאות",type:"num"},{key:"conversionRate",label:"המרה",type:"pct"} ], nvr.slice(), { search:false });
       mountTable("audSearchMount", [ {key:"term",label:"מונח חיפוש",align:"right",long:true},{key:"count",label:"חיפושים",type:"num"},{key:"users",label:"משתמשים",type:"num"} ], (d.siteSearch||[]).slice(), { defaultSort:{key:"count",dir:"desc"}, scroll:true });
+      mountTable("audBrowsersMount", [ {key:"name",label:"דפדפן",align:"right"},{key:"sessions",label:"Sessions",type:"num"} ], (d.browsers||[]).slice(), { search:false, defaultSort:{key:"sessions",dir:"desc"} });
+      mountTable("audOsMount", [ {key:"name",label:"מערכת",align:"right"},{key:"sessions",label:"Sessions",type:"num"} ], (d.os||[]).slice(), { search:false, defaultSort:{key:"sessions",dir:"desc"} });
+      const age = d.age || []; makeChart("audAge", { type:"bar", data:{ labels:age.map((x)=>x.name), datasets:[{ data:age.map((x)=>x.users), backgroundColor:"#8b5cf6" }] }, options:{responsive:true,plugins:{legend:{display:false}}} });
+      const gen = d.gender || []; makeChart("audGender", { type:"doughnut", data:{ labels:gen.map((x)=>x.name==="male"?"זכר":x.name==="female"?"נקבה":x.name), datasets:[{ data:gen.map((x)=>x.users), backgroundColor:["#1d4ed8","#ec4899","#94a3b8"] }] }, options:{responsive:true,plugins:{legend:{position:"bottom"}}} });
     }
+    function renderRealtime(d) {
+      document.getElementById("rtActive").textContent = fmt(d.active);
+      mountTable("rtDeviceMount", [ {key:"name",label:"מכשיר",align:"right"},{key:"users",label:"פעילים",type:"num"} ], (d.byDevice||[]).slice(), { search:false, defaultSort:{key:"users",dir:"desc"} });
+      mountTable("rtCountryMount", [ {key:"name",label:"מדינה",align:"right"},{key:"users",label:"פעילים",type:"num"} ], (d.byCountry||[]).slice(), { search:false, defaultSort:{key:"users",dir:"desc"} });
+      mountTable("rtEventMount", [ {key:"name",label:"אירוע",align:"right"},{key:"count",label:"כמות",type:"num"} ], (d.byEvent||[]).slice(), { search:false, defaultSort:{key:"count",dir:"desc"} });
+    }
+    function goalKey() { return "goals_" + document.getElementById("siteSelect").value; }
+    function renderGoals(d) {
+      const saved = JSON.parse(localStorage.getItem(goalKey()) || "{}");
+      document.getElementById("goalRevenue").value = saved.revenue || "";
+      document.getElementById("goalTx").value = saved.tx || "";
+      const bar = (label, actual, goal, unit) => {
+        if (!goal) return `<div class="card"><div class="font-medium text-slate-700 mb-1">${label}</div><div class="text-sm text-slate-400">לא הוגדר יעד</div></div>`;
+        const p = Math.min(100, (actual / goal) * 100), reached = actual >= goal;
+        return `<div class="card"><div class="flex justify-between mb-1"><div class="font-medium text-slate-700">${label}</div><div class="text-sm ${reached?'text-emerald-600':'text-slate-600'}">${fmt(actual)} / ${fmt(goal)} ${unit} (${p.toFixed(0)}%)</div></div><div class="bg-slate-100 rounded-full h-4 overflow-hidden"><div class="${reached?'bg-emerald-500':'bg-blue-600'} h-4" style="width:${p}%"></div></div></div>`;
+      };
+      document.getElementById("goalProgress").innerHTML = bar("הכנסות", d.revenue||0, saved.revenue, "₪") + bar("עסקאות", d.transactions||0, saved.tx, "");
+    }
+    document.getElementById("goalSave").addEventListener("click", () => {
+      localStorage.setItem(goalKey(), JSON.stringify({ revenue: Number(document.getElementById("goalRevenue").value)||0, tx: Number(document.getElementById("goalTx").value)||0 }));
+      loadTab("goals", true);
+    });
     function renderPages(d) {
       mountTable("pgTopMount", [ {key:"path",label:"דף",align:"right",long:true,url:true},{key:"views",label:"צפיות",type:"num"} ], (d.topPages||[]).slice(), { defaultSort:{key:"views",dir:"desc"}, scroll:true });
       mountTable("pgLandingMount", [ {key:"path",label:"דף כניסה",align:"right",long:true,url:true},{key:"sessions",label:"Sessions",type:"num"},{key:"bounceRate",label:"Bounce",type:"pct"},{key:"revenue",label:"הכנסה (₪)",type:"num"},{key:"transactions",label:"עסקאות",type:"num"},{key:"convRate",label:"המרה",type:"pct"} ], (d.landingPages||[]).slice(), { defaultSort:{key:"sessions",dir:"desc"}, scroll:true });
@@ -442,7 +502,7 @@
     }
 
     const TABS = {
-      insights:{path:"/api/insights",render:renderInsights},
+      insights:{path:"/api/insights",render:renderInsights}, realtime:{path:"/api/realtime",render:renderRealtime}, goals:{path:"/api/ecommerce",render:renderGoals},
       overview:{path:"/api/data",render:renderOverview}, compare:{path:"/api/compare",render:renderCompare},
       trends:{path:"/api/trends",render:renderTrends},
       sales:{path:"/api/ecommerce",render:renderSales}, ads:{path:"/api/ads",render:renderAds},
@@ -474,6 +534,7 @@
     });
     document.getElementById("siteSelect").addEventListener("change", () => { Object.keys(cache).forEach((k)=>delete cache[k]); loadTab(currentTab,true); });
     setActiveRange("30d"); showTab("overview");
+    setInterval(() => { if (currentTab === "realtime" && !document.hidden) loadTab("realtime", true); }, 20000);
   </script>
 </body>
 </html>
