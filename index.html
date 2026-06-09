@@ -261,8 +261,8 @@
 
     // ===== Generic sortable + filterable table =====
     const tables = {};
-    function cellHtml(val, col) {
-      if (col.render) return col.render(val);
+    function cellHtml(val, col, row) {
+      if (col.render) return col.render(val, row);
       if (val == null) return "";
       if (col.type === "num" || col.type === "money") return fmt(val);
       if (col.type === "pct") return val + "%";
@@ -299,7 +299,7 @@
       else rows.forEach((r) => {
         const rid = String(r[idKey]); const open = st.expanded.has(rid);
         const toggle = hasExpand ? `<td class="py-2 text-slate-400 cursor-pointer exp-tg" data-rid="${rid.replace(/"/g, "&quot;")}">${open ? "▾" : "▸"}</td>` : "";
-        body += `<tr class="border-b ${hasExpand ? "cursor-pointer exp-row hover:bg-slate-50" : ""}" data-rid="${rid.replace(/"/g, "&quot;")}">${toggle}${st.columns.map((c) => `<td class="py-2 ${c.align === "right" ? "text-right" : ""}">${cellHtml(r[c.key], c)}</td>`).join("")}</tr>`;
+        body += `<tr class="border-b ${hasExpand ? "cursor-pointer exp-row hover:bg-slate-50" : ""}" data-rid="${rid.replace(/"/g, "&quot;")}">${toggle}${st.columns.map((c) => `<td class="py-2 ${c.align === "right" ? "text-right" : ""}">${cellHtml(r[c.key], c, r)}</td>`).join("")}</tr>`;
         if (hasExpand && open) body += `<tr class="bg-slate-50"><td colspan="${colCount}" class="py-2 px-3">${st.opts.expand(r)}</td></tr>`;
       });
       let foot = "";
@@ -496,7 +496,11 @@
       const kwCols = [ {key:"key",label:"מילה",align:"right",long:true},{key:"impressions",label:"חשיפות",type:"num"},{key:"clicks",label:"קליקים",type:"num"},{key:"ctr",label:"CTR",type:"pct"},{key:"position",label:"מיקום"} ];
       mountTable("seCtrOppMount", kwCols, (d.ctrOpportunities||[]).slice(), { scroll:true, defaultSort:{key:"impressions",dir:"desc"} });
       mountTable("seStrikingMount", kwCols, (d.strikingDistance||[]).slice(), { scroll:true, defaultSort:{key:"impressions",dir:"desc"} });
-      mountTable("seQuestionsMount", kwCols, (d.questions||[]).slice(), { scroll:true, defaultSort:{key:"impressions",dir:"desc"} });
+      const pageCell = (v, row) => v
+        ? `<a href="${v}" target="_blank" rel="noopener" class="text-blue-600 hover:underline" title="${prettyUrl(v)}">${shortPath(prettyUrl(v))}</a> <span class="text-slate-400 text-xs">(מיקום ${row.pagePosition})</span>`
+        : `<span class="text-amber-600 text-xs font-medium">✍️ אין דף — הזדמנות לתוכן</span>`;
+      const qstCols = [ {key:"key",label:"מילה",align:"right",long:true},{key:"impressions",label:"חשיפות",type:"num"},{key:"clicks",label:"קליקים",type:"num"},{key:"position",label:"מיקום"},{key:"page",label:"דף מתאים באתר",align:"right",render:pageCell} ];
+      mountTable("seQuestionsMount", qstCols, (d.questions||[]).slice(), { scroll:true, defaultSort:{key:"impressions",dir:"desc"} });
       const cannibExpand = (r) => `<div class="text-xs text-slate-600 space-y-1">${(r.detail||[]).map((pg)=>`• <a href="${pg.page}" target="_blank" rel="noopener" class="text-blue-600 hover:underline">${prettyUrl(pg.page)}</a> <span class="text-slate-400">— מיקום ${pg.position}, ${fmt(pg.clicks)} קליקים, ${fmt(pg.impressions)} חשיפות</span>`).join("<br>")}</div>`;
       mountTable("seCannibalMount", [ {key:"key",label:"מילה",align:"right",long:true},{key:"pages",label:"דפים",type:"num"},{key:"impressions",label:"חשיפות",type:"num"},{key:"clicks",label:"קליקים",type:"num"} ], (d.cannibalization||[]).slice(), { scroll:true, defaultSort:{key:"impressions",dir:"desc"}, expand:cannibExpand });
     }
