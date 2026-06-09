@@ -230,10 +230,7 @@
       <div class="card"><div class="text-slate-600 font-medium mb-3">📈 עלו בדירוג</div><div id="seWinnersMount"></div></div>
       <div class="card"><div class="text-slate-600 font-medium mb-3">📉 ירדו בדירוג</div><div id="seLosersMount"></div></div>
     </div>
-    <div class="grid md:grid-cols-2 gap-4">
-      <div class="card"><div class="text-slate-600 font-medium mb-3">מילות חיפוש מובילות</div><div id="seQMount"></div></div>
-      <div class="card"><div class="text-slate-600 font-medium mb-3">דפים מובילים בחיפוש</div><div id="sePMount"></div></div>
-    </div>
+    <div class="card"><div class="text-slate-600 font-medium mb-3">מילות חיפוש מובילות + הדף המדורג</div><div id="seQMount"></div></div>
   </section>
 
   <div class="text-center text-slate-400 text-xs mt-6">Powered by Railway Backend | Dashboard v6.0</div>
@@ -484,15 +481,13 @@
       document.getElementById("seKwTotal").textContent = d.totalKeywords ? `(סה"כ ${fmt(d.totalKeywords)} מילים)` : "";
       makeChart("sePos", { type:"bar", data:{ labels:pos.map((b)=>b.bucket), datasets:[{ data:pos.map((b)=>b.count), backgroundColor:["#16a34a","#65a30d","#eab308","#f97316","#dc2626"] }] }, options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}} });
       const metricCols = [ {key:"clicks",label:"קליקים",type:"num"},{key:"impressions",label:"חשיפות",type:"num"},{key:"ctr",label:"CTR",type:"pct"},{key:"position",label:"מיקום"} ];
-      const qCols = [ {key:"key",label:"מילה",align:"right",long:true}, ...metricCols ];
-      const pCols = [ {key:"key",label:"דף",align:"right",long:true,url:true}, ...metricCols ];
-      mountTable("seQMount", qCols, (d.queries||[]).slice(), { defaultSort:{key:"clicks",dir:"desc"}, scroll:true });
-      mountTable("sePMount", pCols, (d.pages||[]).slice(), { defaultSort:{key:"clicks",dir:"desc"}, scroll:true });
-      const br = d.branded || { branded:{clicks:0}, nonBranded:{clicks:0} };
-      makeChart("seBrand", { type:"doughnut", data:{ labels:["ממותג","לא-ממותג"], datasets:[{ data:[br.branded.clicks, br.nonBranded.clicks], backgroundColor:["#1d4ed8","#94a3b8"] }] }, options:{responsive:true,plugins:{legend:{position:"bottom"}}} });
       const pageCell = (v, row) => v
         ? `<a href="${v}" target="_blank" rel="noopener" class="text-blue-600 hover:underline" title="${prettyUrl(v)}">${shortPath(prettyUrl(v))}</a> <span class="text-slate-400 text-xs">(${row.pagePosition})</span>`
         : `<span class="text-amber-600 text-xs font-medium">✍️ אין דף</span>`;
+      const combinedCols = [ {key:"key",label:"מילה",align:"right",long:true}, {key:"page",label:"דף מדורג",align:"right",render:pageCell}, ...metricCols ];
+      mountTable("seQMount", combinedCols, (d.queries||[]).slice(), { defaultSort:{key:"clicks",dir:"desc"}, scroll:true });
+      const br = d.branded || { branded:{clicks:0}, nonBranded:{clicks:0} };
+      makeChart("seBrand", { type:"doughnut", data:{ labels:["ממותג","לא-ממותג"], datasets:[{ data:[br.branded.clicks, br.nonBranded.clicks], backgroundColor:["#1d4ed8","#94a3b8"] }] }, options:{responsive:true,plugins:{legend:{position:"bottom"}}} });
       const moveCols = [ {key:"key",label:"מילה",align:"right",long:true},{key:"prevPosition",label:"קודם"},{key:"position",label:"עכשיו"},{key:"change",label:"שינוי",render:(v)=>`<span class="font-bold ${v>0?'text-emerald-600':'text-rose-600'}">${v>0?'▲':'▼'} ${Math.abs(v)}</span>`},{key:"page",label:"דף",align:"right",render:pageCell} ];
       mountTable("seWinnersMount", moveCols, (d.winners||[]).slice(), { scroll:true, defaultSort:{key:"change",dir:"desc"} });
       mountTable("seLosersMount", moveCols, (d.losers||[]).slice(), { scroll:true, defaultSort:{key:"change",dir:"asc"} });
