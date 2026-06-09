@@ -63,22 +63,14 @@
     </div>
   </div>
 
-  <!-- Tabs -->
+  <!-- Tabs (6 grouped screens) -->
   <div class="card !py-0 px-3 mb-3 flex flex-wrap gap-1">
-    <button data-tab="insights" class="tab-btn px-4 py-3 text-sm">💡 תובנות</button>
-    <button data-tab="overview" class="tab-btn px-4 py-3 text-sm">📈 סקירה</button>
-    <button data-tab="realtime" class="tab-btn px-4 py-3 text-sm">⏱️ זמן אמת</button>
-    <button data-tab="goals" class="tab-btn px-4 py-3 text-sm">🎯 יעדים</button>
-    <button data-tab="compare" class="tab-btn px-4 py-3 text-sm">📊 השוואה</button>
-    <button data-tab="trends" class="tab-btn px-4 py-3 text-sm">📉 מגמות</button>
-    <button data-tab="sales" class="tab-btn px-4 py-3 text-sm">💰 מכירות</button>
-    <button data-tab="ads" class="tab-btn px-4 py-3 text-sm">📣 פרסום (ROAS)</button>
-    <button data-tab="traffic" class="tab-btn px-4 py-3 text-sm">🚦 מקורות תנועה</button>
-    <button data-tab="audience" class="tab-btn px-4 py-3 text-sm">🌍 קהל</button>
-    <button data-tab="retention" class="tab-btn px-4 py-3 text-sm">🔁 Retention</button>
-    <button data-tab="events" class="tab-btn px-4 py-3 text-sm">🔔 אירועים</button>
-    <button data-tab="pages" class="tab-btn px-4 py-3 text-sm">📄 דפים מובילים</button>
-    <button data-tab="search" class="tab-btn px-4 py-3 text-sm">🔍 חיפוש</button>
+    <button data-group="insights" class="tab-btn px-4 py-3 text-sm">💡 תובנות</button>
+    <button data-group="performance" class="tab-btn px-4 py-3 text-sm">📈 ביצועים</button>
+    <button data-group="salesads" class="tab-btn px-4 py-3 text-sm">💰 מכירות ופרסום</button>
+    <button data-group="audience" class="tab-btn px-4 py-3 text-sm">🌍 קהל ותנועה</button>
+    <button data-group="seo" class="tab-btn px-4 py-3 text-sm">🔍 SEO</button>
+    <button data-group="compare" class="tab-btn px-4 py-3 text-sm">📊 השוואת אתרים</button>
   </div>
 
   <div id="compareNote" class="text-center text-xs text-slate-400 mb-3"></div>
@@ -275,7 +267,7 @@
     const fmt = (n) => Number(n || 0).toLocaleString("en-US");
     const fmtDur = (s) => Math.floor(s / 60) + ":" + String(Math.round(s % 60)).padStart(2, "0");
     const RANGE_LABEL = { "7d": "7 ימים אחרונים", "30d": "30 יום אחרונים", "90d": "90 יום אחרונים", "12m": "שנה אחרונה" };
-    let currentRange = "30d", currentTab = "overview", customStart = null, customEnd = null, cmpStart = null, cmpEnd = null;
+    let currentRange = "30d", currentGroup = "performance", customStart = null, customEnd = null, cmpStart = null, cmpEnd = null;
     let charts = {}; const cache = {};
     const cacheKey = () => document.getElementById("siteSelect").value + "|" + (customStart && customEnd ? customStart + ":" + customEnd : currentRange) + "|" + (cmpStart && cmpEnd ? cmpStart + ":" + cmpEnd : "");
     const periodLabel = () => (customStart && customEnd) ? `${customStart} – ${customEnd}` : (RANGE_LABEL[currentRange] || "");
@@ -371,7 +363,7 @@
         const res = await fetch(`${BASE}/api/data?site=homepetcenter&range=7d`, { headers: { "X-Access-Key": pw } });
         if (res.status === 401) { errEl.classList.remove("hidden"); return; }
         accessKey = pw; localStorage.setItem("dashKey", pw); hideLogin();
-        Object.keys(cache).forEach((k) => delete cache[k]); loadTab(currentTab, true);
+        Object.keys(cache).forEach((k) => delete cache[k]); loadGroup(currentGroup, true);
       } catch (e) { errEl.classList.remove("hidden"); }
     }
     document.getElementById("pwBtn").addEventListener("click", () => tryLogin(document.getElementById("pwInput").value));
@@ -527,7 +519,7 @@
     }
     document.getElementById("goalSave").addEventListener("click", () => {
       localStorage.setItem(goalKey(), JSON.stringify({ revenue: Number(document.getElementById("goalRevenue").value)||0, tx: Number(document.getElementById("goalTx").value)||0 }));
-      loadTab("goals", true);
+      loadPart("goals", true);
     });
     function renderPages(d) {
       mountTable("pgTopMount", [ {key:"path",label:"דף",align:"right",long:true,url:true},{key:"views",label:"צפיות",type:"num"} ], (d.topPages||[]).slice(), { defaultSort:{key:"views",dir:"desc"}, scroll:true });
@@ -560,7 +552,7 @@
       mountTable("seCannibalMount", [ {key:"key",label:"מילה",align:"right",long:true},{key:"pages",label:"דפים",type:"num"},{key:"impressions",label:"חשיפות",type:"num"},{key:"clicks",label:"קליקים",type:"num"} ], (d.cannibalization||[]).slice(), { scroll:true, defaultSort:{key:"impressions",dir:"desc"}, expand:cannibExpand });
     }
 
-    const TABS = {
+    const PARTS = {
       insights:{path:"/api/insights",render:renderInsights}, realtime:{path:"/api/realtime",render:renderRealtime}, goals:{path:"/api/ecommerce",render:renderGoals},
       overview:{path:"/api/data",render:renderOverview}, compare:{path:"/api/compare",render:renderCompare},
       trends:{path:"/api/trends",render:renderTrends},
@@ -569,45 +561,66 @@
       retention:{path:"/api/retention",render:renderRetention}, events:{path:"/api/events",render:renderEvents},
       pages:{path:"/api/pages",render:renderPages}, search:{path:"/api/search",render:renderSearch},
     };
-    async function loadTab(tab, force) {
-      const t = TABS[tab], key = cacheKey();
-      if (!force && cache[tab] && cache[tab].key === key) { t.render(cache[tab].data); return; }
+    // ---- Grouped navigation: 6 rich screens, each loads several endpoints ----
+    const GROUPS = {
+      insights: ["insights"],
+      performance: ["overview", "trends", "realtime", "goals"],
+      salesads: ["sales", "ads"],
+      audience: ["traffic", "audience", "retention", "events"],
+      seo: ["search", "pages"],
+      compare: ["compare"],
+    };
+    const DOM_ORDER = ["insights","overview","trends","realtime","goals","sales","ads","traffic","audience","retention","events","search","pages","compare"];
+
+    async function loadPart(name, force) {
+      const t = PARTS[name], key = cacheKey();
+      if (!force && cache[name] && cache[name].key === key) { t.render(cache[name].data); return; }
+      try {
+        const data = await api(t.path); cache[name] = { key, data }; t.render(data);
+        document.getElementById("updatedAt").textContent = "עודכן: " + new Date().toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" });
+      } catch (err) { setStatus("שגיאה: " + err.message, "error"); }
+    }
+    async function loadGroup(group, force) {
       setStatus("טוען נתונים...", "info");
-      try { const data = await api(t.path); cache[tab] = { key, data }; t.render(data); setStatus("", null); hideLogin();
-        document.getElementById("updatedAt").textContent = "עודכן: " + new Date().toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" }); }
-      catch (err) { setStatus("שגיאה: " + err.message, "error"); }
+      await Promise.all(GROUPS[group].map((n) => loadPart(n, force)));
+      setStatus("", null); hideLogin();
     }
-    function showTab(tab) {
-      currentTab = tab;
-      document.querySelectorAll("[data-screen]").forEach((s) => s.classList.toggle("hidden", s.dataset.screen !== tab));
-      document.querySelectorAll(".tab-btn").forEach((b) => b.classList.toggle("active", b.dataset.tab === tab));
-      loadTab(tab);
+    function showGroup(group) {
+      currentGroup = group;
+      const members = GROUPS[group];
+      document.querySelectorAll("[data-screen]").forEach((s) => s.classList.toggle("hidden", !members.includes(s.dataset.screen)));
+      document.querySelectorAll(".tab-btn").forEach((b) => b.classList.toggle("active", b.dataset.group === group));
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      loadGroup(group);
     }
-    document.querySelectorAll(".tab-btn").forEach((b) => b.addEventListener("click", () => showTab(b.dataset.tab)));
+    const reloadGroup = () => { Object.keys(cache).forEach((k) => delete cache[k]); loadGroup(currentGroup, true); };
+
+    document.querySelectorAll(".tab-btn").forEach((b) => b.addEventListener("click", () => showGroup(b.dataset.group)));
     function setActiveRange(r) { currentRange = r; customStart = customEnd = null; document.querySelectorAll(".range-btn").forEach((b)=>b.classList.toggle("active", b.dataset.range===r)); }
-    document.querySelectorAll(".range-btn").forEach((b)=>b.addEventListener("click",()=>{ setActiveRange(b.dataset.range); Object.keys(cache).forEach((k)=>delete cache[k]); loadTab(currentTab,true); }));
+    document.querySelectorAll(".range-btn").forEach((b)=>b.addEventListener("click",()=>{ setActiveRange(b.dataset.range); reloadGroup(); }));
     document.getElementById("applyDates").addEventListener("click", () => {
       const s = document.getElementById("dateStart").value, e = document.getElementById("dateEnd").value;
       if (!s || !e) { setStatus("יש לבחור תאריך התחלה וסיום","error"); return; }
       if (s > e) { setStatus("תאריך ההתחלה מאוחר מהסיום","error"); return; }
-      customStart = s; customEnd = e; document.querySelectorAll(".range-btn").forEach((b)=>b.classList.remove("active"));
-      Object.keys(cache).forEach((k)=>delete cache[k]); loadTab(currentTab,true);
+      customStart = s; customEnd = e; document.querySelectorAll(".range-btn").forEach((b)=>b.classList.remove("active")); reloadGroup();
     });
-    document.getElementById("siteSelect").addEventListener("change", () => { Object.keys(cache).forEach((k)=>delete cache[k]); loadTab(currentTab,true); });
-    // Refresh
-    document.getElementById("refreshBtn").addEventListener("click", () => { Object.keys(cache).forEach((k)=>delete cache[k]); loadTab(currentTab, true); });
-    // Compare-to period
+    document.getElementById("siteSelect").addEventListener("change", reloadGroup);
+    document.getElementById("refreshBtn").addEventListener("click", reloadGroup);
     document.getElementById("cmpApply").addEventListener("click", () => {
       const s = document.getElementById("cmpStart").value, e = document.getElementById("cmpEnd").value;
       if (!s || !e) { setStatus("לבחירת השוואה — מלאי תאריך התחלה וסיום", "error"); return; }
-      cmpStart = s; cmpEnd = e; Object.keys(cache).forEach((k)=>delete cache[k]); loadTab(currentTab, true);
+      cmpStart = s; cmpEnd = e; reloadGroup();
     });
     document.getElementById("cmpClear").addEventListener("click", () => {
-      cmpStart = cmpEnd = null; document.getElementById("cmpStart").value = ""; document.getElementById("cmpEnd").value = "";
-      Object.keys(cache).forEach((k)=>delete cache[k]); loadTab(currentTab, true);
+      cmpStart = cmpEnd = null; document.getElementById("cmpStart").value = ""; document.getElementById("cmpEnd").value = ""; reloadGroup();
     });
-    setActiveRange("30d"); showTab("overview");
-    setInterval(() => { if (currentTab === "realtime" && !document.hidden) loadTab("realtime", true); }, 20000);
+
+    // Reorder sections into the grouped order, keep footer last
+    DOM_ORDER.forEach((n) => { const s = document.querySelector(`[data-screen="${n}"]`); if (s) document.body.appendChild(s); });
+    const _footer = document.querySelector(".mt-6.text-xs"); if (_footer) document.body.appendChild(_footer);
+
+    setActiveRange("30d"); showGroup("performance");
+    setInterval(() => { if (GROUPS[currentGroup] && GROUPS[currentGroup].includes("realtime") && !document.hidden) loadPart("realtime", true); }, 20000);
   </script>
 </body>
 </html>
