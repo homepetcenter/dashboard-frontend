@@ -50,6 +50,16 @@
         <option value="quickpet">quickpet.co.il</option>
         <option value="tiktakpet">tiktakpet.co.il</option>
       </select>
+      <button id="refreshBtn" title="רענון" class="border border-slate-300 rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-100">🔄</button>
+    </div>
+    <div class="w-full flex flex-wrap items-center gap-2 text-sm border-t border-slate-100 pt-2 mt-1">
+      <span class="text-slate-500">⇄ השווה לתקופה:</span>
+      <input id="cmpStart" type="date" class="border border-slate-300 rounded-lg px-2 py-1 text-slate-700 outline-none" />
+      <span class="text-xs text-slate-400">עד</span>
+      <input id="cmpEnd" type="date" class="border border-slate-300 rounded-lg px-2 py-1 text-slate-700 outline-none" />
+      <button id="cmpApply" class="bg-slate-700 hover:bg-slate-800 text-white text-sm rounded-md px-3 py-1">השווה</button>
+      <button id="cmpClear" class="text-slate-500 hover:text-slate-700 text-xs underline">איפוס</button>
+      <span id="updatedAt" class="text-xs text-slate-400 ms-auto"></span>
     </div>
   </div>
 
@@ -240,9 +250,9 @@
     const fmt = (n) => Number(n || 0).toLocaleString("en-US");
     const fmtDur = (s) => Math.floor(s / 60) + ":" + String(Math.round(s % 60)).padStart(2, "0");
     const RANGE_LABEL = { "7d": "7 ימים אחרונים", "30d": "30 יום אחרונים", "90d": "90 יום אחרונים", "12m": "שנה אחרונה" };
-    let currentRange = "30d", currentTab = "overview", customStart = null, customEnd = null;
+    let currentRange = "30d", currentTab = "overview", customStart = null, customEnd = null, cmpStart = null, cmpEnd = null;
     let charts = {}; const cache = {};
-    const cacheKey = () => document.getElementById("siteSelect").value + "|" + (customStart && customEnd ? customStart + ":" + customEnd : currentRange);
+    const cacheKey = () => document.getElementById("siteSelect").value + "|" + (customStart && customEnd ? customStart + ":" + customEnd : currentRange) + "|" + (cmpStart && cmpEnd ? cmpStart + ":" + cmpEnd : "");
     const periodLabel = () => (customStart && customEnd) ? `${customStart} – ${customEnd}` : (RANGE_LABEL[currentRange] || "");
 
     function setStatus(msg, type) {
@@ -323,6 +333,7 @@
       const site = document.getElementById("siteSelect").value;
       let q = `?site=${encodeURIComponent(site)}`;
       if (customStart && customEnd) q += `&start=${customStart}&end=${customEnd}`; else q += `&range=${currentRange}`;
+      if (cmpStart && cmpEnd) q += `&cmpStart=${cmpStart}&cmpEnd=${cmpEnd}`;
       const res = await fetch(`${BASE}${path}${q}`, { headers: { "X-Access-Key": accessKey } });
       if (res.status === 401) { showLogin(); throw new Error("נדרשת סיסמה"); }
       const d = await res.json(); if (d.error) throw new Error(d.error); return d;
@@ -512,7 +523,8 @@
       const t = TABS[tab], key = cacheKey();
       if (!force && cache[tab] && cache[tab].key === key) { t.render(cache[tab].data); return; }
       setStatus("טוען נתונים...", "info");
-      try { const data = await api(t.path); cache[tab] = { key, data }; t.render(data); setStatus("", null); hideLogin(); }
+      try { const data = await api(t.path); cache[tab] = { key, data }; t.render(data); setStatus("", null); hideLogin();
+        document.getElementById("updatedAt").textContent = "עודכן: " + new Date().toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" }); }
       catch (err) { setStatus("שגיאה: " + err.message, "error"); }
     }
     function showTab(tab) {
@@ -532,6 +544,18 @@
       Object.keys(cache).forEach((k)=>delete cache[k]); loadTab(currentTab,true);
     });
     document.getElementById("siteSelect").addEventListener("change", () => { Object.keys(cache).forEach((k)=>delete cache[k]); loadTab(currentTab,true); });
+    // Refresh
+    document.getElementById("refreshBtn").addEventListener("click", () => { Object.keys(cache).forEach((k)=>delete cache[k]); loadTab(currentTab, true); });
+    // Compare-to period
+    document.getElementById("cmpApply").addEventListener("click", () => {
+      const s = document.getElementById("cmpStart").value, e = document.getElementById("cmpEnd").value;
+      if (!s || !e) { setStatus("לבחירת השוואה — מלאי תאריך התחלה וסיום", "error"); return; }
+      cmpStart = s; cmpEnd = e; Object.keys(cache).forEach((k)=>delete cache[k]); loadTab(currentTab, true);
+    });
+    document.getElementById("cmpClear").addEventListener("click", () => {
+      cmpStart = cmpEnd = null; document.getElementById("cmpStart").value = ""; document.getElementById("cmpEnd").value = "";
+      Object.keys(cache).forEach((k)=>delete cache[k]); loadTab(currentTab, true);
+    });
     setActiveRange("30d"); showTab("overview");
     setInterval(() => { if (currentTab === "realtime" && !document.hidden) loadTab("realtime", true); }, 20000);
   </script>
