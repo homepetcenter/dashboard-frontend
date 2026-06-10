@@ -14,9 +14,13 @@
     .kpi-label { color:#64748b; font-size:.8rem; margin-bottom:.25rem; } .kpi-val { font-size:1.7rem; font-weight:700; color:#1d4ed8; line-height:1.1; }
     .delta { font-size:.78rem; font-weight:600; } .delta.up { color:#16a34a; } .delta.down { color:#dc2626; } .delta.flat { color:#94a3b8; }
     table th { white-space:nowrap; } .srt:hover { color:#1d4ed8; }
+    #loadingBar { position:fixed; top:0; left:0; height:3px; width:0; background:#1d4ed8; z-index:60; transition:width .3s; opacity:0; }
+    #loadingBar.loading { width:90%; opacity:1; transition:width 8s cubic-bezier(.1,.7,.1,1); }
+    @media (max-width:640px) { .tab-bar { flex-wrap:nowrap; overflow-x:auto; } }
   </style>
 </head>
 <body class="bg-slate-100 min-h-screen p-4 md:p-6">
+  <div id="loadingBar"></div>
 
   <!-- Login overlay -->
   <div id="loginOverlay" class="fixed inset-0 z-50 bg-slate-800/60 backdrop-blur-sm flex items-center justify-center">
@@ -64,7 +68,7 @@
   </div>
 
   <!-- Tabs (6 grouped screens) -->
-  <div class="card !py-0 px-3 mb-3 flex flex-wrap gap-1">
+  <div class="tab-bar card !py-0 px-3 mb-3 flex flex-wrap gap-1">
     <button data-group="insights" class="tab-btn px-4 py-3 text-sm">💡 תובנות</button>
     <button data-group="performance" class="tab-btn px-4 py-3 text-sm">📈 ביצועים</button>
     <button data-group="salesads" class="tab-btn px-4 py-3 text-sm">💰 מכירות ופרסום</button>
@@ -73,6 +77,7 @@
     <button data-group="compare" class="tab-btn px-4 py-3 text-sm">📊 השוואת אתרים</button>
   </div>
 
+  <div id="subnav" class="flex flex-wrap gap-2 mb-3 hidden"></div>
   <div id="compareNote" class="text-center text-xs text-slate-400 mb-3"></div>
   <div id="status" class="hidden mb-4 text-center text-sm rounded-lg py-2"></div>
 
@@ -265,6 +270,13 @@
   <script>
     const BASE = "https://dashboard-backend-production-e29c.up.railway.app";
     const fmt = (n) => Number(n || 0).toLocaleString("en-US");
+    const fmtK = (n) => { n = Number(n || 0); if (Math.abs(n) >= 1e6) return (n / 1e6).toFixed(1) + "M"; if (Math.abs(n) >= 1e4) return (n / 1e3).toFixed(1) + "K"; return fmt(n); };
+    function abbreviateKpis() {
+      document.querySelectorAll(".kpi-val").forEach((el) => {
+        const raw = el.dataset.full || el.textContent;
+        if (/^[\d,]+$/.test(raw.trim())) { const num = parseInt(raw.replace(/,/g, ""), 10); if (num >= 10000) { el.dataset.full = raw; el.title = fmt(num); el.textContent = fmtK(num); } }
+      });
+    }
     const fmtDur = (s) => Math.floor(s / 60) + ":" + String(Math.round(s % 60)).padStart(2, "0");
     const RANGE_LABEL = { "7d": "7 ימים אחרונים", "30d": "30 יום אחרונים", "90d": "90 יום אחרונים", "12m": "שנה אחרונה" };
     let currentRange = "30d", currentGroup = "performance", customStart = null, customEnd = null, cmpStart = null, cmpEnd = null;
@@ -308,6 +320,18 @@
       tables[id] = { columns, rows: rows || [], sort: opts.defaultSort || null, filter: "", opts };
       drawTable(id);
     }
+    function exportCSV(id) {
+      const st = tables[id]; if (!st) return;
+      const rows = st._rows || st.rows;
+      const esc = (v) => { v = String(v ?? ""); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+      const header = st.columns.map((c) => esc(c.label)).join(",");
+      const body = rows.map((r) => st.columns.map((c) => esc(r[c.key])).join(",")).join("\n");
+      const blob = new Blob(["﻿" + header + "\n" + body], { type: "text/csv;charset=utf-8;" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = id + "_" + document.getElementById("siteSelect").value + ".csv";
+      a.click(); URL.revokeObjectURL(a.href);
+    }
     function drawTable(id) {
       const st = tables[id], el = document.getElementById(id); if (!el) return;
       if (!st.expanded) st.expanded = new Set();
@@ -316,6 +340,7 @@
       let rows = st.rows.slice();
       if (st.filter) { const f = st.filter.toLowerCase(); rows = rows.filter((r) => st.columns.some((c) => String(r[c.key] ?? "").toLowerCase().includes(f))); }
       if (st.sort) { const { key, dir } = st.sort; rows.sort((a, b) => { let x = a[key], y = b[key]; if (typeof x === "number" && typeof y === "number") return dir === "asc" ? x - y : y - x; x = String(x ?? ""); y = String(y ?? ""); return dir === "asc" ? x.localeCompare(y, "he") : y.localeCompare(x, "he"); }); }
+      st._rows = rows;
       const colCount = st.columns.length + (hasExpand ? 1 : 0);
       const head = (hasExpand ? `<th class="w-6"></th>` : "") + st.columns.map((c) => `<th data-k="${c.key}" class="srt py-2 font-medium cursor-pointer select-none ${c.align === "right" ? "text-right" : ""}">${c.label}${st.sort && st.sort.key === c.key ? (st.sort.dir === "asc" ? " ▲" : " ▼") : ""}</th>`).join("");
       let body = "";
@@ -336,9 +361,12 @@
         }).join("");
         foot = `<tfoot class="border-t-2 font-bold text-slate-700 ${st.opts.scroll ? "sticky bottom-0 bg-white" : ""}"><tr>${cells}</tr></tfoot>`;
       }
-      el.innerHTML = `${st.opts.search === false ? "" : `<input type="text" placeholder="🔍 חיפוש..." class="tbl-search mb-2 border border-slate-300 rounded-lg px-3 py-1 text-sm outline-none focus:ring-2 focus:ring-blue-400 w-full" value="${st.filter.replace(/"/g, "&quot;")}">`}<div class="overflow-x-auto ${st.opts.scroll ? "max-h-[40rem] overflow-y-auto" : ""}"><table class="w-full text-sm whitespace-nowrap"><thead class="${st.opts.scroll ? "sticky top-0 bg-white" : ""}"><tr class="text-slate-400 border-b">${head}</tr></thead><tbody>${body}</tbody>${foot}</table></div>`;
+      const searchInp = st.opts.search === false ? "" : `<input type="text" placeholder="🔍 חיפוש..." class="tbl-search flex-1 border border-slate-300 rounded-lg px-3 py-1 text-sm outline-none focus:ring-2 focus:ring-blue-400" value="${st.filter.replace(/"/g, "&quot;")}">`;
+      const controls = `<div class="flex gap-2 mb-2 items-center">${searchInp}<button class="tbl-export border border-slate-300 rounded-lg px-2 py-1 text-xs text-slate-600 hover:bg-slate-100 whitespace-nowrap">⬇ CSV</button></div>`;
+      el.innerHTML = controls + `<div class="overflow-x-auto ${st.opts.scroll ? "max-h-[40rem] overflow-y-auto" : ""}"><table class="w-full text-sm whitespace-nowrap"><thead class="${st.opts.scroll ? "sticky top-0 bg-white" : ""}"><tr class="text-slate-400 border-b">${head}</tr></thead><tbody>${body}</tbody>${foot}</table></div>`;
       const inp = el.querySelector(".tbl-search");
       if (inp) inp.addEventListener("input", (e) => { st.filter = e.target.value; const pos = e.target.selectionStart; drawTable(id); const ni = el.querySelector(".tbl-search"); ni.focus(); try { ni.setSelectionRange(pos, pos); } catch (_) {} });
+      el.querySelector(".tbl-export").addEventListener("click", () => exportCSV(id));
       el.querySelectorAll("th[data-k]").forEach((th) => th.addEventListener("click", () => { const k = th.dataset.k; if (st.sort && st.sort.key === k) st.sort.dir = st.sort.dir === "asc" ? "desc" : "asc"; else st.sort = { key: k, dir: "desc" }; drawTable(id); }));
       if (hasExpand) el.querySelectorAll(".exp-row").forEach((tr) => tr.addEventListener("click", () => { const rid = tr.dataset.rid; if (st.expanded.has(rid)) st.expanded.delete(rid); else st.expanded.add(rid); drawTable(id); }));
     }
@@ -580,23 +608,44 @@
         document.getElementById("updatedAt").textContent = "עודכן: " + new Date().toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" });
       } catch (err) { setStatus("שגיאה: " + err.message, "error"); }
     }
+    const SECTION_TITLES = { insights:"💡 תובנות", overview:"📈 סקירה", trends:"📉 מגמות", realtime:"⏱️ זמן אמת", goals:"🎯 יעדים", sales:"💰 מכירות", ads:"📣 פרסום (ROAS)", traffic:"🚦 מקורות תנועה", audience:"🌍 קהל", retention:"🔁 Retention", events:"🔔 אירועים", search:"🔍 חיפוש", pages:"📄 דפים מובילים", compare:"📊 השוואת אתרים" };
     async function loadGroup(group, force) {
+      document.getElementById("loadingBar").classList.add("loading");
       setStatus("טוען נתונים...", "info");
       await Promise.all(GROUPS[group].map((n) => loadPart(n, force)));
       setStatus("", null); hideLogin();
+      abbreviateKpis();
+      document.getElementById("loadingBar").classList.remove("loading");
+    }
+    function buildSubnav(members) {
+      const nav = document.getElementById("subnav");
+      if (members.length <= 1) { nav.innerHTML = ""; nav.classList.add("hidden"); return; }
+      nav.classList.remove("hidden");
+      nav.innerHTML = members.map((n) => `<button class="jump-btn text-xs px-3 py-1 rounded-full bg-slate-100 hover:bg-blue-100 text-slate-600" data-jump="${n}">${SECTION_TITLES[n] || n}</button>`).join("");
+      nav.querySelectorAll(".jump-btn").forEach((b) => b.addEventListener("click", () => { const s = document.querySelector(`[data-screen="${b.dataset.jump}"]`); if (s) s.scrollIntoView({ behavior: "smooth", block: "start" }); }));
     }
     function showGroup(group) {
       currentGroup = group;
       const members = GROUPS[group];
-      document.querySelectorAll("[data-screen]").forEach((s) => s.classList.toggle("hidden", !members.includes(s.dataset.screen)));
+      document.querySelectorAll("[data-screen]").forEach((s) => {
+        const show = members.includes(s.dataset.screen);
+        s.classList.toggle("hidden", !show);
+        if (show && !s.querySelector(".sec-title")) {
+          const h = document.createElement("div");
+          h.className = "sec-title text-lg font-bold text-slate-700 mt-2 mb-2 pb-1 border-b border-slate-200";
+          h.textContent = SECTION_TITLES[s.dataset.screen] || "";
+          if (members.length > 1) s.insertBefore(h, s.firstChild);
+        }
+      });
       document.querySelectorAll(".tab-btn").forEach((b) => b.classList.toggle("active", b.dataset.group === group));
+      buildSubnav(members);
       window.scrollTo({ top: 0, behavior: "smooth" });
       loadGroup(group);
     }
     const reloadGroup = () => { Object.keys(cache).forEach((k) => delete cache[k]); loadGroup(currentGroup, true); };
 
     document.querySelectorAll(".tab-btn").forEach((b) => b.addEventListener("click", () => showGroup(b.dataset.group)));
-    function setActiveRange(r) { currentRange = r; customStart = customEnd = null; document.querySelectorAll(".range-btn").forEach((b)=>b.classList.toggle("active", b.dataset.range===r)); }
+    function setActiveRange(r) { currentRange = r; customStart = customEnd = null; localStorage.setItem("dashRange", r); document.querySelectorAll(".range-btn").forEach((b)=>b.classList.toggle("active", b.dataset.range===r)); }
     document.querySelectorAll(".range-btn").forEach((b)=>b.addEventListener("click",()=>{ setActiveRange(b.dataset.range); reloadGroup(); }));
     document.getElementById("applyDates").addEventListener("click", () => {
       const s = document.getElementById("dateStart").value, e = document.getElementById("dateEnd").value;
@@ -604,7 +653,7 @@
       if (s > e) { setStatus("תאריך ההתחלה מאוחר מהסיום","error"); return; }
       customStart = s; customEnd = e; document.querySelectorAll(".range-btn").forEach((b)=>b.classList.remove("active")); reloadGroup();
     });
-    document.getElementById("siteSelect").addEventListener("change", reloadGroup);
+    document.getElementById("siteSelect").addEventListener("change", () => { localStorage.setItem("dashSite", document.getElementById("siteSelect").value); reloadGroup(); });
     document.getElementById("refreshBtn").addEventListener("click", reloadGroup);
     document.getElementById("cmpApply").addEventListener("click", () => {
       const s = document.getElementById("cmpStart").value, e = document.getElementById("cmpEnd").value;
@@ -619,7 +668,10 @@
     DOM_ORDER.forEach((n) => { const s = document.querySelector(`[data-screen="${n}"]`); if (s) document.body.appendChild(s); });
     const _footer = document.querySelector(".mt-6.text-xs"); if (_footer) document.body.appendChild(_footer);
 
-    setActiveRange("30d"); showGroup("performance");
+    // Restore saved selections
+    const savedSite = localStorage.getItem("dashSite"); if (savedSite) document.getElementById("siteSelect").value = savedSite;
+    const savedRange = localStorage.getItem("dashRange") || "30d";
+    setActiveRange(savedRange); showGroup("performance");
     setInterval(() => { if (GROUPS[currentGroup] && GROUPS[currentGroup].includes("realtime") && !document.hidden) loadPart("realtime", true); }, 20000);
   </script>
 </body>
