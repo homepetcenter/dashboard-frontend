@@ -273,8 +273,8 @@
     const fmtK = (n) => { n = Number(n || 0); if (Math.abs(n) >= 1e6) return (n / 1e6).toFixed(1) + "M"; if (Math.abs(n) >= 1e4) return (n / 1e3).toFixed(1) + "K"; return fmt(n); };
     function abbreviateKpis() {
       document.querySelectorAll(".kpi-val").forEach((el) => {
-        const raw = el.dataset.full || el.textContent;
-        if (/^[\d,]+$/.test(raw.trim())) { const num = parseInt(raw.replace(/,/g, ""), 10); if (num >= 10000) { el.dataset.full = raw; el.title = fmt(num); el.textContent = fmtK(num); } }
+        const raw = el.textContent.trim();
+        if (/^[\d,]+$/.test(raw)) { const num = parseInt(raw.replace(/,/g, ""), 10); if (num >= 10000) { el.title = fmt(num); el.textContent = fmtK(num); } }
       });
     }
     const fmtDur = (s) => Math.floor(s / 60) + ":" + String(Math.round(s % 60)).padStart(2, "0");
