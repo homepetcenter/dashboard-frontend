@@ -17,6 +17,26 @@
     #loadingBar { position:fixed; top:0; left:0; height:3px; width:0; background:#1d4ed8; z-index:60; transition:width .3s; opacity:0; }
     #loadingBar.loading { width:90%; opacity:1; transition:width 8s cubic-bezier(.1,.7,.1,1); }
     @media (max-width:640px) { .tab-bar { flex-wrap:nowrap; overflow-x:auto; } }
+    /* ---- Dark mode ---- */
+    body.dark { background:#0f172a; }
+    body.dark .card, body.dark .tab-bar { background:#1e293b; }
+    body.dark .bg-white { background:#1e293b !important; }
+    body.dark .text-slate-800, body.dark .text-slate-700 { color:#e2e8f0 !important; }
+    body.dark .text-slate-600, body.dark .text-slate-500 { color:#94a3b8 !important; }
+    body.dark .kpi-val { color:#60a5fa; }
+    body.dark input, body.dark select { background:#0f172a; color:#cbd5e1; border-color:#334155; }
+    body.dark .range-btn, body.dark .tbl-export, body.dark #refreshBtn { background:#0f172a; color:#94a3b8; border-color:#334155; }
+    body.dark .range-btn.active { background:#1d4ed8; color:#fff; }
+    body.dark .bg-slate-100 { background:#334155 !important; }
+    body.dark .bg-slate-50 { background:#273449 !important; }
+    body.dark .hover\:bg-slate-50:hover, body.dark .hover\:bg-slate-100:hover { background:#33415588 !important; }
+    body.dark .border-b, body.dark .border-t-2, body.dark .border-slate-100, body.dark .border-slate-200, body.dark .border-slate-300 { border-color:#334155 !important; }
+    body.dark .bg-rose-50 { background:#3b1f2b !important; }
+    body.dark .bg-amber-50 { background:#3a2f17 !important; }
+    body.dark .bg-emerald-50 { background:#16322a !important; }
+    body.dark .bg-blue-50 { background:#1e3a5f !important; }
+    body.dark .bg-red-100 { background:#451a1a !important; }
+    body.dark .jump-btn { background:#334155; color:#94a3b8; }
   </style>
 </head>
 <body class="bg-slate-100 min-h-screen p-4 md:p-6">
@@ -55,6 +75,7 @@
         <option value="tiktakpet">tiktakpet.co.il</option>
       </select>
       <button id="refreshBtn" title="רענון" class="border border-slate-300 rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-100">🔄</button>
+      <button id="darkBtn" title="מצב כהה/בהיר" class="border border-slate-300 rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-100">🌙</button>
     </div>
     <div class="w-full flex flex-wrap items-center gap-2 text-sm border-t border-slate-100 pt-2 mt-1">
       <span class="text-slate-500">⇄ השווה לתקופה:</span>
@@ -114,16 +135,16 @@
   <!-- OVERVIEW -->
   <section data-screen="overview">
     <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
-      <div class="card"><div class="kpi-label">Sessions</div><div class="flex items-end gap-2"><div id="ovSessions" class="kpi-val">—</div><div id="ovSessions_d" class="delta"></div></div></div>
-      <div class="card"><div class="kpi-label">Users</div><div class="flex items-end gap-2"><div id="ovUsers" class="kpi-val">—</div><div id="ovUsers_d" class="delta"></div></div></div>
-      <div class="card"><div class="kpi-label">משתמשים חדשים</div><div class="flex items-end gap-2"><div id="ovNew" class="kpi-val">—</div><div id="ovNew_d" class="delta"></div></div></div>
+      <div class="card"><div class="kpi-label">Sessions</div><div class="flex items-end gap-2"><div id="ovSessions" class="kpi-val">—</div><div id="ovSessions_d" class="delta"></div></div><div class="h-7 mt-1"><canvas id="spSessions"></canvas></div></div>
+      <div class="card"><div class="kpi-label">Users</div><div class="flex items-end gap-2"><div id="ovUsers" class="kpi-val">—</div><div id="ovUsers_d" class="delta"></div></div><div class="h-7 mt-1"><canvas id="spUsers"></canvas></div></div>
+      <div class="card"><div class="kpi-label">משתמשים חדשים</div><div class="flex items-end gap-2"><div id="ovNew" class="kpi-val">—</div><div id="ovNew_d" class="delta"></div></div><div class="h-7 mt-1"><canvas id="spNew"></canvas></div></div>
       <div class="card"><div class="kpi-label">Bounce Rate</div><div class="flex items-end gap-2"><div id="ovBounce" class="kpi-val">—</div><div id="ovBounce_d" class="delta"></div></div></div>
       <div class="card"><div class="kpi-label">צפיות / סשן</div><div class="flex items-end gap-2"><div id="ovPps" class="kpi-val">—</div><div id="ovPps_d" class="delta"></div></div></div>
       <div class="card"><div class="kpi-label">זמן שהייה ממוצע</div><div class="flex items-end gap-2"><div id="ovDur" class="kpi-val">—</div><div id="ovDur_d" class="delta"></div></div></div>
       <div class="card"><div class="kpi-label">Impressions</div><div class="flex items-end gap-2"><div id="ovImpr" class="kpi-val">—</div><div id="ovImpr_d" class="delta"></div></div></div>
       <div class="card"><div class="kpi-label">Clicks</div><div class="flex items-end gap-2"><div id="ovClicks" class="kpi-val">—</div><div id="ovClicks_d" class="delta"></div></div></div>
       <div class="card"><div class="kpi-label">CTR</div><div class="flex items-end gap-2"><div id="ovCtr" class="kpi-val">—</div><div id="ovCtr_d" class="delta"></div></div></div>
-      <div class="card"><div class="kpi-label">צפיות עמוד</div><div class="flex items-end gap-2"><div id="ovViews" class="kpi-val">—</div><div id="ovViews_d" class="delta"></div></div></div>
+      <div class="card"><div class="kpi-label">צפיות עמוד</div><div class="flex items-end gap-2"><div id="ovViews" class="kpi-val">—</div><div id="ovViews_d" class="delta"></div></div><div class="h-7 mt-1"><canvas id="spViews"></canvas></div></div>
     </div>
     <div class="card"><div id="ovChartTitle" class="text-slate-600 font-medium mb-3">Sessions</div><canvas id="ovChart" height="90"></canvas></div>
   </section>
@@ -229,6 +250,14 @@
 
   <!-- EVENTS -->
   <section data-screen="events" class="hidden">
+    <div class="card mb-4">
+      <div class="flex items-center justify-between mb-1 flex-wrap gap-2">
+        <div class="text-slate-600 font-medium">📝 טפסים — התחלה מול שליחה</div>
+        <div class="text-sm text-slate-500">סה"כ: <span id="formStarts" class="font-bold text-slate-700">—</span> התחילו · <span id="formSubmits" class="font-bold text-slate-700">—</span> שלחו · השלמה <span id="formRate" class="font-bold text-blue-700">—</span></div>
+      </div>
+      <div class="text-xs text-slate-400 mb-2">איפה גולשים מתחילים למלא טופס ולא משלימים</div>
+      <div id="formsMount"></div>
+    </div>
     <div class="card"><div class="text-slate-600 font-medium mb-3">כל האירועים באתר</div><div id="eventsMount"></div></div>
   </section>
 
@@ -411,6 +440,12 @@
     // ===== Renderers =====
     function renderEvents(d) {
       mountTable("eventsMount", [ {key:"name",label:"אירוע",align:"right"},{key:"count",label:"כמות",type:"num"},{key:"users",label:"משתמשים",type:"num"} ], (d.events||[]).slice(), { defaultSort:{key:"count",dir:"desc"}, scroll:true });
+      const ft = d.formTotals || {};
+      document.getElementById("formStarts").textContent = fmt(ft.starts);
+      document.getElementById("formSubmits").textContent = fmt(ft.submits);
+      document.getElementById("formRate").textContent = (ft.completionRate ?? 0) + "%";
+      const rateCell = (v) => v == null ? `<span class="text-slate-400">—</span>` : `<span class="font-bold ${v >= 70 ? "text-emerald-600" : v >= 40 ? "text-amber-600" : "text-rose-600"}">${v}%</span>`;
+      mountTable("formsMount", [ {key:"page",label:"דף",align:"right",long:true,url:true},{key:"starts",label:"התחילו",type:"num"},{key:"submits",label:"שלחו",type:"num"},{key:"completionRate",label:"% השלמה",render:rateCell} ], (d.forms||[]).slice(), { defaultSort:{key:"starts",dir:"desc"}, scroll:true });
     }
     function renderRetention(d) {
       const rows = d.retention || [];
@@ -445,6 +480,11 @@
       setKpi("ovCtr", (s.ctr ?? 0)+"%", s.ctr, pr.ctr); setKpi("ovViews", fmt(a.pageViews), a.pageViews, pr.pageViews);
       document.getElementById("ovChartTitle").textContent = "Sessions — " + periodLabel();
       const series = a.series || [];
+      const spark = (id, key, color) => makeChart(id, { type: "line",
+        data: { labels: series.map((_, i) => i), datasets: [{ data: series.map((pt) => pt[key] || 0), borderColor: color, borderWidth: 1.5, pointRadius: 0, fill: true, backgroundColor: color + "15", tension: 0.35 }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { enabled: false } }, scales: { x: { display: false }, y: { display: false } } } });
+      spark("spSessions", "sessions", "#1d4ed8"); spark("spUsers", "users", "#0ea5e9");
+      spark("spNew", "newUsers", "#8b5cf6"); spark("spViews", "pageViews", "#10b981");
       makeChart("ovChart", { type: "line", data: { labels: series.map((p)=>niceDate(p.date)), datasets: [{ label:"Sessions", data: series.map((p)=>p.sessions), borderColor:"#1d4ed8", backgroundColor:"rgba(29,78,216,0.08)", fill:true, tension:0.35, pointRadius:2 }] }, options: { responsive:true, plugins:{legend:{display:false}} } });
     }
     function renderCompare(d) {
@@ -670,6 +710,12 @@
     // Reorder sections into the grouped order, keep footer last
     DOM_ORDER.forEach((n) => { const s = document.querySelector(`[data-screen="${n}"]`); if (s) document.body.appendChild(s); });
     const _footer = document.querySelector(".mt-6.text-xs"); if (_footer) document.body.appendChild(_footer);
+
+    // Dark mode
+    const darkBtn = document.getElementById("darkBtn");
+    function setDark(on) { document.body.classList.toggle("dark", on); darkBtn.textContent = on ? "☀️" : "🌙"; localStorage.setItem("dashDark", on ? "1" : "0"); }
+    darkBtn.addEventListener("click", () => setDark(!document.body.classList.contains("dark")));
+    if (localStorage.getItem("dashDark") === "1") setDark(true);
 
     // Restore saved selections
     const savedSite = localStorage.getItem("dashSite"); if (savedSite) document.getElementById("siteSelect").value = savedSite;
