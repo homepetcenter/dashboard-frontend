@@ -110,7 +110,10 @@
 
   <!-- REALTIME -->
   <section data-screen="realtime" class="hidden">
-    <div class="card mb-4 text-center"><div class="kpi-label">משתמשים פעילים עכשיו</div><div id="rtActive" class="text-5xl font-bold text-emerald-600">—</div><div class="text-xs text-slate-400 mt-1">מתעדכן כל 20 שניות · 30 הדקות האחרונות</div></div>
+    <div class="card mb-4 text-center relative">
+      <button id="warRoomBtn" class="absolute top-3 start-3 border border-slate-300 rounded-lg px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100">🖥️ חדר מלחמה</button>
+      <div class="kpi-label">משתמשים פעילים עכשיו</div><div id="rtActive" class="text-5xl font-bold text-emerald-600">—</div><div class="text-xs text-slate-400 mt-1">מתעדכן כל 20 שניות · 30 הדקות האחרונות</div>
+    </div>
     <div class="grid md:grid-cols-3 gap-4">
       <div class="card"><div class="text-slate-600 font-medium mb-3">לפי מכשיר</div><div id="rtDeviceMount"></div></div>
       <div class="card"><div class="text-slate-600 font-medium mb-3">לפי מדינה</div><div id="rtCountryMount"></div></div>
@@ -125,11 +128,17 @@
       <div class="flex flex-wrap gap-4 items-end">
         <div><label class="text-xs text-slate-500 block mb-1">יעד הכנסות (₪)</label><input id="goalRevenue" type="number" class="border border-slate-300 rounded-lg px-3 py-2 w-40 outline-none focus:ring-2 focus:ring-blue-400" /></div>
         <div><label class="text-xs text-slate-500 block mb-1">יעד עסקאות</label><input id="goalTx" type="number" class="border border-slate-300 rounded-lg px-3 py-2 w-40 outline-none focus:ring-2 focus:ring-blue-400" /></div>
+        <div><label class="text-xs text-slate-500 block mb-1">תקציב פרסום חודשי (₪)</label><input id="goalBudget" type="number" class="border border-slate-300 rounded-lg px-3 py-2 w-40 outline-none focus:ring-2 focus:ring-blue-400" /></div>
         <button id="goalSave" class="bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-5 py-2">שמירה</button>
       </div>
       <div class="text-xs text-slate-400 mt-2">היעדים נשמרים בנפרד לכל אתר ומושווים לנתוני התקופה שבחרת למעלה.</div>
     </div>
-    <div id="goalProgress" class="space-y-4"></div>
+    <div id="goalProgress" class="space-y-4 mb-4"></div>
+    <div class="card">
+      <div class="text-slate-600 font-medium mb-1">💸 Pacing תקציב פרסום — החודש הנוכחי</div>
+      <div id="pacingInfo" class="text-sm text-slate-500 mb-3">הגדירי תקציב חודשי למעלה כדי לראות את קצב השריפה</div>
+      <canvas id="pacingChart" height="80"></canvas>
+    </div>
   </section>
 
   <!-- OVERVIEW -->
@@ -160,6 +169,16 @@
 
   <!-- TRENDS -->
   <section data-screen="trends" class="hidden">
+    <div class="card mb-4">
+      <div class="text-slate-600 font-medium mb-1">🔮 תחזית סוף חודש <span id="projDay" class="text-slate-400 text-sm"></span></div>
+      <div class="text-xs text-slate-400 mb-3">לפי הקצב הנוכחי של החודש הקלנדרי (לא תלוי בטווח שנבחר)</div>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div><div class="kpi-label">עד כה החודש (₪)</div><div id="projMtd" class="kpi-val">—</div></div>
+        <div><div class="kpi-label">תחזית הכנסות (₪)</div><div class="flex items-end gap-2"><div id="projRev" class="kpi-val !text-emerald-600">—</div><div id="projRev_d" class="delta"></div></div></div>
+        <div><div class="kpi-label">תחזית עסקאות</div><div class="flex items-end gap-2"><div id="projTx" class="kpi-val">—</div><div id="projTx_d" class="delta"></div></div></div>
+        <div><div class="kpi-label">חודש קודם (₪)</div><div id="projLast" class="kpi-val !text-slate-500">—</div></div>
+      </div>
+    </div>
     <div class="card mb-4"><div class="text-slate-600 font-medium mb-2">הכנסות יומיות (₪)</div><canvas id="trRevenue" height="80"></canvas></div>
     <div class="grid md:grid-cols-2 gap-4">
       <div class="card"><div class="text-slate-600 font-medium mb-2">אחוז המרה (%)</div><canvas id="trConv" height="110"></canvas></div>
@@ -212,6 +231,11 @@
       <div class="card"><div class="text-slate-600 font-medium mb-3">פירוט ערוצים</div><div id="trMount"></div></div>
     </div>
     <div class="card mt-4"><div class="text-slate-600 font-medium mb-1">🤖 תנועה ממנועי AI <span id="aiTotal" class="text-slate-400 text-sm"></span></div><div class="text-xs text-slate-400 mb-2">מבקרים שהגיעו מ-ChatGPT, Gemini, Perplexity וכו'</div><div id="aiMount"></div></div>
+    <div class="card mt-4">
+      <div class="text-slate-600 font-medium mb-1">🎯 ייחוס: מגע ראשון מול מגע אחרון</div>
+      <div class="text-xs text-slate-400 mb-2">איזה ערוץ פותח את ההיכרות עם הלקוח ואיזה סוגר את העסקה</div>
+      <div id="attrMount"></div>
+    </div>
   </section>
 
   <!-- AUDIENCE -->
@@ -263,6 +287,11 @@
 
   <!-- PAGES -->
   <section data-screen="pages" class="hidden">
+    <div class="card mb-4">
+      <div class="text-slate-600 font-medium mb-1">📉 עמודים שאיבדו תנועה</div>
+      <div class="text-xs text-slate-400 mb-2">ירדו 20%+ לעומת התקופה הקודמת — מועמדים לרענון תוכן</div>
+      <div id="pgDecliningMount"></div>
+    </div>
     <div class="grid md:grid-cols-2 gap-4">
       <div class="card"><div class="text-slate-600 font-medium mb-3">דפים נצפים ביותר</div><div id="pgTopMount"></div></div>
       <div class="card"><div class="text-slate-600 font-medium mb-3">דפי כניסה מובילים</div><div id="pgLandingMount"></div></div>
@@ -284,6 +313,11 @@
       <div class="card"><div class="text-slate-600 font-medium mb-1">🎯 הזדמנויות CTR</div><div class="text-xs text-slate-400 mb-2">הרבה חשיפות, מעט קליקים — שפרי כותרת ותיאור</div><div id="seCtrOppMount"></div></div>
       <div class="card"><div class="text-slate-600 font-medium mb-1">🏃 Striking Distance (מיקום 5-15)</div><div class="text-xs text-slate-400 mb-2">קרוב לעמוד 1 — דחיפה קטנה תכפיל תנועה</div><div id="seStrikingMount"></div></div>
     </div>
+    <div class="card mb-4">
+      <div class="text-slate-600 font-medium mb-1">🚀 טראפיק פוטנציאלי</div>
+      <div class="text-xs text-slate-400 mb-2">כמה קליקים נוספים בתקופה אם המילה תגיע לטופ-3 (הערכה לפי עקומת CTR)</div>
+      <div id="sePotentialMount"></div>
+    </div>
     <div class="grid md:grid-cols-2 gap-4 mb-4">
       <div class="card"><div class="text-slate-600 font-medium mb-1">❓ מילות שאלה / כוונה</div><div class="text-xs text-slate-400 mb-2">רעיונות לתוכן, מאמרים ובלוג</div><div id="seQuestionsMount"></div></div>
       <div class="card"><div class="text-slate-600 font-medium mb-1">⚠️ קניבליזציה</div><div class="text-xs text-slate-400 mb-2">מילים שכמה דפים מתחרים עליהן — מבלבל את גוגל</div><div id="seCannibalMount"></div></div>
@@ -294,6 +328,20 @@
     </div>
     <div class="card"><div class="text-slate-600 font-medium mb-3">מילות חיפוש מובילות + הדף המדורג</div><div id="seQMount"></div></div>
   </section>
+
+  <!-- War Room overlay -->
+  <div id="warRoom" class="hidden fixed inset-0 z-[70] bg-slate-900 text-white p-8 flex-col items-center justify-center text-center">
+    <button id="warRoomClose" class="absolute top-4 start-4 text-slate-400 hover:text-white text-2xl">✕</button>
+    <div id="wrSite" class="text-slate-400 text-xl mb-2"></div>
+    <div class="text-slate-400 text-2xl">משתמשים פעילים עכשיו</div>
+    <div id="wrActive" class="font-bold text-emerald-400 leading-none my-4" style="font-size:11rem">—</div>
+    <div class="flex gap-16 justify-center mt-6">
+      <div><div class="text-slate-400 text-lg">Sessions היום</div><div id="wrSessions" class="text-5xl font-bold text-blue-400">—</div></div>
+      <div><div class="text-slate-400 text-lg">הכנסות היום (₪)</div><div id="wrRevenue" class="text-5xl font-bold text-emerald-400">—</div></div>
+      <div><div class="text-slate-400 text-lg">עסקאות היום</div><div id="wrTx" class="text-5xl font-bold text-amber-400">—</div></div>
+    </div>
+    <div id="wrTime" class="text-slate-500 mt-10 text-lg"></div>
+  </div>
 
   <div class="text-center text-slate-400 text-xs mt-6">Powered by Railway Backend | Dashboard v6.0</div>
 
@@ -324,6 +372,37 @@
     function safeDecode(s) { try { return decodeURIComponent(String(s).replace(/\+/g, " ")); } catch (e) { return String(s); } }
     function prettyUrl(s) { if (!s) return s; let v = safeDecode(s).replace(/^https?:\/\/[^/]+/, ""); return v || "/"; }
     function makeChart(id, config) { if (charts[id]) charts[id].destroy(); charts[id] = new Chart(document.getElementById(id), config); }
+
+    // ---- Google algorithm-update markers (maintained list, easy to extend) ----
+    const GOOGLE_UPDATES = [
+      { date: "2024-03-05", name: "Core 3/24" }, { date: "2024-06-20", name: "Spam 6/24" },
+      { date: "2024-08-15", name: "Core 8/24" }, { date: "2024-11-11", name: "Core 11/24" },
+      { date: "2024-12-12", name: "Core 12/24" }, { date: "2025-03-13", name: "Core 3/25" },
+      { date: "2025-06-30", name: "Core 6/25" },
+    ];
+    Chart.register({ id: "gUpdates", afterDatasetsDraw(chart) {
+      const marks = chart.$gUpdates; if (!marks || !marks.length) return;
+      const { ctx, chartArea, scales } = chart; if (!scales.x) return;
+      marks.forEach((mk) => {
+        const x = scales.x.getPixelForValue(mk.index);
+        if (x < chartArea.left || x > chartArea.right) return;
+        ctx.save(); ctx.strokeStyle = "#f59e0b"; ctx.setLineDash([4, 3]); ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(x, chartArea.top); ctx.lineTo(x, chartArea.bottom); ctx.stroke();
+        ctx.fillStyle = "#f59e0b"; ctx.font = "bold 10px sans-serif"; ctx.fillText("G", x + 2, chartArea.top + 10);
+        ctx.restore();
+      });
+    }});
+    function applyGUpdates(id, rawDates) {
+      const c = charts[id]; if (!c || !rawDates || !rawDates.length) return;
+      const norm = rawDates.map((d) => { d = String(d).replace(/-/g, ""); return d.length === 6 ? d + "15" : d; });
+      const marks = [];
+      GOOGLE_UPDATES.forEach((u) => {
+        const ud = u.date.replace(/-/g, "");
+        if (ud < norm[0] || ud > norm[norm.length - 1]) return;
+        for (let i = 0; i < norm.length; i++) if (norm[i] >= ud) { marks.push({ index: i, name: u.name }); break; }
+      });
+      c.$gUpdates = marks; c.update();
+    }
 
     // ===== Generic sortable + filterable table =====
     const tables = {};
@@ -486,6 +565,7 @@
       spark("spSessions", "sessions", "#1d4ed8"); spark("spUsers", "users", "#0ea5e9");
       spark("spNew", "newUsers", "#8b5cf6"); spark("spViews", "pageViews", "#10b981");
       makeChart("ovChart", { type: "line", data: { labels: series.map((p)=>niceDate(p.date)), datasets: [{ label:"Sessions", data: series.map((p)=>p.sessions), borderColor:"#1d4ed8", backgroundColor:"rgba(29,78,216,0.08)", fill:true, tension:0.35, pointRadius:2 }] }, options: { responsive:true, plugins:{legend:{display:false}} } });
+      applyGUpdates("ovChart", series.map((p)=>p.date));
     }
     function renderCompare(d) {
       const NAMES = { homepetcenter:"homepetcenter", quickpet:"quickpet", tiktakpet:"tiktakpet" };
@@ -530,6 +610,13 @@
       line("trRevenue", ser.map((r)=>r.revenue), "#16a34a");
       line("trConv", ser.map((r)=>r.conversionRate), "#1d4ed8");
       line("trAov", ser.map((r)=>r.aov), "#f59e0b");
+      applyGUpdates("trRevenue", ser.map((r)=>r.date));
+      const pj = d.projection || {};
+      document.getElementById("projDay").textContent = pj.dayOfMonth ? `(יום ${pj.dayOfMonth} מתוך ${pj.daysInMonth})` : "";
+      document.getElementById("projMtd").textContent = fmt(pj.mtdRevenue);
+      setKpi("projRev", fmt(pj.forecastRevenue), pj.forecastRevenue, pj.lastMonthRevenue);
+      setKpi("projTx", fmt(pj.forecastTransactions), pj.forecastTransactions, pj.lastMonthTransactions);
+      document.getElementById("projLast").textContent = fmt(pj.lastMonthRevenue);
     }
     function renderAds(d) {
       const t = d.totals || {};
@@ -549,6 +636,17 @@
       mountTable("trMount", [ {key:"name",label:"ערוץ",align:"right"},{key:"sessions",label:"Sessions",type:"num"},{key:"users",label:"Users",type:"num"},{key:"revenue",label:"הכנסה (₪)",type:"num"},{key:"transactions",label:"עסקאות",type:"num"},{key:"convRate",label:"המרה",type:"pct"},{key:"pct",label:"% תנועה",type:"pct"} ], ch, { search:false, defaultSort:{key:"sessions",dir:"desc"}, scroll:true });
       document.getElementById("aiTotal").textContent = (d.aiTotal ? `(סה"כ ${fmt(d.aiTotal)} כניסות)` : "");
       mountTable("aiMount", [ {key:"name",label:"מקור AI",align:"right",long:true},{key:"sessions",label:"Sessions",type:"num"},{key:"users",label:"Users",type:"num"},{key:"transactions",label:"עסקאות",type:"num"},{key:"revenue",label:"הכנסה (₪)",type:"num"},{key:"convRate",label:"המרה",type:"pct"} ], (d.aiTraffic||[]).slice(), { search:false, defaultSort:{key:"sessions",dir:"desc"}, scroll:true });
+      // First vs last touch attribution
+      const ft = d.firstTouch || [];
+      const ftMap = {}; ft.forEach((c) => ftMap[c.name] = c);
+      const names = [...new Set([...ch.map((c)=>c.name), ...ft.map((c)=>c.name)])];
+      const attr = names.map((n) => {
+        const f = ftMap[n] || {}, l = ch.find((c)=>c.name===n) || {};
+        const fr = f.revenue || 0, lr = l.revenue || 0;
+        const role = fr > lr * 1.3 ? "🚪 פותח היכרות" : lr > fr * 1.3 ? "🎯 סוגר עסקאות" : "⚖️ מאוזן";
+        return { name: n, firstRevenue: fr, lastRevenue: lr, role };
+      }).filter((r) => r.firstRevenue || r.lastRevenue);
+      mountTable("attrMount", [ {key:"name",label:"ערוץ",align:"right"},{key:"firstRevenue",label:"הכנסה כמגע ראשון (₪)",type:"num"},{key:"lastRevenue",label:"הכנסה כמגע אחרון (₪)",type:"num"},{key:"role",label:"תפקיד"} ], attr, { search:false, defaultSort:{key:"lastRevenue",dir:"desc"} });
     }
     const DAY_NAMES = ["ראשון","שני","שלישי","רביעי","חמישי","שישי","שבת"];
     function renderAudience(d) {
@@ -577,10 +675,39 @@
       mountTable("rtEventMount", [ {key:"name",label:"אירוע",align:"right"},{key:"count",label:"כמות",type:"num"} ], (d.byEvent||[]).slice(), { search:false, defaultSort:{key:"count",dir:"desc"} });
     }
     function goalKey() { return "goals_" + document.getElementById("siteSelect").value; }
+    async function loadPacing(budget) {
+      const info = document.getElementById("pacingInfo");
+      if (!budget) { info.textContent = "הגדירי תקציב חודשי למעלה כדי לראות את קצב השריפה"; if (charts["pacingChart"]) charts["pacingChart"].destroy(); return; }
+      const now = new Date(), y = now.getFullYear(), m = now.getMonth();
+      const pad = (n) => String(n).padStart(2, "0");
+      const ms = `${y}-${pad(m + 1)}-01`, todayStr = `${y}-${pad(m + 1)}-${pad(now.getDate())}`;
+      const daysInMonth = new Date(y, m + 1, 0).getDate(), dayOfMonth = now.getDate();
+      try {
+        const site = document.getElementById("siteSelect").value;
+        const res = await fetch(`${BASE}/api/ads?site=${encodeURIComponent(site)}&start=${ms}&end=${todayStr}`, { headers: { "X-Access-Key": accessKey } });
+        const d = await res.json();
+        const series = d.costSeries || [];
+        let cum = 0; const actual = series.map((r) => { cum += r.cost; return Math.round(cum); });
+        const spent = cum;
+        const daysLeft = Math.max(1, daysInMonth - dayOfMonth);
+        const allowedPerDay = Math.max(0, (budget - spent) / daysLeft);
+        const pace = spent / (budget * (dayOfMonth / daysInMonth));
+        const status = spent > budget ? `<span class="text-rose-600 font-bold">חריגה מהתקציב!</span>` : pace > 1.1 ? `<span class="text-amber-600 font-bold">קצב מהיר מדי</span>` : `<span class="text-emerald-600 font-bold">בקצב תקין</span>`;
+        info.innerHTML = `הוצא: <b>₪${fmt(Math.round(spent))}</b> מתוך ₪${fmt(budget)} (${((spent / budget) * 100).toFixed(0)}%) · ${status} · מותר להוציא עוד <b>₪${fmt(Math.round(allowedPerDay))}/יום</b> ב-${daysLeft} הימים שנותרו`;
+        const labels = series.map((r) => niceDate(r.date));
+        const ideal = series.map((_, i) => Math.round(budget * ((i + 1) / daysInMonth)));
+        makeChart("pacingChart", { type: "line", data: { labels, datasets: [
+          { label: "הוצאה מצטברת", data: actual, borderColor: "#dc2626", backgroundColor: "rgba(220,38,38,.08)", fill: true, tension: .3, pointRadius: 0 },
+          { label: "קצב אידיאלי", data: ideal, borderColor: "#94a3b8", borderDash: [6, 4], pointRadius: 0, fill: false },
+        ] }, options: { responsive: true, plugins: { legend: { position: "bottom" } } } });
+      } catch (e) { info.textContent = "שגיאה בטעינת נתוני עלות"; }
+    }
     function renderGoals(d) {
       const saved = JSON.parse(localStorage.getItem(goalKey()) || "{}");
       document.getElementById("goalRevenue").value = saved.revenue || "";
       document.getElementById("goalTx").value = saved.tx || "";
+      document.getElementById("goalBudget").value = saved.budget || "";
+      loadPacing(saved.budget);
       const bar = (label, actual, goal, unit) => {
         if (!goal) return `<div class="card"><div class="font-medium text-slate-700 mb-1">${label}</div><div class="text-sm text-slate-400">לא הוגדר יעד</div></div>`;
         const p = Math.min(100, (actual / goal) * 100), reached = actual >= goal;
@@ -589,17 +716,19 @@
       document.getElementById("goalProgress").innerHTML = bar("הכנסות", d.revenue||0, saved.revenue, "₪") + bar("עסקאות", d.transactions||0, saved.tx, "");
     }
     document.getElementById("goalSave").addEventListener("click", () => {
-      localStorage.setItem(goalKey(), JSON.stringify({ revenue: Number(document.getElementById("goalRevenue").value)||0, tx: Number(document.getElementById("goalTx").value)||0 }));
+      localStorage.setItem(goalKey(), JSON.stringify({ revenue: Number(document.getElementById("goalRevenue").value)||0, tx: Number(document.getElementById("goalTx").value)||0, budget: Number(document.getElementById("goalBudget").value)||0 }));
       loadPart("goals", true);
     });
     function renderPages(d) {
       mountTable("pgTopMount", [ {key:"path",label:"דף",align:"right",long:true,url:true},{key:"views",label:"צפיות",type:"num"} ], (d.topPages||[]).slice(), { defaultSort:{key:"views",dir:"desc"}, scroll:true });
       mountTable("pgLandingMount", [ {key:"path",label:"דף כניסה",align:"right",long:true,url:true},{key:"sessions",label:"Sessions",type:"num"},{key:"bounceRate",label:"Bounce",type:"pct"},{key:"revenue",label:"הכנסה (₪)",type:"num"},{key:"transactions",label:"עסקאות",type:"num"},{key:"convRate",label:"המרה",type:"pct"} ], (d.landingPages||[]).slice(), { defaultSort:{key:"sessions",dir:"desc"}, scroll:true });
+      mountTable("pgDecliningMount", [ {key:"path",label:"דף",align:"right",long:true,url:true},{key:"prevViews",label:"צפיות קודם",type:"num"},{key:"views",label:"צפיות עכשיו",type:"num"},{key:"change",label:"שינוי",render:(v)=>`<span class="font-bold text-rose-600">▼ ${Math.abs(v)}%</span>`} ], (d.declining||[]).slice(), { defaultSort:{key:"change",dir:"asc"}, scroll:true });
     }
     function area(id, labels, data, color) { makeChart(id, { type:"line", data:{ labels, datasets:[{ data, borderColor:color, backgroundColor:color+"22", fill:true, tension:0.35, pointRadius:0 }] }, options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{display:false}}} }); }
     function renderSearch(d) {
       const ser = d.series || [], labels = ser.map((r)=>niceDate(r.date));
       area("seImpr", labels, ser.map((r)=>r.impressions), "#1d4ed8"); area("seClicks", labels, ser.map((r)=>r.clicks), "#10b981"); area("seCtr", labels, ser.map((r)=>r.ctr), "#f59e0b");
+      applyGUpdates("seClicks", ser.map((r)=>r.date)); applyGUpdates("seImpr", ser.map((r)=>r.date));
       const pos = d.positions || [];
       document.getElementById("seKwTotal").textContent = d.totalKeywords ? `(סה"כ ${fmt(d.totalKeywords)} מילים)` : "";
       makeChart("sePos", { type:"bar", data:{ labels:pos.map((b)=>b.bucket), datasets:[{ data:pos.map((b)=>b.count), backgroundColor:["#16a34a","#65a30d","#eab308","#f97316","#dc2626"] }] }, options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}} });
@@ -621,6 +750,7 @@
       mountTable("seQuestionsMount", qstCols, (d.questions||[]).slice(), { scroll:true, defaultSort:{key:"impressions",dir:"desc"} });
       const cannibExpand = (r) => `<div class="text-xs text-slate-600 space-y-1">${(r.detail||[]).map((pg)=>`• <a href="${pg.page}" target="_blank" rel="noopener" class="text-blue-600 hover:underline">${prettyUrl(pg.page)}</a> <span class="text-slate-400">— מיקום ${pg.position}, ${fmt(pg.clicks)} קליקים, ${fmt(pg.impressions)} חשיפות</span>`).join("<br>")}</div>`;
       mountTable("seCannibalMount", [ {key:"key",label:"מילה",align:"right",long:true},{key:"pages",label:"דפים",type:"num"},{key:"impressions",label:"חשיפות",type:"num"},{key:"clicks",label:"קליקים",type:"num"} ], (d.cannibalization||[]).slice(), { scroll:true, defaultSort:{key:"impressions",dir:"desc"}, expand:cannibExpand });
+      mountTable("sePotentialMount", [ {key:"key",label:"מילה",align:"right",long:true},{key:"position",label:"מיקום"},{key:"impressions",label:"חשיפות",type:"num"},{key:"clicks",label:"קליקים היום",type:"num"},{key:"potential",label:"פוטנציאל קליקים",render:(v)=>`<span class="font-bold text-emerald-600">+${fmt(v)}</span>`},{key:"page",label:"דף",align:"right",render:pageCell} ], (d.trafficPotential||[]).slice(), { scroll:true, defaultSort:{key:"potential",dir:"desc"} });
     }
 
     const PARTS = {
@@ -710,6 +840,46 @@
     // Reorder sections into the grouped order, keep footer last
     DOM_ORDER.forEach((n) => { const s = document.querySelector(`[data-screen="${n}"]`); if (s) document.body.appendChild(s); });
     const _footer = document.querySelector(".mt-6.text-xs"); if (_footer) document.body.appendChild(_footer);
+
+    // ---- War Room mode ----
+    let warTimer = null;
+    async function warTick() {
+      const site = document.getElementById("siteSelect").value;
+      const pad2 = (n) => String(n).padStart(2, "0");
+      const now = new Date();
+      const today = `${now.getFullYear()}-${pad2(now.getMonth() + 1)}-${pad2(now.getDate())}`;
+      const hdr = { headers: { "X-Access-Key": accessKey } };
+      try {
+        const rt = await (await fetch(`${BASE}/api/realtime?site=${site}`, hdr)).json();
+        document.getElementById("wrActive").textContent = fmt(rt.active);
+      } catch (e) {}
+      try {
+        const ov = await (await fetch(`${BASE}/api/data?site=${site}&start=${today}&end=${today}`, hdr)).json();
+        document.getElementById("wrSessions").textContent = fmt(ov.analytics?.sessions);
+      } catch (e) {}
+      try {
+        const ec = await (await fetch(`${BASE}/api/ecommerce?site=${site}&start=${today}&end=${today}`, hdr)).json();
+        document.getElementById("wrRevenue").textContent = fmt(ec.revenue);
+        document.getElementById("wrTx").textContent = fmt(ec.transactions);
+      } catch (e) {}
+      document.getElementById("wrTime").textContent = new Date().toLocaleTimeString("he-IL");
+      document.getElementById("wrSite").textContent = site + ".co.il";
+    }
+    function openWarRoom() {
+      const el = document.getElementById("warRoom");
+      el.classList.remove("hidden"); el.classList.add("flex");
+      if (el.requestFullscreen) el.requestFullscreen().catch(() => {});
+      warTick(); warTimer = setInterval(warTick, 20000);
+    }
+    function closeWarRoom() {
+      const el = document.getElementById("warRoom");
+      el.classList.add("hidden"); el.classList.remove("flex");
+      clearInterval(warTimer); warTimer = null;
+      if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    }
+    document.getElementById("warRoomBtn").addEventListener("click", openWarRoom);
+    document.getElementById("warRoomClose").addEventListener("click", closeWarRoom);
+    document.addEventListener("fullscreenchange", () => { if (!document.fullscreenElement && warTimer) closeWarRoom(); });
 
     // Dark mode
     const darkBtn = document.getElementById("darkBtn");
