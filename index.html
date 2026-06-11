@@ -982,7 +982,8 @@
       try {
         prog.textContent = "מושך sitemap ו-robots.txt...";
         const u = await (await fetch(`${BASE}/api/audit?site=${site}&mode=urls`, { headers: hdr })).json();
-        if (!u.urls || !u.urls.length) { prog.textContent = "לא נמצא sitemap או שאין בו עמודים"; btn.disabled = false; btn.textContent = "הרץ סריקה"; return; }
+        if (u.error) { prog.textContent = "שגיאה: " + u.error; btn.disabled = false; btn.textContent = "הרץ סריקה"; return; }
+        if (!u.urls || !u.urls.length) { prog.textContent = "לא נמצא sitemap או שאין בו עמודים (נסי שוב — ייתכן עומס זמני)"; btn.disabled = false; btn.textContent = "הרץ סריקה"; return; }
         const all = [];
         for (let i = 0; i < u.urls.length; i += 15) {
           const res = await (await fetch(`${BASE}/api/audit`, { method: "POST", headers: { ...hdr, "Content-Type": "application/json" }, body: JSON.stringify({ site, urls: u.urls.slice(i, i + 15) }) })).json();
