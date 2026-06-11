@@ -106,6 +106,15 @@
   <section data-screen="insights" class="hidden">
     <div id="insSummary" class="flex flex-wrap gap-3 mb-4"></div>
     <div id="insList" class="space-y-3"></div>
+    <div class="card mt-4">
+      <div class="text-slate-600 font-medium mb-1">📋 לוח משימות</div>
+      <div class="text-xs text-slate-400 mb-3">משימות שיצרת מתובנות או ידנית — נשמרות בדפדפן</div>
+      <div class="flex gap-2 mb-3">
+        <input id="taskInput" type="text" placeholder="משימה חדשה..." class="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-400" />
+        <button id="taskAdd" class="bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-4 py-2 text-sm">הוספה</button>
+      </div>
+      <div id="taskBoard"></div>
+    </div>
   </section>
 
   <!-- REALTIME -->
@@ -180,9 +189,19 @@
       </div>
     </div>
     <div class="card mb-4"><div class="text-slate-600 font-medium mb-2">הכנסות יומיות (₪)</div><canvas id="trRevenue" height="80"></canvas></div>
-    <div class="grid md:grid-cols-2 gap-4">
+    <div class="grid md:grid-cols-2 gap-4 mb-4">
       <div class="card"><div class="text-slate-600 font-medium mb-2">אחוז המרה (%)</div><canvas id="trConv" height="110"></canvas></div>
       <div class="card"><div class="text-slate-600 font-medium mb-2">עסקה ממוצעת (₪)</div><canvas id="trAov" height="110"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="text-slate-600 font-medium mb-1">📝 יומן הערות</div>
+      <div class="text-xs text-slate-400 mb-3">סמני שינויים שעשית ("החלפתי קריאייטיב", "שיניתי מטא") — יופיעו כקו סגול על הגרפים, וכך תראי אם השינוי עזר</div>
+      <div class="flex flex-wrap gap-2 mb-3">
+        <input id="annotDate" type="date" class="border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none" />
+        <input id="annotText" type="text" placeholder="מה עשית?" class="flex-1 min-w-40 border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-400" />
+        <button id="annotAdd" class="bg-purple-600 hover:bg-purple-700 text-white rounded-lg px-4 py-2 text-sm">הוספה</button>
+      </div>
+      <div id="annotList"></div>
     </div>
   </section>
 
@@ -220,7 +239,23 @@
       <div class="card"><div class="kpi-label">עלות לקליק (₪)</div><div id="adCpc" class="kpi-val">—</div></div>
     </div>
     <div class="card mb-4"><div class="text-slate-600 font-medium mb-3">קמפיינים</div><div id="adCampaignsMount"></div></div>
-    <div class="card"><div class="text-slate-600 font-medium mb-3">קבוצות מודעות</div><div id="adGroupsMount"></div></div>
+    <div class="card mb-4"><div class="text-slate-600 font-medium mb-3">קבוצות מודעות</div><div id="adGroupsMount"></div></div>
+    <div class="card">
+      <div class="text-slate-600 font-medium mb-1">🧮 סימולטור "מה אם" — תקציב פרסום</div>
+      <div class="text-xs text-slate-400 mb-3">הערכה ליניארית לפי ה-ROAS הנוכחי (בפועל התשואה יורדת ככל שמגדילים — קחי כקירוב)</div>
+      <div class="flex items-center gap-3 mb-4">
+        <span class="text-sm text-slate-500">-50%</span>
+        <input id="whatIfSlider" type="range" min="-50" max="50" value="0" class="flex-1 accent-blue-600" />
+        <span class="text-sm text-slate-500">+50%</span>
+        <span id="whatIfPct" class="font-bold text-blue-700 w-14 text-center">0%</span>
+      </div>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div><div class="kpi-label">עלות חדשה (₪)</div><div id="wiCost" class="kpi-val !text-rose-600">—</div></div>
+        <div><div class="kpi-label">הכנסה צפויה (₪)</div><div id="wiRev" class="kpi-val !text-emerald-600">—</div></div>
+        <div><div class="kpi-label">שינוי בהכנסה (₪)</div><div id="wiDeltaRev" class="kpi-val">—</div></div>
+        <div><div class="kpi-label">שינוי ברווח גולמי (₪)</div><div id="wiDeltaProfit" class="kpi-val">—</div></div>
+      </div>
+    </div>
   </section>
 
   <!-- TRAFFIC -->
@@ -281,6 +316,20 @@
       </div>
       <div class="text-xs text-slate-400 mb-2">איפה גולשים מתחילים למלא טופס ולא משלימים</div>
       <div id="formsMount"></div>
+    </div>
+    <div class="card mb-4">
+      <div class="text-slate-600 font-medium mb-1">🪜 משפך מותאם אישית</div>
+      <div class="text-xs text-slate-400 mb-3">בחרי 2-4 אירועים לפי הסדר וראי איפה הנשירה הגדולה ביותר</div>
+      <div class="flex flex-wrap gap-2 mb-3">
+        <select id="fnStep1" class="fn-step border border-slate-300 rounded-lg px-2 py-1.5 text-sm"></select>
+        <span class="text-slate-400">◄</span>
+        <select id="fnStep2" class="fn-step border border-slate-300 rounded-lg px-2 py-1.5 text-sm"></select>
+        <span class="text-slate-400">◄</span>
+        <select id="fnStep3" class="fn-step border border-slate-300 rounded-lg px-2 py-1.5 text-sm"></select>
+        <span class="text-slate-400">◄</span>
+        <select id="fnStep4" class="fn-step border border-slate-300 rounded-lg px-2 py-1.5 text-sm"></select>
+      </div>
+      <div id="fnResult"></div>
     </div>
     <div class="card"><div class="text-slate-600 font-medium mb-3">כל האירועים באתר</div><div id="eventsMount"></div></div>
   </section>
@@ -380,28 +429,54 @@
       { date: "2024-12-12", name: "Core 12/24" }, { date: "2025-03-13", name: "Core 3/25" },
       { date: "2025-06-30", name: "Core 6/25" },
     ];
-    Chart.register({ id: "gUpdates", afterDatasetsDraw(chart) {
-      const marks = chart.$gUpdates; if (!marks || !marks.length) return;
+    function drawMarks(chart, marks, color, label, yOff) {
+      if (!marks || !marks.length) return;
       const { ctx, chartArea, scales } = chart; if (!scales.x) return;
       marks.forEach((mk) => {
         const x = scales.x.getPixelForValue(mk.index);
         if (x < chartArea.left || x > chartArea.right) return;
-        ctx.save(); ctx.strokeStyle = "#f59e0b"; ctx.setLineDash([4, 3]); ctx.lineWidth = 1;
+        ctx.save(); ctx.strokeStyle = color; ctx.setLineDash([4, 3]); ctx.lineWidth = 1;
         ctx.beginPath(); ctx.moveTo(x, chartArea.top); ctx.lineTo(x, chartArea.bottom); ctx.stroke();
-        ctx.fillStyle = "#f59e0b"; ctx.font = "bold 10px sans-serif"; ctx.fillText("G", x + 2, chartArea.top + 10);
+        ctx.fillStyle = color; ctx.font = "bold 10px sans-serif"; ctx.fillText(label, x + 2, chartArea.top + yOff);
         ctx.restore();
       });
+    }
+    Chart.register({ id: "gUpdates", afterDatasetsDraw(chart) {
+      drawMarks(chart, chart.$gUpdates, "#f59e0b", "G", 10);
+      drawMarks(chart, chart.$annotations, "#9333ea", "📝", 22);
     }});
-    function applyGUpdates(id, rawDates) {
-      const c = charts[id]; if (!c || !rawDates || !rawDates.length) return;
+    function marksFor(rawDates, dateList) {
       const norm = rawDates.map((d) => { d = String(d).replace(/-/g, ""); return d.length === 6 ? d + "15" : d; });
       const marks = [];
-      GOOGLE_UPDATES.forEach((u) => {
-        const ud = u.date.replace(/-/g, "");
+      dateList.forEach((u) => {
+        const ud = String(u).replace(/-/g, "");
         if (ud < norm[0] || ud > norm[norm.length - 1]) return;
-        for (let i = 0; i < norm.length; i++) if (norm[i] >= ud) { marks.push({ index: i, name: u.name }); break; }
+        for (let i = 0; i < norm.length; i++) if (norm[i] >= ud) { marks.push({ index: i }); break; }
       });
-      c.$gUpdates = marks; c.update();
+      return marks;
+    }
+    // ---- Personal annotations (per site, localStorage) ----
+    const annotKey = () => "annot_" + document.getElementById("siteSelect").value;
+    const getAnnots = () => JSON.parse(localStorage.getItem(annotKey()) || "[]");
+    function renderAnnotList() {
+      const a = getAnnots().sort((x, y) => y.date.localeCompare(x.date));
+      document.getElementById("annotList").innerHTML = a.length ? a.map((x, i) =>
+        `<div class="flex items-center gap-2 py-1.5 border-b border-slate-100 last:border-0 text-sm"><span class="text-purple-600 font-bold">📝</span><span class="text-slate-400 text-xs">${x.date}</span><div class="flex-1">${x.text}</div><button class="annot-del text-slate-300 hover:text-rose-500" data-i="${i}">🗑</button></div>`).join("")
+        : `<div class="text-slate-400 text-sm">אין הערות עדיין</div>`;
+      document.querySelectorAll(".annot-del").forEach((b) => b.addEventListener("click", () => {
+        const a2 = getAnnots().sort((x, y) => y.date.localeCompare(x.date)); a2.splice(Number(b.dataset.i), 1);
+        localStorage.setItem(annotKey(), JSON.stringify(a2)); renderAnnotList(); loadGroup(currentGroup, false);
+      }));
+    }
+    function applyAnnotations(id, rawDates) {
+      const c = charts[id]; if (!c || !rawDates || !rawDates.length) return;
+      c.$annotations = marksFor(rawDates, getAnnots().map((a) => a.date)); c.update();
+    }
+    function applyGUpdates(id, rawDates) {
+      const c = charts[id]; if (!c || !rawDates || !rawDates.length) return;
+      c.$gUpdates = marksFor(rawDates, GOOGLE_UPDATES.map((u) => u.date));
+      c.$annotations = marksFor(rawDates, getAnnots().map((a) => a.date));
+      c.update();
     }
 
     // ===== Generic sortable + filterable table =====
@@ -525,7 +600,33 @@
       document.getElementById("formRate").textContent = (ft.completionRate ?? 0) + "%";
       const rateCell = (v) => v == null ? `<span class="text-slate-400">—</span>` : `<span class="font-bold ${v >= 70 ? "text-emerald-600" : v >= 40 ? "text-amber-600" : "text-rose-600"}">${v}%</span>`;
       mountTable("formsMount", [ {key:"page",label:"דף",align:"right",long:true,url:true},{key:"starts",label:"התחילו",type:"num"},{key:"submits",label:"שלחו",type:"num"},{key:"completionRate",label:"% השלמה",render:rateCell} ], (d.forms||[]).slice(), { defaultSort:{key:"starts",dir:"desc"}, scroll:true });
+      // Custom funnel
+      lastEvents = d.events || [];
+      const saved = JSON.parse(localStorage.getItem("fnSteps") || '["session_start","view_item","add_to_cart","purchase"]');
+      document.querySelectorAll(".fn-step").forEach((sel, i) => {
+        sel.innerHTML = `<option value="">— ללא —</option>` + lastEvents.map((e) => `<option value="${e.name}" ${e.name === saved[i] ? "selected" : ""}>${e.name}</option>`).join("");
+      });
+      drawCustomFunnel();
     }
+    let lastEvents = [];
+    function drawCustomFunnel() {
+      const steps = [...document.querySelectorAll(".fn-step")].map((s) => s.value).filter(Boolean);
+      localStorage.setItem("fnSteps", JSON.stringify([...document.querySelectorAll(".fn-step")].map((s) => s.value)));
+      const el = document.getElementById("fnResult");
+      if (steps.length < 2) { el.innerHTML = `<div class="text-slate-400 text-sm">בחרי לפחות 2 אירועים</div>`; return; }
+      const counts = steps.map((n) => ({ name: n, count: (lastEvents.find((e) => e.name === n) || {}).count || 0 }));
+      const maxC = Math.max(1, ...counts.map((c) => c.count));
+      let worst = { i: -1, drop: -1 };
+      counts.forEach((c, i) => { if (i > 0 && counts[i - 1].count > 0) { const dr = (counts[i - 1].count - c.count) / counts[i - 1].count * 100; if (dr > worst.drop) worst = { i, drop: dr }; } });
+      el.innerHTML = counts.map((c, i) => {
+        const w = Math.max(3, (c.count / maxC) * 100).toFixed(0);
+        const drop = i > 0 && counts[i - 1].count > 0 ? ((counts[i - 1].count - c.count) / counts[i - 1].count * 100) : null;
+        const isWorst = i === worst.i && worst.drop > 0;
+        const dropHtml = drop != null ? `<span class="${isWorst ? "text-rose-600 font-bold" : "text-slate-400"} text-xs">▼ ${drop.toFixed(0)}%${isWorst ? " ← הנשירה הגדולה" : ""}</span>` : "";
+        return `<div class="flex items-center gap-3 mb-2"><div class="w-40 text-sm text-slate-700 truncate" title="${c.name}">${c.name}</div><div class="flex-1 bg-slate-100 rounded h-7 relative overflow-hidden"><div class="${isWorst ? "bg-rose-400" : "bg-blue-600"} h-7 rounded" style="width:${w}%"></div><span class="absolute inset-0 flex items-center px-2 text-xs font-bold text-slate-800">${fmt(c.count)}</span></div><div class="w-44 text-left">${dropHtml}</div></div>`;
+      }).join("");
+    }
+    document.querySelectorAll(".fn-step").forEach((s) => s.addEventListener("change", drawCustomFunnel));
     function renderRetention(d) {
       const rows = d.retention || [];
       const cell = (pct) => { const bg = pct >= 20 ? "#1d4ed8" : pct >= 10 ? "#3b82f6" : pct >= 5 ? "#93c5fd" : pct > 0 ? "#dbeafe" : "#f8fafc"; const col = pct >= 10 ? "#fff" : "#334155"; return `background:${bg};color:${col};`; };
@@ -544,11 +645,66 @@
         `<div class="card flex items-center gap-2"><span class="text-2xl">🟢</span><div><div class="text-2xl font-bold text-emerald-600">${C.good||0}</div><div class="text-xs text-slate-500">חוזקות</div></div></div>`,
       ].join("");
       const STYLE = { bad:{b:"border-rose-400",bg:"bg-rose-50",i:"🔴"}, warn:{b:"border-amber-400",bg:"bg-amber-50",i:"🟡"}, good:{b:"border-emerald-400",bg:"bg-emerald-50",i:"🟢"} };
-      document.getElementById("insList").innerHTML = (d.insights||[]).map((x) => {
+      lastInsights = d.insights || [];
+      document.getElementById("insList").innerHTML = lastInsights.map((x, i) => {
         const s = STYLE[x.level] || STYLE.warn;
-        return `<div class="card border-r-4 ${s.b} ${s.bg}"><div class="font-bold text-slate-800 mb-1">${s.i} ${x.title}</div><div class="text-sm text-slate-600">💡 ${x.rec}</div></div>`;
+        return `<div class="card border-r-4 ${s.b} ${s.bg}"><div class="flex items-start justify-between gap-2"><div class="font-bold text-slate-800 mb-1">${s.i} ${x.title}</div><button class="ins-task shrink-0 text-xs border border-slate-300 rounded-md px-2 py-1 text-slate-500 hover:bg-white" data-i="${i}">➕ משימה</button></div><div class="text-sm text-slate-600">💡 ${x.rec}</div></div>`;
       }).join("") || `<div class="card text-slate-400">אין תובנות</div>`;
+      document.querySelectorAll(".ins-task").forEach((b) => b.addEventListener("click", () => {
+        const ins = lastInsights[Number(b.dataset.i)]; if (!ins) return;
+        addTask(ins.title); b.textContent = "✓ נוסף"; b.disabled = true;
+      }));
     }
+    // ---- What-If simulator ----
+    let adsTotals = null;
+    function updateWhatIf() {
+      if (!adsTotals || !adsTotals.cost) return;
+      const pct = Number(document.getElementById("whatIfSlider").value);
+      document.getElementById("whatIfPct").textContent = (pct > 0 ? "+" : "") + pct + "%";
+      const newCost = adsTotals.cost * (1 + pct / 100);
+      const newRev = adsTotals.revenue * (1 + pct / 100);
+      const dRev = newRev - adsTotals.revenue, dProfit = dRev - (newCost - adsTotals.cost);
+      document.getElementById("wiCost").textContent = fmt(Math.round(newCost));
+      document.getElementById("wiRev").textContent = fmt(Math.round(newRev));
+      const sign = (v) => (v > 0 ? "+" : "") + fmt(Math.round(v));
+      const el1 = document.getElementById("wiDeltaRev"); el1.textContent = sign(dRev); el1.className = "kpi-val " + (dRev >= 0 ? "!text-emerald-600" : "!text-rose-600");
+      const el2 = document.getElementById("wiDeltaProfit"); el2.textContent = sign(dProfit); el2.className = "kpi-val " + (dProfit >= 0 ? "!text-emerald-600" : "!text-rose-600");
+    }
+    document.getElementById("whatIfSlider").addEventListener("input", updateWhatIf);
+
+    // ---- Task board (localStorage) ----
+    let lastInsights = [];
+    const getTasks = () => JSON.parse(localStorage.getItem("dashTasks") || "[]");
+    const saveTasks = (t) => localStorage.setItem("dashTasks", JSON.stringify(t));
+    function addTask(text) {
+      const t = getTasks();
+      t.unshift({ id: Date.now(), text, site: document.getElementById("siteSelect").value, date: new Date().toISOString().slice(0, 10), done: false });
+      saveTasks(t); renderTaskBoard();
+    }
+    function renderTaskBoard() {
+      const t = getTasks();
+      document.getElementById("taskBoard").innerHTML = t.length ? t.map((x) =>
+        `<div class="flex items-center gap-2 py-2 border-b border-slate-100 last:border-0 ${x.done ? "opacity-50" : ""}">
+          <input type="checkbox" ${x.done ? "checked" : ""} data-id="${x.id}" class="task-done accent-blue-600">
+          <div class="flex-1 text-sm ${x.done ? "line-through" : ""}">${x.text}</div>
+          <span class="text-xs text-slate-400">${x.site} · ${x.date}</span>
+          <button class="task-del text-slate-300 hover:text-rose-500" data-id="${x.id}">🗑</button>
+        </div>`).join("") : `<div class="text-slate-400 text-sm">אין משימות — צרי מתובנה (➕) או ידנית</div>`;
+      document.querySelectorAll(".task-done").forEach((c) => c.addEventListener("change", () => { const t2 = getTasks(); const it = t2.find((x) => x.id == c.dataset.id); if (it) { it.done = c.checked; saveTasks(t2); renderTaskBoard(); } }));
+      document.querySelectorAll(".task-del").forEach((b) => b.addEventListener("click", () => { saveTasks(getTasks().filter((x) => x.id != b.dataset.id)); renderTaskBoard(); }));
+    }
+    document.getElementById("taskAdd").addEventListener("click", () => { const v = document.getElementById("taskInput").value.trim(); if (v) { addTask(v); document.getElementById("taskInput").value = ""; } });
+    document.getElementById("taskInput").addEventListener("keydown", (e) => { if (e.key === "Enter") document.getElementById("taskAdd").click(); });
+    renderTaskBoard();
+    document.getElementById("annotAdd").addEventListener("click", () => {
+      const dt = document.getElementById("annotDate").value, tx = document.getElementById("annotText").value.trim();
+      if (!dt || !tx) { setStatus("יש למלא תאריך וטקסט להערה", "error"); return; }
+      const a = getAnnots(); a.push({ date: dt, text: tx });
+      localStorage.setItem(annotKey(), JSON.stringify(a));
+      document.getElementById("annotText").value = "";
+      renderAnnotList(); loadGroup(currentGroup, false);
+    });
+    renderAnnotList();
     function renderOverview(d) {
       const a = d.analytics || {}, s = d.searchConsole || {}, pr = d.prev || {};
       document.getElementById("compareNote").textContent = d.compareTo ? "בהשוואה לתקופה: " + d.compareTo : "";
@@ -622,6 +778,7 @@
       const t = d.totals || {};
       document.getElementById("adCost").textContent = fmt(t.cost); document.getElementById("adRev").textContent = fmt(t.revenue);
       document.getElementById("adRoas").textContent = (t.roas ?? 0)+"x"; document.getElementById("adClicks").textContent = fmt(t.clicks); document.getElementById("adCpc").textContent = (t.cpc ?? 0);
+      adsTotals = t; updateWhatIf();
       const roasCell = (v) => { const c = v>=3?"text-emerald-600":v>=1?"text-amber-600":"text-rose-600"; return `<span class="font-bold ${c}">${v}x</span>`; };
       const cols = [ {key:"name",label:"שם",align:"right",long:true},{key:"cost",label:"עלות (₪)",type:"num"},{key:"impressions",label:"חשיפות",type:"num"},{key:"clicks",label:"קליקים",type:"num"},{key:"ctr",label:"CTR",type:"pct"},{key:"cpc",label:"CPC (₪)"},{key:"revenue",label:"הכנסה (₪)",type:"num"},{key:"transactions",label:"עסקאות",type:"num"},{key:"cpa",label:"CPA (₪)"},{key:"convRate",label:"המרה",type:"pct"},{key:"roas",label:"ROAS",render:roasCell} ];
       mountTable("adCampaignsMount", cols, (d.campaigns||[]).slice(), { defaultSort:{key:"cost",dir:"desc"}, scroll:true });
