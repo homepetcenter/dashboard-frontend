@@ -378,6 +378,25 @@
     <div class="card"><div class="text-slate-600 font-medium mb-3">מילות חיפוש מובילות + הדף המדורג</div><div id="seQMount"></div></div>
   </section>
 
+  <!-- HEALTH -->
+  <section data-screen="health" class="hidden">
+    <div class="card mb-4">
+      <div class="text-slate-600 font-medium mb-1">⚡ Core Web Vitals — מהירות אמיתית מגולשי Chrome</div>
+      <div class="text-xs text-slate-400 mb-3">ממוצע 28 יום (p75) — אותם מדדים שמשפיעים על הדירוג בגוגל</div>
+      <div id="vitalsMount"></div>
+    </div>
+    <div class="card">
+      <div class="flex items-center justify-between flex-wrap gap-2 mb-1">
+        <div class="text-slate-600 font-medium">🕷️ סריקה טכנית — Title, Meta, 404, אינדוקס</div>
+        <button id="auditRun" class="bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-4 py-2 text-sm">הרץ סריקה</button>
+      </div>
+      <div class="text-xs text-slate-400 mb-3">סורק עד 300 עמודים מה-sitemap · אורך ~דקה · רץ לפי דרישה</div>
+      <div id="auditProgress" class="text-sm text-blue-600 mb-3 hidden"></div>
+      <div id="auditSummary" class="flex flex-wrap gap-3 mb-4"></div>
+      <div id="auditIssuesMount"></div>
+    </div>
+  </section>
+
   <!-- War Room overlay -->
   <div id="warRoom" class="hidden fixed inset-0 z-[70] bg-slate-900 text-white p-8 flex-col items-center justify-center text-center">
     <button id="warRoomClose" class="absolute top-4 start-4 text-slate-400 hover:text-white text-2xl">✕</button>
@@ -910,6 +929,67 @@
       mountTable("sePotentialMount", [ {key:"key",label:"מילה",align:"right",long:true},{key:"position",label:"מיקום"},{key:"impressions",label:"חשיפות",type:"num"},{key:"clicks",label:"קליקים היום",type:"num"},{key:"potential",label:"פוטנציאל קליקים",render:(v)=>`<span class="font-bold text-emerald-600">+${fmt(v)}</span>`},{key:"page",label:"דף",align:"right",render:pageCell} ], (d.trafficPotential||[]).slice(), { scroll:true, defaultSort:{key:"potential",dir:"desc"} });
     }
 
+    function renderVitals(d) {
+      const el = document.getElementById("vitalsMount");
+      if (!d.vitals) { el.innerHTML = `<div class="text-amber-600 text-sm">⚠️ חסר מפתח <b>CRUX_API_KEY</b> ב-Railway — הוסיפי אותו כדי לראות נתוני מהירות</div>`; return; }
+      const RATE = { lcp: [2500, 4000], inp: [200, 500], cls: [0.1, 0.25] };
+      const NAMES = { lcp: "LCP — טעינה", inp: "INP — תגובתיות", cls: "CLS — יציבות" };
+      const fmtV = (k, v) => v == null ? "—" : k === "cls" ? v.toFixed(2) : (v / 1000).toFixed(1) + "s";
+      const block = (label, data) => {
+        if (!data || data.error) return `<div class="mb-2 text-sm"><span class="font-medium text-slate-700">${label}:</span> <span class="text-slate-400">אין מספיק נתוני גלישה לאתר זה</span></div>`;
+        return `<div class="mb-3"><div class="font-medium text-slate-700 mb-1">${label}</div><div class="flex gap-3 flex-wrap">` +
+          ["lcp", "inp", "cls"].map((k) => {
+            const v = data[k], [g, n] = RATE[k];
+            const cls = v == null ? "bg-slate-100 text-slate-400" : v <= g ? "bg-emerald-100 text-emerald-700" : v <= n ? "bg-amber-100 text-amber-700" : "bg-rose-100 text-rose-700";
+            const tag = v == null ? "" : v <= g ? "טוב ✓" : v <= n ? "דורש שיפור" : "גרוע ✗";
+            return `<div class="rounded-lg px-4 py-2 ${cls}"><div class="text-xs">${NAMES[k]}</div><div class="font-bold text-xl">${fmtV(k, v)}</div><div class="text-xs">${tag}</div></div>`;
+          }).join("") + `</div></div>`;
+      };
+      el.innerHTML = block("📱 מובייל", d.vitals.mobile) + block("💻 דסקטופ", d.vitals.desktop);
+    }
+
+    // ---- Technical audit (on-demand crawler) ----
+    async function runAudit() {
+      const btn = document.getElementById("auditRun"), prog = document.getElementById("auditProgress");
+      btn.disabled = true; btn.textContent = "סורק..."; prog.classList.remove("hidden");
+      const site = document.getElementById("siteSelect").value;
+      const hdr = { "X-Access-Key": accessKey };
+      try {
+        prog.textContent = "מושך sitemap ו-robots.txt...";
+        const u = await (await fetch(`${BASE}/api/audit?site=${site}&mode=urls`, { headers: hdr })).json();
+        if (!u.urls || !u.urls.length) { prog.textContent = "לא נמצא sitemap או שאין בו עמודים"; btn.disabled = false; btn.textContent = "הרץ סריקה"; return; }
+        const all = [];
+        for (let i = 0; i < u.urls.length; i += 15) {
+          const res = await (await fetch(`${BASE}/api/audit`, { method: "POST", headers: { ...hdr, "Content-Type": "application/json" }, body: JSON.stringify({ site, urls: u.urls.slice(i, i + 15) }) })).json();
+          all.push(...(res.results || []));
+          prog.textContent = `נסרקו ${all.length} מתוך ${u.urls.length} עמודים...`;
+        }
+        const ok = all.filter((r) => r.status === 200);
+        const issues = [];
+        all.filter((r) => r.status !== 200).forEach((r) => issues.push({ url: r.url, issue: "🔴 שגיאה " + (r.status || "טעינה"), detail: "העמוד לא נטען תקין" }));
+        (u.blocked || []).forEach((b) => issues.push({ url: b, issue: "🚫 חסום ב-robots", detail: "מופיע ב-sitemap אך חסום לסריקה" }));
+        ok.filter((r) => r.noindex).forEach((r) => issues.push({ url: r.url, issue: "🙈 noindex", detail: "העמוד מסומן לא-להוסיף-לאינדקס" }));
+        ok.filter((r) => !r.title).forEach((r) => issues.push({ url: r.url, issue: "✏️ חסר Title", detail: "" }));
+        ok.filter((r) => r.titleLen > 65).forEach((r) => issues.push({ url: r.url, issue: "📏 Title ארוך", detail: r.titleLen + " תווים (מומלץ עד 65)" }));
+        ok.filter((r) => r.title && !r.meta).forEach((r) => issues.push({ url: r.url, issue: "📝 חסר Meta Description", detail: "" }));
+        ok.filter((r) => r.metaLen > 160).forEach((r) => issues.push({ url: r.url, issue: "📏 Meta ארוך", detail: r.metaLen + " תווים (מומלץ עד 160)" }));
+        const byTitle = {}; ok.forEach((r) => { if (r.title) (byTitle[r.title] = byTitle[r.title] || []).push(r.url); });
+        Object.entries(byTitle).filter(([, us]) => us.length > 1).forEach(([t, us]) => us.forEach((uu) => issues.push({ url: uu, issue: "👯 Title כפול", detail: `מופיע ב-${us.length} עמודים: "${t.slice(0, 50)}"` })));
+        const chip = (n, label, color) => `<div class="card flex items-center gap-2 !py-2"><div class="text-xl font-bold ${color}">${n}</div><div class="text-xs text-slate-500">${label}</div></div>`;
+        const count = (pred) => issues.filter(pred).length;
+        document.getElementById("auditSummary").innerHTML =
+          chip(ok.length, "עמודים תקינים", "text-emerald-600") +
+          chip(count((i) => i.issue.includes("שגיאה")), "שגיאות טעינה/404", "text-rose-600") +
+          chip(count((i) => i.issue.includes("Title")), "בעיות Title", "text-amber-600") +
+          chip(count((i) => i.issue.includes("Meta")), "בעיות Meta", "text-amber-600") +
+          chip(count((i) => i.issue.includes("noindex") || i.issue.includes("robots")), "בעיות אינדוקס", "text-purple-600");
+        mountTable("auditIssuesMount", [ {key:"url",label:"עמוד",align:"right",long:true,url:true},{key:"issue",label:"בעיה",align:"right"},{key:"detail",label:"פירוט",align:"right"} ], issues, { defaultSort:{key:"issue",dir:"asc"}, scroll:true });
+        prog.textContent = `✓ הסריקה הושלמה — ${all.length} עמודים, ${issues.length} ממצאים`;
+      } catch (e) { prog.textContent = "שגיאה בסריקה: " + e.message; }
+      btn.disabled = false; btn.textContent = "הרץ סריקה";
+    }
+    document.getElementById("auditRun").addEventListener("click", runAudit);
+
     const PARTS = {
       insights:{path:"/api/insights",render:renderInsights}, realtime:{path:"/api/realtime",render:renderRealtime}, goals:{path:"/api/ecommerce",render:renderGoals},
       overview:{path:"/api/data",render:renderOverview}, compare:{path:"/api/compare",render:renderCompare},
@@ -918,6 +998,7 @@
       traffic:{path:"/api/sources",render:renderTraffic}, audience:{path:"/api/audience",render:renderAudience},
       retention:{path:"/api/retention",render:renderRetention}, events:{path:"/api/events",render:renderEvents},
       pages:{path:"/api/pages",render:renderPages}, search:{path:"/api/search",render:renderSearch},
+      health:{path:"/api/vitals",render:renderVitals},
     };
     // ---- Grouped navigation: 6 rich screens, each loads several endpoints ----
     const GROUPS = {
@@ -925,10 +1006,10 @@
       performance: ["overview", "trends", "realtime", "goals"],
       salesads: ["sales", "ads"],
       audience: ["traffic", "audience", "retention", "events"],
-      seo: ["search", "pages"],
+      seo: ["search", "pages", "health"],
       compare: ["compare"],
     };
-    const DOM_ORDER = ["insights","overview","trends","realtime","goals","sales","ads","traffic","audience","retention","events","search","pages","compare"];
+    const DOM_ORDER = ["insights","overview","trends","realtime","goals","sales","ads","traffic","audience","retention","events","search","pages","health","compare"];
 
     async function loadPart(name, force) {
       const t = PARTS[name], key = cacheKey();
@@ -938,7 +1019,7 @@
         document.getElementById("updatedAt").textContent = "עודכן: " + new Date().toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" });
       } catch (err) { setStatus("שגיאה: " + err.message, "error"); }
     }
-    const SECTION_TITLES = { insights:"💡 תובנות", overview:"📈 סקירה", trends:"📉 מגמות", realtime:"⏱️ זמן אמת", goals:"🎯 יעדים", sales:"💰 מכירות", ads:"📣 פרסום (ROAS)", traffic:"🚦 מקורות תנועה", audience:"🌍 קהל", retention:"🔁 Retention", events:"🔔 אירועים", search:"🔍 חיפוש", pages:"📄 דפים מובילים", compare:"📊 השוואת אתרים" };
+    const SECTION_TITLES = { insights:"💡 תובנות", overview:"📈 סקירה", trends:"📉 מגמות", realtime:"⏱️ זמן אמת", goals:"🎯 יעדים", sales:"💰 מכירות", ads:"📣 פרסום (ROAS)", traffic:"🚦 מקורות תנועה", audience:"🌍 קהל", retention:"🔁 Retention", events:"🔔 אירועים", search:"🔍 חיפוש", pages:"📄 דפים מובילים", health:"🩺 בריאות האתר", compare:"📊 השוואת אתרים" };
     async function loadGroup(group, force) {
       document.getElementById("loadingBar").classList.add("loading");
       setStatus("טוען נתונים...", "info");
