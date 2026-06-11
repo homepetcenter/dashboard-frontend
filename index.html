@@ -397,6 +397,31 @@
     </div>
   </section>
 
+  <!-- RANKS -->
+  <section data-screen="ranks" class="hidden">
+    <div class="card mb-4">
+      <div class="flex items-center justify-between flex-wrap gap-2 mb-1">
+        <div class="text-slate-600 font-medium">🎯 מילות מפתח במעקב <span id="rkCount" class="text-slate-400 text-sm"></span></div>
+        <button id="rkRun" class="bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-4 py-2 text-sm">🔄 בדוק מיקומים עכשיו</button>
+      </div>
+      <div class="text-xs text-slate-400 mb-3">בדיקה חיה בגוגל ישראל (עברית) · כל בדיקה עולה ~0.2 סנט מקרדיט DataForSEO</div>
+      <div class="flex gap-2 mb-3">
+        <input id="rkInput" type="text" placeholder="הוסיפי מילה (או כמה, מופרדות בפסיק)..." class="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-400" />
+        <button id="rkAdd" class="bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg px-4 py-2 text-sm">הוספה</button>
+      </div>
+      <div id="rkChips" class="flex flex-wrap gap-2"></div>
+      <div id="rkStatus" class="text-sm text-blue-600 mt-2"></div>
+    </div>
+    <div class="card mb-4"><div class="text-slate-600 font-medium mb-3">מיקומים נוכחיים</div><div id="rkTableMount"></div></div>
+    <div class="card">
+      <div class="flex items-center gap-3 mb-3 flex-wrap">
+        <div class="text-slate-600 font-medium">היסטוריית מיקום:</div>
+        <select id="rkChartSel" class="border border-slate-300 rounded-lg px-3 py-1.5 text-sm"></select>
+      </div>
+      <canvas id="rkChart" height="90"></canvas>
+    </div>
+  </section>
+
   <!-- War Room overlay -->
   <div id="warRoom" class="hidden fixed inset-0 z-[70] bg-slate-900 text-white p-8 flex-col items-center justify-center text-center">
     <button id="warRoomClose" class="absolute top-4 start-4 text-slate-400 hover:text-white text-2xl">✕</button>
@@ -990,6 +1015,88 @@
     }
     document.getElementById("auditRun").addEventListener("click", runAudit);
 
+    // ---- Rank tracker ----
+    let rkData = [];
+    function renderRanks(d) {
+      rkData = d.keywords || [];
+      document.getElementById("rkCount").textContent = d.tracked ? `(${d.tracked} מילים)` : "";
+      // chips of tracked keywords (from history + tracked list)
+      loadRkChips();
+      const posCell = (v) => v == null ? `<span class="text-slate-400">לא בטופ-100</span>` : `<span class="font-bold ${v <= 3 ? "text-emerald-600" : v <= 10 ? "text-lime-600" : v <= 20 ? "text-amber-600" : "text-rose-600"}">#${v}</span>`;
+      const chCell = (v) => v == null ? "" : v > 0 ? `<span class="text-emerald-600 font-bold">▲ ${v}</span>` : v < 0 ? `<span class="text-rose-600 font-bold">▼ ${Math.abs(v)}</span>` : `<span class="text-slate-400">—</span>`;
+      mountTable("rkTableMount", [
+        {key:"keyword",label:"מילה",align:"right",long:true},
+        {key:"position",label:"מיקום",render:posCell},
+        {key:"change",label:"שינוי",render:chCell},
+        {key:"best",label:"שיא"},
+        {key:"url",label:"דף מדורג",align:"right",long:true,url:true},
+      ], rkData.slice(), { defaultSort:{key:"position",dir:"asc"}, scroll:true });
+      const sel = document.getElementById("rkChartSel");
+      sel.innerHTML = rkData.map((k) => `<option value="${k.keyword.replace(/"/g, "&quot;")}">${k.keyword}</option>`).join("") || `<option value="">אין נתונים עדיין</option>`;
+      drawRkChart();
+    }
+    function drawRkChart() {
+      const kw = document.getElementById("rkChartSel").value;
+      const item = rkData.find((k) => k.keyword === kw);
+      if (!item) { if (charts["rkChart"]) charts["rkChart"].destroy(); return; }
+      const ser = item.series || [];
+      makeChart("rkChart", { type: "line",
+        data: { labels: ser.map((s) => niceDate(String(s.date).replace(/-/g, ""))), datasets: [{ label: "מיקום", data: ser.map((s) => s.position), borderColor: "#1d4ed8", backgroundColor: "rgba(29,78,216,.08)", fill: true, tension: .3, pointRadius: 3, spanGaps: true }] },
+        options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { reverse: true, min: 1, title: { display: true, text: "מיקום בגוגל (1 = למעלה)" } } } } });
+    }
+    document.getElementById("rkChartSel").addEventListener("change", drawRkChart);
+    async function rkApi(method, body) {
+      const site = document.getElementById("siteSelect").value;
+      const res = await fetch(`${BASE}/api/keywords?site=${site}`, { method, headers: { "X-Access-Key": accessKey, "Content-Type": "application/json" }, body: body ? JSON.stringify({ site, ...body }) : undefined });
+      return res.json();
+    }
+    async function loadRkChips() {
+      try {
+        const d = await rkApi("GET");
+        const kws = d.keywords || [];
+        document.getElementById("rkCount").textContent = `(${kws.length} מילים)`;
+        document.getElementById("rkChips").innerHTML = kws.map((k) =>
+          `<span class="inline-flex items-center gap-1 bg-slate-100 rounded-full px-3 py-1 text-sm">${k}<button class="rk-del text-slate-400 hover:text-rose-500" data-k="${k.replace(/"/g, "&quot;")}">✕</button></span>`).join("") || `<span class="text-slate-400 text-sm">אין מילים — הוסיפי למעלה</span>`;
+        document.querySelectorAll(".rk-del").forEach((b) => b.addEventListener("click", async () => { await rkApi("POST", { remove: [b.dataset.k] }); loadRkChips(); }));
+      } catch (e) { document.getElementById("rkChips").innerHTML = `<span class="text-amber-600 text-sm">⚠️ ${e.message || "שגיאת חיבור ל-Supabase"}</span>`; }
+    }
+    document.getElementById("rkAdd").addEventListener("click", async () => {
+      const v = document.getElementById("rkInput").value.trim(); if (!v) return;
+      await rkApi("POST", { add: v.split(",").map((s) => s.trim()).filter(Boolean) });
+      document.getElementById("rkInput").value = ""; loadRkChips();
+    });
+    document.getElementById("rkInput").addEventListener("keydown", (e) => { if (e.key === "Enter") document.getElementById("rkAdd").click(); });
+    document.getElementById("rkRun").addEventListener("click", async () => {
+      const btn = document.getElementById("rkRun"), st = document.getElementById("rkStatus");
+      btn.disabled = true; btn.textContent = "בודק מול גוגל...";
+      try {
+        const site = document.getElementById("siteSelect").value;
+        const kd = await rkApi("GET");
+        const kws = (kd.keywords || []).filter((k) => k && k.trim());
+        if (!kws.length) { st.textContent = "אין מילים במעקב"; }
+        else {
+          let done = 0, found = 0;
+          st.textContent = `בודק 0/${kws.length}...`;
+          // 2 keywords in parallel — each live check takes ~10-20s
+          let idx = 0;
+          async function worker() {
+            while (idx < kws.length) {
+              const k = kws[idx++];
+              try {
+                const r = await (await fetch(`${BASE}/api/rank-run?site=${site}&kw=${encodeURIComponent(k)}`, { headers: { "X-Access-Key": accessKey } })).json();
+                if (r.position) found++;
+              } catch (e) {}
+              done++; st.textContent = `בודק ${done}/${kws.length}... (${found} נמצאו עד כה)`;
+            }
+          }
+          await Promise.all([worker(), worker()]);
+          st.textContent = `✓ נבדקו ${done} מילים, ${found} נמצאו בטופ-100`;
+          loadPart("ranks", true);
+        }
+      } catch (e) { st.textContent = "שגיאה: " + e.message; }
+      btn.disabled = false; btn.textContent = "🔄 בדוק מיקומים עכשיו";
+    });
+
     const PARTS = {
       insights:{path:"/api/insights",render:renderInsights}, realtime:{path:"/api/realtime",render:renderRealtime}, goals:{path:"/api/ecommerce",render:renderGoals},
       overview:{path:"/api/data",render:renderOverview}, compare:{path:"/api/compare",render:renderCompare},
@@ -999,6 +1106,7 @@
       retention:{path:"/api/retention",render:renderRetention}, events:{path:"/api/events",render:renderEvents},
       pages:{path:"/api/pages",render:renderPages}, search:{path:"/api/search",render:renderSearch},
       health:{path:"/api/vitals",render:renderVitals},
+      ranks:{path:"/api/rank-history",render:renderRanks},
     };
     // ---- Grouped navigation: 6 rich screens, each loads several endpoints ----
     const GROUPS = {
@@ -1006,10 +1114,10 @@
       performance: ["overview", "trends", "realtime", "goals"],
       salesads: ["sales", "ads"],
       audience: ["traffic", "audience", "retention", "events"],
-      seo: ["search", "pages", "health"],
+      seo: ["ranks", "search", "pages", "health"],
       compare: ["compare"],
     };
-    const DOM_ORDER = ["insights","overview","trends","realtime","goals","sales","ads","traffic","audience","retention","events","search","pages","health","compare"];
+    const DOM_ORDER = ["insights","overview","trends","realtime","goals","sales","ads","traffic","audience","retention","events","ranks","search","pages","health","compare"];
 
     async function loadPart(name, force) {
       const t = PARTS[name], key = cacheKey();
@@ -1019,7 +1127,7 @@
         document.getElementById("updatedAt").textContent = "עודכן: " + new Date().toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" });
       } catch (err) { setStatus("שגיאה: " + err.message, "error"); }
     }
-    const SECTION_TITLES = { insights:"💡 תובנות", overview:"📈 סקירה", trends:"📉 מגמות", realtime:"⏱️ זמן אמת", goals:"🎯 יעדים", sales:"💰 מכירות", ads:"📣 פרסום (ROAS)", traffic:"🚦 מקורות תנועה", audience:"🌍 קהל", retention:"🔁 Retention", events:"🔔 אירועים", search:"🔍 חיפוש", pages:"📄 דפים מובילים", health:"🩺 בריאות האתר", compare:"📊 השוואת אתרים" };
+    const SECTION_TITLES = { insights:"💡 תובנות", overview:"📈 סקירה", trends:"📉 מגמות", realtime:"⏱️ זמן אמת", goals:"🎯 יעדים", sales:"💰 מכירות", ads:"📣 פרסום (ROAS)", traffic:"🚦 מקורות תנועה", audience:"🌍 קהל", retention:"🔁 Retention", events:"🔔 אירועים", search:"🔍 חיפוש", pages:"📄 דפים מובילים", health:"🩺 בריאות האתר", ranks:"📈 מעקב מיקומים", compare:"📊 השוואת אתרים" };
     async function loadGroup(group, force) {
       document.getElementById("loadingBar").classList.add("loading");
       setStatus("טוען נתונים...", "info");
