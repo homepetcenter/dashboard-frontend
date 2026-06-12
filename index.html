@@ -837,7 +837,8 @@
       const cols = [ {key:"name",label:"שם",align:"right",long:true},{key:"cost",label:"עלות (₪)",type:"num"},{key:"impressions",label:"חשיפות",type:"num"},{key:"clicks",label:"קליקים",type:"num"},{key:"ctr",label:"CTR",type:"pct"},{key:"cpc",label:"CPC (₪)"},{key:"revenue",label:"הכנסה (₪)",type:"num"},{key:"transactions",label:"עסקאות",type:"num"},{key:"cpa",label:"CPA (₪)"},{key:"convRate",label:"המרה",type:"pct"},{key:"roas",label:"ROAS",render:roasCell} ];
       mountTable("adCampaignsMount", cols, (d.campaigns||[]).slice(), { defaultSort:{key:"cost",dir:"desc"}, scroll:true });
       mountTable("adGroupsMount", cols, (d.adGroups||[]).slice(), { defaultSort:{key:"cost",dir:"desc"}, scroll:true });
-      const wasteCell = (v, row) => row.transactions === 0 && row.cost >= 10 ? `<span class="text-rose-600 font-bold">⚠️ בזבוז</span>` : row.roas >= 3 ? `<span class="text-emerald-600">✓</span>` : "";
+      const aq = (d.adQueries||[]).map((r) => ({ ...r, status: r.transactions === 0 && r.cost >= 10 ? "⚠️ בזבוז" : r.roas >= 3 ? "✓ רווחי" : "" }));
+      const statusCell = (v) => v.includes("בזבוז") ? `<span class="text-rose-600 font-bold">${v}</span>` : v.includes("רווחי") ? `<span class="text-emerald-600">${v}</span>` : "";
       mountTable("adQueriesMount", [
         {key:"query",label:"מה הקלידו",align:"right",long:true},
         {key:"campaign",label:"קמפיין",align:"right",long:true},
@@ -847,8 +848,8 @@
         {key:"revenue",label:"הכנסה (₪)",type:"num"},
         {key:"transactions",label:"עסקאות",type:"num"},
         {key:"roas",label:"ROAS",render:roasCell},
-        {key:"_w",label:"סטטוס",render:wasteCell},
-      ], (d.adQueries||[]).slice(), { defaultSort:{key:"cost",dir:"desc"}, scroll:true });
+        {key:"status",label:"סטטוס",render:statusCell},
+      ], aq, { defaultSort:{key:"cost",dir:"desc"}, scroll:true });
     }
     const DONUT = ["#1d4ed8","#0ea5e9","#10b981","#f59e0b","#ef4444","#8b5cf6","#ec4899","#14b8a6","#64748b","#a3a3a3","#84cc16","#f97316"];
     function renderTraffic(d) {
