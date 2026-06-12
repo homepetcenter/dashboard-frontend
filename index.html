@@ -240,6 +240,11 @@
     </div>
     <div class="card mb-4"><div class="text-slate-600 font-medium mb-3">קמפיינים</div><div id="adCampaignsMount"></div></div>
     <div class="card mb-4"><div class="text-slate-600 font-medium mb-3">קבוצות מודעות</div><div id="adGroupsMount"></div></div>
+    <div class="card mb-4">
+      <div class="text-slate-600 font-medium mb-1">🔤 שאילתות חיפוש ששולם עליהן</div>
+      <div class="text-xs text-slate-400 mb-2">מה אנשים באמת הקלידו בגוגל כשהמודעה שלך הופיעה · ⚠️ = עלות בלי אף מכירה (מועמד למילים שליליות)</div>
+      <div id="adQueriesMount"></div>
+    </div>
     <div class="card">
       <div class="text-slate-600 font-medium mb-1">🧮 סימולטור "מה אם" — תקציב פרסום</div>
       <div class="text-xs text-slate-400 mb-3">הערכה ליניארית לפי ה-ROAS הנוכחי (בפועל התשואה יורדת ככל שמגדילים — קחי כקירוב)</div>
@@ -832,6 +837,18 @@
       const cols = [ {key:"name",label:"שם",align:"right",long:true},{key:"cost",label:"עלות (₪)",type:"num"},{key:"impressions",label:"חשיפות",type:"num"},{key:"clicks",label:"קליקים",type:"num"},{key:"ctr",label:"CTR",type:"pct"},{key:"cpc",label:"CPC (₪)"},{key:"revenue",label:"הכנסה (₪)",type:"num"},{key:"transactions",label:"עסקאות",type:"num"},{key:"cpa",label:"CPA (₪)"},{key:"convRate",label:"המרה",type:"pct"},{key:"roas",label:"ROAS",render:roasCell} ];
       mountTable("adCampaignsMount", cols, (d.campaigns||[]).slice(), { defaultSort:{key:"cost",dir:"desc"}, scroll:true });
       mountTable("adGroupsMount", cols, (d.adGroups||[]).slice(), { defaultSort:{key:"cost",dir:"desc"}, scroll:true });
+      const wasteCell = (v, row) => row.transactions === 0 && row.cost >= 10 ? `<span class="text-rose-600 font-bold">⚠️ בזבוז</span>` : row.roas >= 3 ? `<span class="text-emerald-600">✓</span>` : "";
+      mountTable("adQueriesMount", [
+        {key:"query",label:"מה הקלידו",align:"right",long:true},
+        {key:"campaign",label:"קמפיין",align:"right",long:true},
+        {key:"cost",label:"עלות (₪)",type:"num"},
+        {key:"clicks",label:"קליקים",type:"num"},
+        {key:"sessions",label:"כניסות",type:"num"},
+        {key:"revenue",label:"הכנסה (₪)",type:"num"},
+        {key:"transactions",label:"עסקאות",type:"num"},
+        {key:"roas",label:"ROAS",render:roasCell},
+        {key:"_w",label:"סטטוס",render:wasteCell},
+      ], (d.adQueries||[]).slice(), { defaultSort:{key:"cost",dir:"desc"}, scroll:true });
     }
     const DONUT = ["#1d4ed8","#0ea5e9","#10b981","#f59e0b","#ef4444","#8b5cf6","#ec4899","#14b8a6","#64748b","#a3a3a3","#84cc16","#f97316"];
     function renderTraffic(d) {
