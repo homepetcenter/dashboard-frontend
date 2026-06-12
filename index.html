@@ -430,6 +430,7 @@
       <div id="rkChips" class="flex flex-wrap gap-2"></div>
       <div id="rkStatus" class="text-sm text-blue-600 mt-2"></div>
     </div>
+    <div id="rkSummary" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4"></div>
     <div class="card mb-4">
       <div class="text-slate-600 font-medium mb-3">מיקומים נוכחיים</div>
       <div id="rkFilterChips" class="flex flex-wrap gap-2 mb-3"></div>
@@ -997,6 +998,7 @@
       kwMasterData = d.master || [];
       buildKwPresets();
       applyKwPreset(kwActivePreset);
+      if (rkData.length) drawRkTable(); // refresh GSC merge in rank tracker
     }
 
     // ---- Unified keyword master table ----
@@ -1142,10 +1144,22 @@
       }).join("");
       document.querySelectorAll(".rk-flt").forEach((b) => b.addEventListener("click", () => { rkFilter = b.dataset.f; buildRkFilters(); drawRkTable(); }));
     }
+    const RK_CTR = (p) => p == null ? 0 : p <= 1 ? 0.28 : p <= 2 ? 0.15 : p <= 3 ? 0.10 : p <= 4 ? 0.07 : p <= 5 ? 0.05 : p <= 10 ? 0.03 : p <= 20 ? 0.01 : 0.004;
+    function rkEnriched() {
+      const gsc = {}; (kwMasterData || []).forEach((m) => { gsc[m.key] = m; });
+      return rkData.map((r) => {
+        const g = gsc[r.keyword] || {};
+        const estNow = r.volume ? Math.round(r.volume * RK_CTR(r.position)) : null;
+        const top3 = r.volume ? Math.round(r.volume * 0.10) : null;
+        return { ...r, gscClicks: g.clicks ?? null, gscImpr: g.impressions ?? null, estNow, uplift: top3 != null ? Math.max(0, top3 - (estNow || 0)) : null };
+      });
+    }
     function drawRkTable() {
       const ft = RK_FILTERS.find((x) => x.id === rkFilter) || RK_FILTERS[0];
       const posCell = (v) => v == null ? `<span class="text-slate-400">לא בטופ-100</span>` : `<span class="font-bold ${v <= 3 ? "text-emerald-600" : v <= 10 ? "text-lime-600" : v <= 20 ? "text-amber-600" : "text-rose-600"}">#${v}</span>`;
       const chCell = (v) => v == null ? "" : v > 0 ? `<span class="text-emerald-600 font-bold">▲ ${v}</span>` : v < 0 ? `<span class="text-rose-600 font-bold">▼ ${Math.abs(v)}</span>` : `<span class="text-slate-400">—</span>`;
+      const vchCell = (v) => v == null ? "" : `<span class="text-xs font-medium ${v >= 0 ? "text-emerald-600" : "text-rose-600"}">${v >= 0 ? "+" : ""}${v}%</span>`;
+      const upCell = (v) => v != null && v >= 5 ? `<span class="font-bold text-emerald-600">+${fmt(v)}</span>` : "";
       mountTable("rkTableMount", [
         {key:"keyword",label:"מילה",align:"right",long:true},
         {key:"position",label:"מיקום",render:posCell},
@@ -1153,9 +1167,25 @@
         {key:"initial",label:"התחלתי"},
         {key:"best",label:"שיא"},
         {key:"volume",label:"נפח חודשי",type:"num"},
+        {key:"volChange",label:"נפח שנתי",render:vchCell},
+        {key:"gscClicks",label:"קליקים (GSC)",type:"num"},
+        {key:"estNow",label:"קליקים מוערך",type:"num"},
+        {key:"uplift",label:"+ בטופ-3",render:upCell},
         {key:"_spark",label:"מגמה",render:(v,row)=>rkSpark(row.series)},
         {key:"url",label:"דף מדורג",align:"right",long:true,url:true},
-      ], rkData.filter(ft.f), { defaultSort:{key:"position",dir:"asc"}, scroll:true });
+      ], rkEnriched().filter(ft.f), { defaultSort:{key:"position",dir:"asc"}, scroll:true });
+      // Summary cards
+      const en = rkEnriched();
+      const sum = (arr, k) => arr.reduce((s, r) => s + (Number(r[k]) || 0), 0);
+      const totalVol = sum(en, "volume");
+      const volP1 = sum(en.filter((r) => r.position != null && r.position <= 10), "volume");
+      const upliftSum = sum(en, "uplift");
+      const card = (v, l, c) => `<div class="card"><div class="kpi-label">${l}</div><div class="kpi-val ${c || ""}">${v}</div></div>`;
+      document.getElementById("rkSummary").innerHTML =
+        card(fmt(totalVol), "נפח חיפוש כולל במעקב / חודש", "") +
+        card(fmt(volP1), "נפח שבו את בעמוד הראשון", "!text-emerald-600") +
+        card(totalVol ? ((volP1 / totalVol) * 100).toFixed(0) + "%" : "—", "נתח השוק שלך (עמוד 1)", "") +
+        card("+" + fmt(upliftSum), "פוטנציאל קליקים/חודש אם הכל בטופ-3", "!text-blue-600");
     }
     function renderRanks(d) {
       rkData = d.keywords || [];
