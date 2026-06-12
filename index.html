@@ -417,7 +417,10 @@
     <div class="card mb-4">
       <div class="flex items-center justify-between flex-wrap gap-2 mb-1">
         <div class="text-slate-600 font-medium">🎯 מילות מפתח במעקב <span id="rkCount" class="text-slate-400 text-sm"></span></div>
-        <button id="rkRun" class="bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-4 py-2 text-sm">🔄 בדוק מיקומים עכשיו</button>
+        <div class="flex gap-2">
+          <button id="rkVol" class="border border-slate-300 hover:bg-slate-100 text-slate-600 rounded-lg px-3 py-2 text-sm">📊 עדכן נפחי חיפוש</button>
+          <button id="rkRun" class="bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-4 py-2 text-sm">🔄 בדוק מיקומים עכשיו</button>
+        </div>
       </div>
       <div class="text-xs text-slate-400 mb-3">בדיקה חיה בגוגל ישראל (עברית) · כל בדיקה עולה ~0.2 סנט מקרדיט DataForSEO</div>
       <div class="flex gap-2 mb-3">
@@ -427,7 +430,11 @@
       <div id="rkChips" class="flex flex-wrap gap-2"></div>
       <div id="rkStatus" class="text-sm text-blue-600 mt-2"></div>
     </div>
-    <div class="card mb-4"><div class="text-slate-600 font-medium mb-3">מיקומים נוכחיים</div><div id="rkTableMount"></div></div>
+    <div class="card mb-4">
+      <div class="text-slate-600 font-medium mb-3">מיקומים נוכחיים</div>
+      <div id="rkFilterChips" class="flex flex-wrap gap-2 mb-3"></div>
+      <div id="rkTableMount"></div>
+    </div>
     <div class="card">
       <div class="flex items-center gap-3 mb-3 flex-wrap">
         <div class="text-slate-600 font-medium">היסטוריית מיקום:</div>
@@ -1108,22 +1115,54 @@
       document.getElementById("sePosDetail").scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
 
-    // ---- Rank tracker ----
-    let rkData = [];
-    function renderRanks(d) {
-      rkData = d.keywords || [];
-      document.getElementById("rkCount").textContent = d.tracked ? `(${d.tracked} מילים)` : "";
-      // chips of tracked keywords (from history + tracked list)
-      loadRkChips();
+    // ---- Rank tracker (Koliom-style) ----
+    let rkData = [], rkFilter = "all";
+    const RK_FILTERS = [
+      { id:"all",   label:"הכל",                f:()=>true },
+      { id:"top1",  label:"🥇 מקום 1",           f:(r)=>r.position===1 },
+      { id:"page1", label:"עמוד ראשון (1-10)",   f:(r)=>r.position!=null&&r.position<=10 },
+      { id:"page2", label:"עמוד 2+ (11-100)",    f:(r)=>r.position!=null&&r.position>10 },
+      { id:"none",  label:"ללא דירוג",           f:(r)=>r.position==null },
+    ];
+    function rkSpark(series) {
+      const pts = (series || []).filter((s) => s.position != null);
+      if (pts.length < 2) return `<span class="text-slate-300">—</span>`;
+      const w = 80, h = 24;
+      const maxP = Math.max(...pts.map((p) => p.position), 10);
+      const xs = pts.map((_, i) => (i / (pts.length - 1)) * (w - 4) + 2);
+      const ys = pts.map((p) => ((p.position - 1) / (maxP - 1 || 1)) * (h - 6) + 3);
+      const dPath = xs.map((x, i) => `${i ? "L" : "M"}${x.toFixed(1)},${ys[i].toFixed(1)}`).join(" ");
+      const up = pts[pts.length - 1].position <= pts[0].position;
+      return `<svg width="${w}" height="${h}" style="vertical-align:middle"><path d="${dPath}" fill="none" stroke="${up ? "#16a34a" : "#dc2626"}" stroke-width="1.5"/></svg>`;
+    }
+    function buildRkFilters() {
+      document.getElementById("rkFilterChips").innerHTML = RK_FILTERS.map((ft) => {
+        const n = rkData.filter(ft.f).length;
+        return `<button class="rk-flt text-xs px-3 py-1.5 rounded-full border ${ft.id===rkFilter?"bg-blue-600 text-white border-blue-600":"bg-slate-50 text-slate-600 border-slate-200 hover:bg-blue-50"}" data-f="${ft.id}">${ft.label} <span class="opacity-70">(${n})</span></button>`;
+      }).join("");
+      document.querySelectorAll(".rk-flt").forEach((b) => b.addEventListener("click", () => { rkFilter = b.dataset.f; buildRkFilters(); drawRkTable(); }));
+    }
+    function drawRkTable() {
+      const ft = RK_FILTERS.find((x) => x.id === rkFilter) || RK_FILTERS[0];
       const posCell = (v) => v == null ? `<span class="text-slate-400">לא בטופ-100</span>` : `<span class="font-bold ${v <= 3 ? "text-emerald-600" : v <= 10 ? "text-lime-600" : v <= 20 ? "text-amber-600" : "text-rose-600"}">#${v}</span>`;
       const chCell = (v) => v == null ? "" : v > 0 ? `<span class="text-emerald-600 font-bold">▲ ${v}</span>` : v < 0 ? `<span class="text-rose-600 font-bold">▼ ${Math.abs(v)}</span>` : `<span class="text-slate-400">—</span>`;
       mountTable("rkTableMount", [
         {key:"keyword",label:"מילה",align:"right",long:true},
         {key:"position",label:"מיקום",render:posCell},
         {key:"change",label:"שינוי",render:chCell},
+        {key:"initial",label:"התחלתי"},
         {key:"best",label:"שיא"},
+        {key:"volume",label:"נפח חודשי",type:"num"},
+        {key:"_spark",label:"מגמה",render:(v,row)=>rkSpark(row.series)},
         {key:"url",label:"דף מדורג",align:"right",long:true,url:true},
-      ], rkData.slice(), { defaultSort:{key:"position",dir:"asc"}, scroll:true });
+      ], rkData.filter(ft.f), { defaultSort:{key:"position",dir:"asc"}, scroll:true });
+    }
+    function renderRanks(d) {
+      rkData = d.keywords || [];
+      document.getElementById("rkCount").textContent = d.tracked ? `(${d.tracked} מילים)` : "";
+      loadRkChips();
+      buildRkFilters();
+      drawRkTable();
       const sel = document.getElementById("rkChartSel");
       sel.innerHTML = rkData.map((k) => `<option value="${k.keyword.replace(/"/g, "&quot;")}">${k.keyword}</option>`).join("") || `<option value="">אין נתונים עדיין</option>`;
       drawRkChart();
@@ -1159,6 +1198,17 @@
       document.getElementById("rkInput").value = ""; loadRkChips();
     });
     document.getElementById("rkInput").addEventListener("keydown", (e) => { if (e.key === "Enter") document.getElementById("rkAdd").click(); });
+    document.getElementById("rkVol").addEventListener("click", async () => {
+      const btn = document.getElementById("rkVol"), st = document.getElementById("rkStatus");
+      btn.disabled = true; btn.textContent = "מושך נפחים...";
+      try {
+        const site = document.getElementById("siteSelect").value;
+        const r = await (await fetch(`${BASE}/api/kw-volume?site=${site}`, { headers: { "X-Access-Key": accessKey } })).json();
+        st.textContent = r.error ? "שגיאה: " + r.error : `✓ עודכנו נפחי חיפוש ל-${r.updated} מילים`;
+        loadPart("ranks", true);
+      } catch (e) { st.textContent = "שגיאה: " + e.message; }
+      btn.disabled = false; btn.textContent = "📊 עדכן נפחי חיפוש";
+    });
     document.getElementById("rkRun").addEventListener("click", async () => {
       const btn = document.getElementById("rkRun"), st = document.getElementById("rkStatus");
       btn.disabled = true; btn.textContent = "בודק מול גוגל...";
