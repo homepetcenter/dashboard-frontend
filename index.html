@@ -238,8 +238,16 @@
       <div class="card"><div class="kpi-label">קליקים</div><div id="adClicks" class="kpi-val">—</div></div>
       <div class="card"><div class="kpi-label">עלות לקליק (₪)</div><div id="adCpc" class="kpi-val">—</div></div>
     </div>
-    <div class="card mb-4"><div class="text-slate-600 font-medium mb-3">קמפיינים</div><div id="adCampaignsMount"></div></div>
-    <div class="card mb-4"><div class="text-slate-600 font-medium mb-3">קבוצות מודעות</div><div id="adGroupsMount"></div></div>
+    <div class="card mb-4">
+      <div class="flex items-center gap-3 mb-3 flex-wrap">
+        <div class="text-slate-600 font-medium">ביצועי פרסום לפי:</div>
+        <div class="flex rounded-lg overflow-hidden border border-slate-300">
+          <button data-lvl="campaigns" class="ad-lvl range-btn px-3 py-1.5 text-sm active">קמפיינים</button>
+          <button data-lvl="adGroups" class="ad-lvl range-btn px-3 py-1.5 text-sm">קבוצות מודעות</button>
+        </div>
+      </div>
+      <div id="adLevelMount"></div>
+    </div>
     <div class="card mb-4">
       <div class="text-slate-600 font-medium mb-1">🔤 שאילתות חיפוש ששולם עליהן</div>
       <div class="text-xs text-slate-400 mb-2">מה אנשים באמת הקלידו בגוגל כשהמודעה שלך הופיעה · ⚠️ = עלות בלי אף מכירה (מועמד למילים שליליות)</div>
@@ -286,9 +294,15 @@
       <div class="card"><div class="kpi-label">אירועים לסשן</div><div id="engEvents" class="kpi-val">—</div></div>
       <div class="card"><div class="kpi-label">זמן מעורבות/משתמש</div><div id="engTime" class="kpi-val">—</div></div>
     </div>
-    <div class="grid md:grid-cols-2 gap-4 mb-4">
-      <div class="card"><div class="text-slate-600 font-medium mb-3">מדינות מובילות</div><div id="audCountriesMount"></div></div>
-      <div class="card"><div class="text-slate-600 font-medium mb-3">ערים מובילות</div><div id="audCitiesMount"></div></div>
+    <div class="card mb-4">
+      <div class="flex items-center gap-3 mb-3 flex-wrap">
+        <div class="text-slate-600 font-medium">🗺️ גאוגרפיה לפי:</div>
+        <div class="flex rounded-lg overflow-hidden border border-slate-300">
+          <button data-geo="countries" class="aud-geo range-btn px-3 py-1.5 text-sm active">מדינות</button>
+          <button data-geo="cities" class="aud-geo range-btn px-3 py-1.5 text-sm">ערים</button>
+        </div>
+      </div>
+      <div id="audGeoMount"></div>
     </div>
     <div class="grid md:grid-cols-2 gap-4 mb-4">
       <div class="card"><div class="text-slate-600 font-medium mb-3">חדשים מול חוזרים</div><canvas id="audNvr" height="180"></canvas></div>
@@ -297,9 +311,15 @@
     <div class="card mb-4"><div class="text-slate-600 font-medium mb-1">🔎 חיפושים פנימיים באתר</div><div class="text-xs text-slate-400 mb-2">מה גולשים מחפשים בתיבת החיפוש שלך — ביקוש ישיר!</div><div id="audSearchMount"></div></div>
     <div class="card mb-4"><div class="text-slate-600 font-medium mb-3">פעילות לפי שעה ביום</div><canvas id="audHours" height="80"></canvas></div>
     <div class="card mb-4"><div class="text-slate-600 font-medium mb-3">פעילות לפי יום בשבוע</div><canvas id="audDays" height="70"></canvas></div>
-    <div class="grid md:grid-cols-2 gap-4 mb-4">
-      <div class="card"><div class="text-slate-600 font-medium mb-3">דפדפנים</div><div id="audBrowsersMount"></div></div>
-      <div class="card"><div class="text-slate-600 font-medium mb-3">מערכת הפעלה</div><div id="audOsMount"></div></div>
+    <div class="card mb-4">
+      <div class="flex items-center gap-3 mb-3 flex-wrap">
+        <div class="text-slate-600 font-medium">💻 טכנולוגיה לפי:</div>
+        <div class="flex rounded-lg overflow-hidden border border-slate-300">
+          <button data-tech="browsers" class="aud-tech range-btn px-3 py-1.5 text-sm active">דפדפנים</button>
+          <button data-tech="os" class="aud-tech range-btn px-3 py-1.5 text-sm">מערכת הפעלה</button>
+        </div>
+      </div>
+      <div id="audTechMount"></div>
     </div>
     <div class="grid md:grid-cols-2 gap-4">
       <div class="card"><div class="text-slate-600 font-medium mb-3">גיל (אם זמין)</div><canvas id="audAge" height="150"></canvas></div>
@@ -342,14 +362,11 @@
   <!-- PAGES -->
   <section data-screen="pages" class="hidden">
     <div class="card mb-4">
-      <div class="text-slate-600 font-medium mb-1">📉 עמודים שאיבדו תנועה</div>
-      <div class="text-xs text-slate-400 mb-2">ירדו 20%+ לעומת התקופה הקודמת — מועמדים לרענון תוכן</div>
-      <div id="pgDecliningMount"></div>
+      <div class="text-slate-600 font-medium mb-1">📄 דפים נצפים + שינוי מהתקופה הקודמת</div>
+      <div class="text-xs text-slate-400 mb-2">מיון לפי "שינוי" (עולה) מציג את הדפים שאיבדו הכי הרבה תנועה — מועמדים לרענון</div>
+      <div id="pgTopMount"></div>
     </div>
-    <div class="grid md:grid-cols-2 gap-4">
-      <div class="card"><div class="text-slate-600 font-medium mb-3">דפים נצפים ביותר</div><div id="pgTopMount"></div></div>
-      <div class="card"><div class="text-slate-600 font-medium mb-3">דפי כניסה מובילים</div><div id="pgLandingMount"></div></div>
-    </div>
+    <div class="card"><div class="text-slate-600 font-medium mb-3">דפי כניסה מובילים</div><div id="pgLandingMount"></div></div>
   </section>
 
   <!-- SEARCH -->
@@ -368,24 +385,12 @@
         </div>
       </div>
     </div>
-    <div class="grid md:grid-cols-2 gap-4 mb-4">
-      <div class="card"><div class="text-slate-600 font-medium mb-1">🎯 הזדמנויות CTR</div><div class="text-xs text-slate-400 mb-2">הרבה חשיפות, מעט קליקים — שפרי כותרת ותיאור</div><div id="seCtrOppMount"></div></div>
-      <div class="card"><div class="text-slate-600 font-medium mb-1">🏃 Striking Distance (מיקום 5-15)</div><div class="text-xs text-slate-400 mb-2">קרוב לעמוד 1 — דחיפה קטנה תכפיל תנועה</div><div id="seStrikingMount"></div></div>
+    <div class="card">
+      <div class="text-slate-600 font-medium mb-1">🔑 מילות מפתח — הכל בטבלה אחת</div>
+      <div class="text-xs text-slate-400 mb-2">לחצי על סינון מהיר · לחיצה על שורה עם ⚠️ קניבליזציה פותחת את הדפים המתחרים</div>
+      <div id="kwPresets" class="flex flex-wrap gap-2 mb-3"></div>
+      <div id="kwMaster"></div>
     </div>
-    <div class="card mb-4">
-      <div class="text-slate-600 font-medium mb-1">🚀 טראפיק פוטנציאלי</div>
-      <div class="text-xs text-slate-400 mb-2">כמה קליקים נוספים בתקופה אם המילה תגיע לטופ-3 (הערכה לפי עקומת CTR)</div>
-      <div id="sePotentialMount"></div>
-    </div>
-    <div class="grid md:grid-cols-2 gap-4 mb-4">
-      <div class="card"><div class="text-slate-600 font-medium mb-1">❓ מילות שאלה / כוונה</div><div class="text-xs text-slate-400 mb-2">רעיונות לתוכן, מאמרים ובלוג</div><div id="seQuestionsMount"></div></div>
-      <div class="card"><div class="text-slate-600 font-medium mb-1">⚠️ קניבליזציה</div><div class="text-xs text-slate-400 mb-2">מילים שכמה דפים מתחרים עליהן — מבלבל את גוגל</div><div id="seCannibalMount"></div></div>
-    </div>
-    <div class="grid md:grid-cols-2 gap-4 mb-4">
-      <div class="card"><div class="text-slate-600 font-medium mb-3">📈 עלו בדירוג</div><div id="seWinnersMount"></div></div>
-      <div class="card"><div class="text-slate-600 font-medium mb-3">📉 ירדו בדירוג</div><div id="seLosersMount"></div></div>
-    </div>
-    <div class="card"><div class="text-slate-600 font-medium mb-3">מילות חיפוש מובילות + הדף המדורג</div><div id="seQMount"></div></div>
   </section>
 
   <!-- HEALTH -->
@@ -709,6 +714,28 @@
         addTask(ins.title); b.textContent = "✓ נוסף"; b.disabled = true;
       }));
     }
+    // ---- Audience toggles (geo / tech) ----
+    const audToggleData = {}; let audGeo = "countries", audTech = "browsers";
+    function drawAudGeo() {
+      document.querySelectorAll(".aud-geo").forEach((b) => b.classList.toggle("active", b.dataset.geo === audGeo));
+      mountTable("audGeoMount", [ {key:"name",label:audGeo==="countries"?"מדינה":"עיר",align:"right"},{key:"sessions",label:"Sessions",type:"num"} ], audToggleData[audGeo] || [], { defaultSort:{key:"sessions",dir:"desc"}, scroll:true });
+    }
+    function drawAudTech() {
+      document.querySelectorAll(".aud-tech").forEach((b) => b.classList.toggle("active", b.dataset.tech === audTech));
+      mountTable("audTechMount", [ {key:"name",label:audTech==="browsers"?"דפדפן":"מערכת",align:"right"},{key:"sessions",label:"Sessions",type:"num"} ], audToggleData[audTech] || [], { search:false, defaultSort:{key:"sessions",dir:"desc"} });
+    }
+    document.querySelectorAll(".aud-geo").forEach((b) => b.addEventListener("click", () => { audGeo = b.dataset.geo; drawAudGeo(); }));
+    document.querySelectorAll(".aud-tech").forEach((b) => b.addEventListener("click", () => { audTech = b.dataset.tech; drawAudTech(); }));
+
+    // ---- Ads level toggle (campaigns / ad groups) ----
+    let adLevelData = null, adLevel = "campaigns";
+    function drawAdLevel() {
+      if (!adLevelData) return;
+      document.querySelectorAll(".ad-lvl").forEach((b) => b.classList.toggle("active", b.dataset.lvl === adLevel));
+      mountTable("adLevelMount", adLevelData.cols, adLevelData[adLevel], { defaultSort:{key:"cost",dir:"desc"}, scroll:true });
+    }
+    document.querySelectorAll(".ad-lvl").forEach((b) => b.addEventListener("click", () => { adLevel = b.dataset.lvl; drawAdLevel(); }));
+
     // ---- What-If simulator ----
     let adsTotals = null;
     function updateWhatIf() {
@@ -835,8 +862,8 @@
       adsTotals = t; updateWhatIf();
       const roasCell = (v) => { const c = v>=3?"text-emerald-600":v>=1?"text-amber-600":"text-rose-600"; return `<span class="font-bold ${c}">${v}x</span>`; };
       const cols = [ {key:"name",label:"שם",align:"right",long:true},{key:"cost",label:"עלות (₪)",type:"num"},{key:"impressions",label:"חשיפות",type:"num"},{key:"clicks",label:"קליקים",type:"num"},{key:"ctr",label:"CTR",type:"pct"},{key:"cpc",label:"CPC (₪)"},{key:"revenue",label:"הכנסה (₪)",type:"num"},{key:"transactions",label:"עסקאות",type:"num"},{key:"cpa",label:"CPA (₪)"},{key:"convRate",label:"המרה",type:"pct"},{key:"roas",label:"ROAS",render:roasCell} ];
-      mountTable("adCampaignsMount", cols, (d.campaigns||[]).slice(), { defaultSort:{key:"cost",dir:"desc"}, scroll:true });
-      mountTable("adGroupsMount", cols, (d.adGroups||[]).slice(), { defaultSort:{key:"cost",dir:"desc"}, scroll:true });
+      adLevelData = { campaigns: (d.campaigns||[]).slice(), adGroups: (d.adGroups||[]).slice(), cols };
+      drawAdLevel();
       const aq = (d.adQueries||[]).map((r) => ({ ...r, status: r.transactions === 0 && r.cost >= 10 ? "⚠️ בזבוז" : r.roas >= 3 ? "✓ רווחי" : "" }));
       const statusCell = (v) => v.includes("בזבוז") ? `<span class="text-rose-600 font-bold">${v}</span>` : v.includes("רווחי") ? `<span class="text-emerald-600">${v}</span>` : "";
       mountTable("adQueriesMount", [
@@ -874,8 +901,8 @@
     }
     const DAY_NAMES = ["ראשון","שני","שלישי","רביעי","חמישי","שישי","שבת"];
     function renderAudience(d) {
-      mountTable("audCountriesMount", [ {key:"name",label:"מדינה",align:"right"},{key:"sessions",label:"Sessions",type:"num"} ], (d.countries||[]).slice(), { defaultSort:{key:"sessions",dir:"desc"}, scroll:true });
-      mountTable("audCitiesMount", [ {key:"name",label:"עיר",align:"right"},{key:"sessions",label:"Sessions",type:"num"} ], (d.cities||[]).slice(), { defaultSort:{key:"sessions",dir:"desc"}, scroll:true });
+      audToggleData.countries = (d.countries||[]).slice(); audToggleData.cities = (d.cities||[]).slice();
+      drawAudGeo();
       const hours = d.byHour || []; makeChart("audHours", { type:"bar", data:{ labels:hours.map((h)=>h.hour+":00"), datasets:[{ data:hours.map((h)=>h.sessions), backgroundColor:"#1d4ed8" }] }, options:{responsive:true,plugins:{legend:{display:false}}} });
       const days = d.byDay || []; makeChart("audDays", { type:"bar", data:{ labels:days.map((x)=>DAY_NAMES[x.day]), datasets:[{ data:days.map((x)=>x.sessions), backgroundColor:"#10b981" }] }, options:{responsive:true,plugins:{legend:{display:false}}} });
       const nvr = d.newReturning || [];
@@ -887,8 +914,8 @@
       document.getElementById("engSessions").textContent = fmt(eng.engagedSessions);
       document.getElementById("engEvents").textContent = (eng.eventsPerSession ?? 0);
       document.getElementById("engTime").textContent = fmtDur(eng.avgEngagementPerUser || 0);
-      mountTable("audBrowsersMount", [ {key:"name",label:"דפדפן",align:"right"},{key:"sessions",label:"Sessions",type:"num"} ], (d.browsers||[]).slice(), { search:false, defaultSort:{key:"sessions",dir:"desc"} });
-      mountTable("audOsMount", [ {key:"name",label:"מערכת",align:"right"},{key:"sessions",label:"Sessions",type:"num"} ], (d.os||[]).slice(), { search:false, defaultSort:{key:"sessions",dir:"desc"} });
+      audToggleData.browsers = (d.browsers||[]).slice(); audToggleData.os = (d.os||[]).slice();
+      drawAudTech();
       const age = d.age || []; makeChart("audAge", { type:"bar", data:{ labels:age.map((x)=>x.name), datasets:[{ data:age.map((x)=>x.users), backgroundColor:"#8b5cf6" }] }, options:{responsive:true,plugins:{legend:{display:false}}} });
       const gen = d.gender || []; makeChart("audGender", { type:"doughnut", data:{ labels:gen.map((x)=>x.name==="male"?"זכר":x.name==="female"?"נקבה":x.name), datasets:[{ data:gen.map((x)=>x.users), backgroundColor:["#1d4ed8","#ec4899","#94a3b8"] }] }, options:{responsive:true,plugins:{legend:{position:"bottom"}}} });
     }
@@ -944,9 +971,9 @@
       loadPart("goals", true);
     });
     function renderPages(d) {
-      mountTable("pgTopMount", [ {key:"path",label:"דף",align:"right",long:true,url:true},{key:"views",label:"צפיות",type:"num"} ], (d.topPages||[]).slice(), { defaultSort:{key:"views",dir:"desc"}, scroll:true });
+      const pgChange = (v) => v == null ? `<span class="text-slate-400 text-xs">חדש</span>` : `<span class="font-bold ${v >= 0 ? "text-emerald-600" : "text-rose-600"}">${v >= 0 ? "▲" : "▼"} ${Math.abs(v)}%</span>`;
+      mountTable("pgTopMount", [ {key:"path",label:"דף",align:"right",long:true,url:true},{key:"views",label:"צפיות",type:"num"},{key:"prevViews",label:"תקופה קודמת",type:"num"},{key:"change",label:"שינוי",render:pgChange} ], (d.topPages||[]).slice(), { defaultSort:{key:"views",dir:"desc"}, scroll:true });
       mountTable("pgLandingMount", [ {key:"path",label:"דף כניסה",align:"right",long:true,url:true},{key:"sessions",label:"Sessions",type:"num"},{key:"bounceRate",label:"Bounce",type:"pct"},{key:"revenue",label:"הכנסה (₪)",type:"num"},{key:"transactions",label:"עסקאות",type:"num"},{key:"convRate",label:"המרה",type:"pct"} ], (d.landingPages||[]).slice(), { defaultSort:{key:"sessions",dir:"desc"}, scroll:true });
-      mountTable("pgDecliningMount", [ {key:"path",label:"דף",align:"right",long:true,url:true},{key:"prevViews",label:"צפיות קודם",type:"num"},{key:"views",label:"צפיות עכשיו",type:"num"},{key:"change",label:"שינוי",render:(v)=>`<span class="font-bold text-rose-600">▼ ${Math.abs(v)}%</span>`} ], (d.declining||[]).slice(), { defaultSort:{key:"change",dir:"asc"}, scroll:true });
     }
     function area(id, labels, data, color) { makeChart(id, { type:"line", data:{ labels, datasets:[{ data, borderColor:color, backgroundColor:color+"22", fill:true, tension:0.35, pointRadius:0 }] }, options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{display:false}}} }); }
     function renderSearch(d) {
@@ -958,25 +985,55 @@
       document.getElementById("seKwTotal").textContent = d.totalKeywords ? `(סה"כ ${fmt(d.totalKeywords)} מילים)` : "";
       makeChart("sePos", { type:"bar", data:{ labels:pos.map((b)=>b.bucket), datasets:[{ data:pos.map((b)=>b.count), backgroundColor:["#16a34a","#65a30d","#eab308","#f97316","#dc2626"] }] }, options:{responsive:true, onClick:(e,els)=>{ if(els.length) showPosBucket(pos[els[0].index].bucket); }, plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}} });
       document.getElementById("sePosDetail").classList.add("hidden");
-      const metricCols = [ {key:"clicks",label:"קליקים",type:"num"},{key:"impressions",label:"חשיפות",type:"num"},{key:"ctr",label:"CTR",type:"pct"},{key:"position",label:"מיקום"} ];
+      const br = d.branded || { branded:{clicks:0}, nonBranded:{clicks:0} };
+      makeChart("seBrand", { type:"doughnut", data:{ labels:["ממותג","לא-ממותג"], datasets:[{ data:[br.branded.clicks, br.nonBranded.clicks], backgroundColor:["#1d4ed8","#94a3b8"] }] }, options:{responsive:true,plugins:{legend:{position:"bottom"}}} });
+      kwMasterData = d.master || [];
+      buildKwPresets();
+      applyKwPreset(kwActivePreset);
+    }
+
+    // ---- Unified keyword master table ----
+    let kwMasterData = [], kwActivePreset = "all";
+    const KW_PRESETS = [
+      { id:"all",       label:"הכל",                 f:()=>true,                 sort:{key:"clicks",dir:"desc"} },
+      { id:"ctrOpp",    label:"🎯 הזדמנויות CTR",     f:(r)=>r.ctrOpp,            sort:{key:"impressions",dir:"desc"} },
+      { id:"striking",  label:"🏃 Striking (5-15)",   f:(r)=>r.striking,          sort:{key:"impressions",dir:"desc"} },
+      { id:"question",  label:"❓ שאלות",             f:(r)=>r.question,          sort:{key:"impressions",dir:"desc"} },
+      { id:"cannibal",  label:"⚠️ קניבליזציה",        f:(r)=>r.cannibal>=2,       sort:{key:"impressions",dir:"desc"} },
+      { id:"up",        label:"📈 עלו",               f:(r)=>r.change>0,          sort:{key:"change",dir:"desc"} },
+      { id:"down",      label:"📉 ירדו",              f:(r)=>r.change<0,          sort:{key:"change",dir:"asc"} },
+      { id:"potential", label:"🚀 פוטנציאל",          f:(r)=>r.potential>=5,      sort:{key:"potential",dir:"desc"} },
+    ];
+    function buildKwPresets() {
+      document.getElementById("kwPresets").innerHTML = KW_PRESETS.map((pst) => {
+        const n = kwMasterData.filter(pst.f).length;
+        return `<button class="kw-pst text-xs px-3 py-1.5 rounded-full border ${pst.id===kwActivePreset?"bg-blue-600 text-white border-blue-600":"bg-slate-50 text-slate-600 border-slate-200 hover:bg-blue-50"}" data-p="${pst.id}">${pst.label} <span class="opacity-70">(${fmt(n)})</span></button>`;
+      }).join("");
+      document.querySelectorAll(".kw-pst").forEach((b) => b.addEventListener("click", () => applyKwPreset(b.dataset.p)));
+    }
+    function applyKwPreset(id) {
+      kwActivePreset = id;
+      const pst = KW_PRESETS.find((x) => x.id === id) || KW_PRESETS[0];
+      buildKwPresets();
       const pageCell = (v, row) => v
         ? `<a href="${v}" target="_blank" rel="noopener" class="text-blue-600 hover:underline" title="${prettyUrl(v)}">${shortPath(prettyUrl(v))}</a> <span class="text-slate-400 text-xs">(${row.pagePosition})</span>`
         : `<span class="text-amber-600 text-xs font-medium">✍️ אין דף</span>`;
-      const combinedCols = [ {key:"key",label:"מילה",align:"right",long:true}, {key:"page",label:"דף מדורג",align:"right",render:pageCell}, ...metricCols ];
-      mountTable("seQMount", combinedCols, (d.queries||[]).slice(), { defaultSort:{key:"clicks",dir:"desc"}, scroll:true });
-      const br = d.branded || { branded:{clicks:0}, nonBranded:{clicks:0} };
-      makeChart("seBrand", { type:"doughnut", data:{ labels:["ממותג","לא-ממותג"], datasets:[{ data:[br.branded.clicks, br.nonBranded.clicks], backgroundColor:["#1d4ed8","#94a3b8"] }] }, options:{responsive:true,plugins:{legend:{position:"bottom"}}} });
-      const moveCols = [ {key:"key",label:"מילה",align:"right",long:true},{key:"prevPosition",label:"קודם"},{key:"position",label:"עכשיו"},{key:"change",label:"שינוי",render:(v)=>`<span class="font-bold ${v>0?'text-emerald-600':'text-rose-600'}">${v>0?'▲':'▼'} ${Math.abs(v)}</span>`},{key:"page",label:"דף",align:"right",render:pageCell} ];
-      mountTable("seWinnersMount", moveCols, (d.winners||[]).slice(), { scroll:true, defaultSort:{key:"change",dir:"desc"} });
-      mountTable("seLosersMount", moveCols, (d.losers||[]).slice(), { scroll:true, defaultSort:{key:"change",dir:"asc"} });
-      const kwCols = [ {key:"key",label:"מילה",align:"right",long:true},{key:"impressions",label:"חשיפות",type:"num"},{key:"clicks",label:"קליקים",type:"num"},{key:"ctr",label:"CTR",type:"pct"},{key:"position",label:"מיקום"} ];
-      mountTable("seCtrOppMount", kwCols, (d.ctrOpportunities||[]).slice(), { scroll:true, defaultSort:{key:"impressions",dir:"desc"} });
-      mountTable("seStrikingMount", kwCols, (d.strikingDistance||[]).slice(), { scroll:true, defaultSort:{key:"impressions",dir:"desc"} });
-      const qstCols = [ {key:"key",label:"מילה",align:"right",long:true},{key:"impressions",label:"חשיפות",type:"num"},{key:"clicks",label:"קליקים",type:"num"},{key:"position",label:"מיקום"},{key:"page",label:"דף מתאים באתר",align:"right",render:pageCell} ];
-      mountTable("seQuestionsMount", qstCols, (d.questions||[]).slice(), { scroll:true, defaultSort:{key:"impressions",dir:"desc"} });
-      const cannibExpand = (r) => `<div class="text-xs text-slate-600 space-y-1">${(r.detail||[]).map((pg)=>`• <a href="${pg.page}" target="_blank" rel="noopener" class="text-blue-600 hover:underline">${prettyUrl(pg.page)}</a> <span class="text-slate-400">— מיקום ${pg.position}, ${fmt(pg.clicks)} קליקים, ${fmt(pg.impressions)} חשיפות</span>`).join("<br>")}</div>`;
-      mountTable("seCannibalMount", [ {key:"key",label:"מילה",align:"right",long:true},{key:"pages",label:"דפים",type:"num"},{key:"impressions",label:"חשיפות",type:"num"},{key:"clicks",label:"קליקים",type:"num"} ], (d.cannibalization||[]).slice(), { scroll:true, defaultSort:{key:"impressions",dir:"desc"}, expand:cannibExpand });
-      mountTable("sePotentialMount", [ {key:"key",label:"מילה",align:"right",long:true},{key:"position",label:"מיקום"},{key:"impressions",label:"חשיפות",type:"num"},{key:"clicks",label:"קליקים היום",type:"num"},{key:"potential",label:"פוטנציאל קליקים",render:(v)=>`<span class="font-bold text-emerald-600">+${fmt(v)}</span>`},{key:"page",label:"דף",align:"right",render:pageCell} ], (d.trafficPotential||[]).slice(), { scroll:true, defaultSort:{key:"potential",dir:"desc"} });
+      const chCell = (v) => v == null ? "" : `<span class="font-bold ${v>0?"text-emerald-600":"text-rose-600"}">${v>0?"▲":"▼"} ${Math.abs(v)}</span>`;
+      const potCell = (v) => v >= 5 ? `<span class="font-bold text-emerald-600">+${fmt(v)}</span>` : "";
+      const cannibExpand = (r) => r.detail && r.detail.length
+        ? `<div class="text-xs text-slate-600 space-y-1">${r.detail.map((pg)=>`• <a href="${pg.page}" target="_blank" rel="noopener" class="text-blue-600 hover:underline">${prettyUrl(pg.page)}</a> <span class="text-slate-400">— מיקום ${pg.position}, ${fmt(pg.clicks)} קליקים, ${fmt(pg.impressions)} חשיפות</span>`).join("<br>")}</div>`
+        : `<span class="text-xs text-slate-400">אין דפים מתחרים</span>`;
+      mountTable("kwMaster", [
+        {key:"key",label:"מילה",align:"right",long:true},
+        {key:"page",label:"דף מדורג",align:"right",render:pageCell},
+        {key:"position",label:"מיקום"},
+        {key:"change",label:"שינוי",render:chCell},
+        {key:"impressions",label:"חשיפות",type:"num"},
+        {key:"clicks",label:"קליקים",type:"num"},
+        {key:"ctr",label:"CTR",type:"pct"},
+        {key:"potential",label:"פוטנציאל",render:potCell},
+        {key:"tagsText",label:"תגיות",align:"right"},
+      ], kwMasterData.filter(pst.f), { defaultSort: pst.sort, scroll:true, expand:cannibExpand });
     }
 
     function renderVitals(d) {
