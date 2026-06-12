@@ -356,7 +356,12 @@
     </div>
     <div class="grid md:grid-cols-3 gap-4 mb-4">
       <div class="card md:col-span-1"><div class="text-slate-600 font-medium mb-2">ממותג מול לא-ממותג (קליקים)</div><canvas id="seBrand" height="160"></canvas></div>
-      <div class="card md:col-span-2"><div class="text-slate-600 font-medium mb-2">התפלגות מיקומים <span id="seKwTotal" class="text-slate-400 text-sm"></span></div><canvas id="sePos" height="70"></canvas></div>
+      <div class="card md:col-span-2"><div class="text-slate-600 font-medium mb-2">התפלגות מיקומים <span id="seKwTotal" class="text-slate-400 text-sm"></span> <span class="text-xs text-blue-500">· לחצי על עמודה לפירוט</span></div><canvas id="sePos" height="70"></canvas>
+        <div id="sePosDetail" class="hidden mt-4 border-t border-slate-100 pt-3">
+          <div id="sePosDetailTitle" class="text-slate-700 font-medium mb-2"></div>
+          <div id="sePosDetailMount"></div>
+        </div>
+      </div>
     </div>
     <div class="grid md:grid-cols-2 gap-4 mb-4">
       <div class="card"><div class="text-slate-600 font-medium mb-1">🎯 הזדמנויות CTR</div><div class="text-xs text-slate-400 mb-2">הרבה חשיפות, מעט קליקים — שפרי כותרת ותיאור</div><div id="seCtrOppMount"></div></div>
@@ -931,8 +936,10 @@
       area("seImpr", labels, ser.map((r)=>r.impressions), "#1d4ed8"); area("seClicks", labels, ser.map((r)=>r.clicks), "#10b981"); area("seCtr", labels, ser.map((r)=>r.ctr), "#f59e0b");
       applyGUpdates("seClicks", ser.map((r)=>r.date)); applyGUpdates("seImpr", ser.map((r)=>r.date));
       const pos = d.positions || [];
+      sePosDetails = d.positionDetails || {};
       document.getElementById("seKwTotal").textContent = d.totalKeywords ? `(סה"כ ${fmt(d.totalKeywords)} מילים)` : "";
-      makeChart("sePos", { type:"bar", data:{ labels:pos.map((b)=>b.bucket), datasets:[{ data:pos.map((b)=>b.count), backgroundColor:["#16a34a","#65a30d","#eab308","#f97316","#dc2626"] }] }, options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}} });
+      makeChart("sePos", { type:"bar", data:{ labels:pos.map((b)=>b.bucket), datasets:[{ data:pos.map((b)=>b.count), backgroundColor:["#16a34a","#65a30d","#eab308","#f97316","#dc2626"] }] }, options:{responsive:true, onClick:(e,els)=>{ if(els.length) showPosBucket(pos[els[0].index].bucket); }, plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}} });
+      document.getElementById("sePosDetail").classList.add("hidden");
       const metricCols = [ {key:"clicks",label:"קליקים",type:"num"},{key:"impressions",label:"חשיפות",type:"num"},{key:"ctr",label:"CTR",type:"pct"},{key:"position",label:"מיקום"} ];
       const pageCell = (v, row) => v
         ? `<a href="${v}" target="_blank" rel="noopener" class="text-blue-600 hover:underline" title="${prettyUrl(v)}">${shortPath(prettyUrl(v))}</a> <span class="text-slate-400 text-xs">(${row.pagePosition})</span>`
@@ -1015,6 +1022,16 @@
       btn.disabled = false; btn.textContent = "הרץ סריקה";
     }
     document.getElementById("auditRun").addEventListener("click", runAudit);
+
+    // ---- Position-bucket drill-down ----
+    let sePosDetails = {};
+    function showPosBucket(bucket) {
+      const rows = sePosDetails[bucket] || [];
+      document.getElementById("sePosDetail").classList.remove("hidden");
+      document.getElementById("sePosDetailTitle").textContent = `מילים במיקום ${bucket} (${fmt(rows.length)}${rows.length === 300 ? "+ — מוצגות 300 המובילות" : ""})`;
+      mountTable("sePosDetailMount", [ {key:"key",label:"מילה",align:"right",long:true},{key:"position",label:"מיקום"},{key:"impressions",label:"חשיפות",type:"num"},{key:"clicks",label:"קליקים",type:"num"} ], rows.slice(), { defaultSort:{key:"impressions",dir:"desc"}, scroll:true });
+      document.getElementById("sePosDetail").scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
 
     // ---- Rank tracker ----
     let rkData = [];
