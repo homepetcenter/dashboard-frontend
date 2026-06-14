@@ -811,8 +811,8 @@
     });
     renderAnnotList();
     function renderPeriods(d) {
-      const tm = d.thisMonth || {}, lm = d.lastMonth || {}, ly = d.lastYear || {};
-      document.getElementById("pdSub").textContent = `(1–${d.dayOfMonth} בחודש)`;
+      const tm = d.current || {}, lm = d.previous || {}, ly = d.lastYear || {};
+      document.getElementById("pdSub").textContent = d.label ? `(${d.label})` : "";
       const METRICS = [
         { k: "revenue", label: "הכנסות (₪)", money: true },
         { k: "transactions", label: "עסקאות" },
@@ -836,7 +836,7 @@
         <td class="py-2 text-center">${val(ly, mt)} <div>${delta(tm[mt.k], ly[mt.k])}</div></td>
       </tr>`).join("");
       document.getElementById("pdBand").innerHTML = `<table class="w-full text-sm whitespace-nowrap"><thead><tr class="text-slate-400 border-b">
-        <th class="py-2 text-right">מדד</th><th class="py-2 text-center">החודש</th><th class="py-2 text-center">חודש שעבר</th><th class="py-2 text-center">שנה שעברה</th>
+        <th class="py-2 text-right">מדד</th><th class="py-2 text-center">תקופה נבחרת</th><th class="py-2 text-center">תקופה קודמת</th><th class="py-2 text-center">שנה שעברה</th>
       </tr></thead><tbody>${rows}</tbody></table>`;
     }
     function renderOverview(d) {
