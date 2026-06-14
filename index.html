@@ -125,7 +125,16 @@
     </div>
     <div class="grid md:grid-cols-3 gap-4">
       <div class="card"><div class="text-slate-600 font-medium mb-3">לפי מכשיר</div><div id="rtDeviceMount"></div></div>
-      <div class="card"><div class="text-slate-600 font-medium mb-3">לפי מדינה</div><div id="rtCountryMount"></div></div>
+      <div class="card">
+        <div class="flex items-center gap-2 mb-3 flex-wrap">
+          <div class="text-slate-600 font-medium">לפי:</div>
+          <div class="flex rounded-lg overflow-hidden border border-slate-300">
+            <button data-rtg="byCity" class="rt-geo range-btn px-3 py-1 text-xs active">ערים</button>
+            <button data-rtg="byCountry" class="rt-geo range-btn px-3 py-1 text-xs">מדינות</button>
+          </div>
+        </div>
+        <div id="rtGeoMount"></div>
+      </div>
       <div class="card"><div class="text-slate-600 font-medium mb-3">מה קורה עכשיו (אירועים)</div><div id="rtEventMount"></div></div>
     </div>
   </section>
@@ -964,7 +973,8 @@
     function renderRealtime(d) {
       document.getElementById("rtActive").textContent = fmt(d.active);
       mountTable("rtDeviceMount", [ {key:"name",label:"מכשיר",align:"right"},{key:"users",label:"פעילים",type:"num"} ], (d.byDevice||[]).slice(), { search:false, defaultSort:{key:"users",dir:"desc"} });
-      mountTable("rtCountryMount", [ {key:"name",label:"מדינה",align:"right"},{key:"users",label:"פעילים",type:"num"} ], (d.byCountry||[]).slice(), { search:false, defaultSort:{key:"users",dir:"desc"} });
+      rtGeoData = { byCity: (d.byCity||[]).slice(), byCountry: (d.byCountry||[]).slice() };
+      drawRtGeo();
       mountTable("rtEventMount", [ {key:"name",label:"אירוע",align:"right"},{key:"count",label:"כמות",type:"num"} ], (d.byEvent||[]).slice(), { search:false, defaultSort:{key:"count",dir:"desc"} });
     }
     function goalKey() { return "goals_" + document.getElementById("siteSelect").value; }
@@ -1150,6 +1160,14 @@
       mountTable("sePosDetailMount", [ {key:"key",label:"מילה",align:"right",long:true},{key:"position",label:"מיקום"},{key:"impressions",label:"חשיפות",type:"num"},{key:"clicks",label:"קליקים",type:"num"} ], rows.slice(), { defaultSort:{key:"impressions",dir:"desc"}, scroll:true });
       document.getElementById("sePosDetail").scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
+
+    // ---- Realtime geo toggle (cities / countries) ----
+    let rtGeoData = {}, rtGeo = "byCity";
+    function drawRtGeo() {
+      document.querySelectorAll(".rt-geo").forEach((b) => b.classList.toggle("active", b.dataset.rtg === rtGeo));
+      mountTable("rtGeoMount", [ {key:"name",label:rtGeo==="byCity"?"עיר":"מדינה",align:"right"},{key:"users",label:"פעילים",type:"num"} ], rtGeoData[rtGeo] || [], { search:false, defaultSort:{key:"users",dir:"desc"} });
+    }
+    document.querySelectorAll(".rt-geo").forEach((b) => b.addEventListener("click", () => { rtGeo = b.dataset.rtg; drawRtGeo(); }));
 
     // ---- Rank tracker (Koliom-style) ----
     let rkData = [], rkFilter = "all";
