@@ -152,6 +152,11 @@
 
   <!-- OVERVIEW -->
   <section data-screen="overview">
+    <div class="card mb-4">
+      <div class="text-slate-600 font-medium mb-1">📅 השוואת תקופות <span id="pdSub" class="text-slate-400 text-sm"></span></div>
+      <div class="text-xs text-slate-400 mb-3">השוואה הוגנת: 1 בחודש עד אותו יום בכל תקופה</div>
+      <div id="pdBand" class="overflow-x-auto"></div>
+    </div>
     <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
       <div class="card"><div class="kpi-label">Sessions</div><div class="flex items-end gap-2"><div id="ovSessions" class="kpi-val">—</div><div id="ovSessions_d" class="delta"></div></div><div class="h-7 mt-1"><canvas id="spSessions"></canvas></div></div>
       <div class="card"><div class="kpi-label">Users</div><div class="flex items-end gap-2"><div id="ovUsers" class="kpi-val">—</div><div id="ovUsers_d" class="delta"></div></div><div class="h-7 mt-1"><canvas id="spUsers"></canvas></div></div>
@@ -794,6 +799,35 @@
       renderAnnotList(); loadGroup(currentGroup, false);
     });
     renderAnnotList();
+    function renderPeriods(d) {
+      const tm = d.thisMonth || {}, lm = d.lastMonth || {}, ly = d.lastYear || {};
+      document.getElementById("pdSub").textContent = `(1–${d.dayOfMonth} בחודש)`;
+      const METRICS = [
+        { k: "revenue", label: "הכנסות (₪)", money: true },
+        { k: "transactions", label: "עסקאות" },
+        { k: "sessions", label: "Sessions" },
+        { k: "users", label: "משתמשים" },
+        { k: "conversionRate", label: "אחוז המרה", pct: true },
+        { k: "aov", label: "עסקה ממוצעת (₪)", money: true },
+      ];
+      const delta = (cur, base) => {
+        if (!base) return "";
+        const p = ((cur - base) / base) * 100;
+        const cls = Math.abs(p) < 0.5 ? "text-slate-400" : p > 0 ? "text-emerald-600" : "text-rose-600";
+        const arr = p > 0 ? "▲" : p < 0 ? "▼" : "■";
+        return `<span class="${cls} text-xs font-medium">${arr} ${Math.abs(p).toFixed(0)}%</span>`;
+      };
+      const val = (m, mt) => mt.pct ? (m[mt.k] ?? 0) + "%" : fmt(m[mt.k]);
+      const rows = METRICS.map((mt) => `<tr class="border-b last:border-0">
+        <td class="py-2 text-right font-medium text-slate-700">${mt.label}</td>
+        <td class="py-2 text-center font-bold text-blue-700">${val(tm, mt)}</td>
+        <td class="py-2 text-center">${val(lm, mt)} <div>${delta(tm[mt.k], lm[mt.k])}</div></td>
+        <td class="py-2 text-center">${val(ly, mt)} <div>${delta(tm[mt.k], ly[mt.k])}</div></td>
+      </tr>`).join("");
+      document.getElementById("pdBand").innerHTML = `<table class="w-full text-sm whitespace-nowrap"><thead><tr class="text-slate-400 border-b">
+        <th class="py-2 text-right">מדד</th><th class="py-2 text-center">החודש</th><th class="py-2 text-center">חודש שעבר</th><th class="py-2 text-center">שנה שעברה</th>
+      </tr></thead><tbody>${rows}</tbody></table>`;
+    }
     function renderOverview(d) {
       const a = d.analytics || {}, s = d.searchConsole || {}, pr = d.prev || {};
       document.getElementById("compareNote").textContent = d.compareTo ? "בהשוואה לתקופה: " + d.compareTo : "";
@@ -1272,6 +1306,7 @@
 
     const PARTS = {
       insights:{path:"/api/insights",render:renderInsights}, realtime:{path:"/api/realtime",render:renderRealtime}, goals:{path:"/api/ecommerce",render:renderGoals},
+      periods:{path:"/api/periods",render:renderPeriods},
       overview:{path:"/api/data",render:renderOverview}, compare:{path:"/api/compare",render:renderCompare},
       trends:{path:"/api/trends",render:renderTrends},
       sales:{path:"/api/ecommerce",render:renderSales}, ads:{path:"/api/ads",render:renderAds},
@@ -1284,7 +1319,7 @@
     // ---- Grouped navigation: 6 rich screens, each loads several endpoints ----
     const GROUPS = {
       insights: ["insights"],
-      performance: ["overview", "trends", "realtime", "goals"],
+      performance: ["overview", "periods", "trends", "realtime", "goals"],
       salesads: ["sales", "ads"],
       audience: ["traffic", "audience", "retention", "events"],
       seo: ["ranks", "search", "pages", "health"],
