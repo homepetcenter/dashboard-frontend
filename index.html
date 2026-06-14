@@ -240,6 +240,19 @@
       <div class="card"><div class="kpi-label">הזמנות לקונה</div><div id="cvOrders" class="kpi-val">—</div></div>
       <div class="card"><div class="kpi-label">% קונים חוזרים</div><div id="cvReturn" class="kpi-val">—</div></div>
     </div>
+    <div class="card mb-4">
+      <div class="text-slate-600 font-medium mb-1">💎 נאמנות וערך לקוח</div>
+      <div class="text-xs text-slate-400 mb-3">מדדי שימור — לקוח חוזר שווה הרבה יותר מגיוס לקוח חדש</div>
+      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div><div class="kpi-label">שיעור רכישה חוזרת</div><div id="lyRepeat" class="kpi-val">—</div></div>
+        <div><div class="kpi-label">לקוחות חדשים</div><div id="lyNewShare" class="kpi-val">—</div></div>
+        <div><div class="kpi-label">לקוחות חוזרים</div><div id="lyRetShare" class="kpi-val !text-emerald-600">—</div></div>
+        <div><div class="kpi-label">הכנסה מחוזרים (₪)</div><div id="lyRetRev" class="kpi-val !text-emerald-600">—</div></div>
+        <div><div class="kpi-label">% הכנסה מחוזרים</div><div id="lyRetRevShare" class="kpi-val">—</div></div>
+        <div><div class="kpi-label">LTV משוער (₪)</div><div id="lyLtv" class="kpi-val !text-blue-700">—</div></div>
+      </div>
+      <div class="text-xs text-slate-400 mt-3">⏱️ <b>זמן בין רכישות</b> — לא זמין מ-GA4; דורש חיבור WooCommerce (נתוני הזמנות ברמת לקוח)</div>
+    </div>
     <div class="card mb-4"><div class="text-slate-600 font-medium mb-3">משפך Checkout מפורט</div><div id="slCheckoutFunnel"></div></div>
     <div class="card mb-4"><div class="text-slate-600 font-medium mb-3">מוצרים (צפייה→סל→רכישה→הכנסה)</div><div id="slProductsMount"></div></div>
     <div class="card"><div class="text-slate-600 font-medium mb-3">קטגוריות מובילות</div><div id="slCategoriesMount"></div></div>
@@ -878,6 +891,12 @@
       document.getElementById("cvRevBuyer").textContent = fmt(cv.revenuePerBuyer);
       document.getElementById("cvOrders").textContent = (cv.ordersPerBuyer ?? 0);
       document.getElementById("cvReturn").textContent = (cv.returningBuyerShare ?? 0) + "%";
+      document.getElementById("lyRepeat").textContent = (cv.repeatPurchaseRate ?? 0) + "%";
+      document.getElementById("lyNewShare").textContent = (cv.newCustomerShare ?? 0) + "%";
+      document.getElementById("lyRetShare").textContent = (cv.returningCustomerShare ?? 0) + "%";
+      document.getElementById("lyRetRev").textContent = fmt(cv.returningRevenue);
+      document.getElementById("lyRetRevShare").textContent = (cv.returningRevenueShare ?? 0) + "%";
+      document.getElementById("lyLtv").textContent = fmt(cv.estLtv);
       const f = d.funnel || {};
       document.getElementById("slAbandon").textContent = (f.cartAbandonRate ?? 0) + "%";
       makeChart("slFunnel", { type:"bar", data:{ labels:["צפיות","הוספה לסל","Checkout","רכישה"], datasets:[{ data:[f.sessions,f.addToCart,f.checkout,f.purchase], backgroundColor:["#93c5fd","#60a5fa","#3b82f6","#1d4ed8"] }] }, options:{ indexAxis:"y", responsive:true, plugins:{legend:{display:false}} } });
