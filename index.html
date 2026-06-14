@@ -63,6 +63,8 @@
         <button data-range="30d" class="range-btn px-3 py-2 text-sm">30 יום</button>
         <button data-range="90d" class="range-btn px-3 py-2 text-sm">90 יום</button>
         <button data-range="12m" class="range-btn px-3 py-2 text-sm">שנה</button>
+        <button data-month="this" class="range-btn px-3 py-2 text-sm border-r border-slate-300">החודש</button>
+        <button data-month="last" class="range-btn px-3 py-2 text-sm">חודש שעבר</button>
       </div>
       <div class="flex items-center gap-1 border border-slate-300 rounded-lg px-2 py-1">
         <span class="text-xs text-slate-400">מ-</span><input id="dateStart" type="date" class="text-sm text-slate-700 outline-none" />
@@ -1391,7 +1393,17 @@
 
     document.querySelectorAll(".tab-btn").forEach((b) => b.addEventListener("click", () => showGroup(b.dataset.group)));
     function setActiveRange(r) { currentRange = r; customStart = customEnd = null; localStorage.setItem("dashRange", r); document.querySelectorAll(".range-btn").forEach((b)=>b.classList.toggle("active", b.dataset.range===r)); }
-    document.querySelectorAll(".range-btn").forEach((b)=>b.addEventListener("click",()=>{ setActiveRange(b.dataset.range); reloadGroup(); }));
+    document.querySelectorAll(".range-btn[data-range]").forEach((b)=>b.addEventListener("click",()=>{ setActiveRange(b.dataset.range); reloadGroup(); }));
+    // Calendar-month quick buttons (this month / last month)
+    document.querySelectorAll(".range-btn[data-month]").forEach((b)=>b.addEventListener("click",()=>{
+      const pad=(n)=>String(n).padStart(2,"0"), now=new Date(), y=now.getFullYear(), m=now.getMonth();
+      let s,e;
+      if(b.dataset.month==="this"){ s=`${y}-${pad(m+1)}-01`; e=`${y}-${pad(m+1)}-${pad(now.getDate())}`; }
+      else{ const ly=m===0?y-1:y, lm=m===0?11:m-1, dim=new Date(ly,lm+1,0).getDate(); s=`${ly}-${pad(lm+1)}-01`; e=`${ly}-${pad(lm+1)}-${pad(dim)}`; }
+      customStart=s; customEnd=e; currentRange="";
+      document.querySelectorAll(".range-btn").forEach((x)=>x.classList.remove("active")); b.classList.add("active");
+      reloadGroup();
+    }));
     document.getElementById("applyDates").addEventListener("click", () => {
       const s = document.getElementById("dateStart").value, e = document.getElementById("dateEnd").value;
       if (!s || !e) { setStatus("יש לבחור תאריך התחלה וסיום","error"); return; }
