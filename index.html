@@ -106,6 +106,10 @@
 
   <!-- INSIGHTS -->
   <section data-screen="insights" class="hidden">
+    <div id="aiCard" class="hidden card mb-4 border-r-4 border-violet-400 bg-violet-50">
+      <div class="font-bold text-slate-800 mb-2">🤖 סיכום AI</div>
+      <div id="aiText" class="text-sm text-slate-700 whitespace-pre-line leading-relaxed"></div>
+    </div>
     <div id="insSummary" class="flex flex-wrap gap-3 mb-4"></div>
     <div id="insList" class="space-y-3"></div>
     <div class="card mt-4">
@@ -353,6 +357,24 @@
     <div class="grid md:grid-cols-2 gap-4">
       <div class="card"><div class="text-slate-600 font-medium mb-3">גיל (אם זמין)</div><canvas id="audAge" height="150"></canvas></div>
       <div class="card"><div class="text-slate-600 font-medium mb-3">מגדר (אם זמין)</div><canvas id="audGender" height="150"></canvas></div>
+    </div>
+  </section>
+
+  <!-- ANALYSES -->
+  <section data-screen="analyses" class="hidden">
+    <div class="card mb-4">
+      <div class="text-slate-600 font-medium mb-1">🗓️ עונתיות — מתי הכי פעילים</div>
+      <div class="text-xs text-slate-400 mb-3">כל ריבוע = יום בשבוע × שעה. כהה יותר = יותר תנועה. שימושי לתזמון מבצעים וקמפיינים</div>
+      <div class="flex gap-2 mb-2 text-xs">
+        <button data-seas="sessions" class="seas-m range-btn px-3 py-1 rounded active">לפי תנועה</button>
+        <button data-seas="revenue" class="seas-m range-btn px-3 py-1 rounded">לפי הכנסות</button>
+      </div>
+      <div id="seasGrid" class="overflow-x-auto"></div>
+    </div>
+    <div class="card">
+      <div class="text-slate-600 font-medium mb-1">📱 המרה לפי מכשיר</div>
+      <div class="text-xs text-slate-400 mb-3">האם המובייל ממיר פחות טוב מהדסקטופ? פער גדול = בעיה בחוויית המובייל</div>
+      <div id="devConvMount"></div>
     </div>
   </section>
 
@@ -733,6 +755,45 @@
       html += `</tbody></table>`;
       document.getElementById("retentionGrid").innerHTML = rows.length ? html : `<div class="text-slate-400">אין מספיק נתונים</div>`;
     }
+    let seasData = null, seasMetric = "sessions";
+    function drawSeasonality() {
+      if (!seasData) return;
+      document.querySelectorAll(".seas-m").forEach((b) => b.classList.toggle("active", b.dataset.seas === seasMetric));
+      const DAYS = ["א", "ב", "ג", "ד", "ה", "ו", "ש"];
+      let max = 1;
+      seasData.forEach((row) => row.forEach((c) => { if (c[seasMetric] > max) max = c[seasMetric]; }));
+      let html = `<table class="text-xs" style="border-collapse:collapse"><thead><tr><th class="p-1"></th>`;
+      for (let h = 0; h < 24; h++) html += `<th class="p-1 text-slate-400 font-normal">${h}</th>`;
+      html += `</tr></thead><tbody>`;
+      seasData.forEach((row, d) => {
+        html += `<tr><td class="p-1 text-slate-500 font-medium">${DAYS[d]}</td>`;
+        row.forEach((c) => {
+          const v = c[seasMetric], a = max ? v / max : 0;
+          const bg = a === 0 ? "#f8fafc" : `rgba(29,78,216,${(0.12 + a * 0.88).toFixed(2)})`;
+          const col = a > 0.5 ? "#fff" : "#475569";
+          const title = `יום ${DAYS[d]} שעה ${row.indexOf(c)}: ${fmt(c.sessions)} כניסות, ₪${fmt(c.revenue)}`;
+          html += `<td class="text-center" style="background:${bg};color:${col};width:26px;height:24px;font-size:9px" title="${title}">${v > 0 && a > 0.25 ? (seasMetric === "revenue" ? Math.round(v / 1000) + "k" : v) : ""}</td>`;
+        });
+        html += `</tr>`;
+      });
+      document.getElementById("seasGrid").innerHTML = html + `</tbody></table>`;
+    }
+    document.querySelectorAll(".seas-m").forEach((b) => b.addEventListener("click", () => { seasMetric = b.dataset.seas; drawSeasonality(); }));
+    function renderAnalyses(d) {
+      seasData = d.seasonality || null; drawSeasonality();
+      const dev = (d.deviceConversion || []).slice();
+      const totS = dev.reduce((s, x) => s + x.sessions, 0) || 1;
+      dev.forEach((x) => (x.share = Number(((x.sessions / totS) * 100).toFixed(1))));
+      mountTable("devConvMount", [
+        {key:"name",label:"מכשיר",align:"right"},
+        {key:"sessions",label:"Sessions",type:"num"},
+        {key:"share",label:"% מהתנועה",type:"pct"},
+        {key:"transactions",label:"עסקאות",type:"num"},
+        {key:"convRate",label:"אחוז המרה",type:"pct"},
+        {key:"revenue",label:"הכנסה (₪)",type:"num"},
+        {key:"bounceRate",label:"Bounce",type:"pct"},
+      ], dev, { search:false, defaultSort:{key:"sessions",dir:"desc"} });
+    }
     function renderInsights(d) {
       const C = d.counts || {};
       document.getElementById("insSummary").innerHTML = [
@@ -741,6 +802,9 @@
         `<div class="card flex items-center gap-2"><span class="text-2xl">🟢</span><div><div class="text-2xl font-bold text-emerald-600">${C.good||0}</div><div class="text-xs text-slate-500">חוזקות</div></div></div>`,
       ].join("");
       const STYLE = { bad:{b:"border-rose-400",bg:"bg-rose-50",i:"🔴"}, warn:{b:"border-amber-400",bg:"bg-amber-50",i:"🟡"}, good:{b:"border-emerald-400",bg:"bg-emerald-50",i:"🟢"} };
+      const aiCard = document.getElementById("aiCard");
+      if (d.aiSummary) { document.getElementById("aiText").textContent = d.aiSummary; aiCard.classList.remove("hidden"); }
+      else aiCard.classList.add("hidden");
       lastInsights = d.insights || [];
       document.getElementById("insList").innerHTML = lastInsights.map((x, i) => {
         const s = STYLE[x.level] || STYLE.warn;
@@ -1350,7 +1414,7 @@
       trends:{path:"/api/trends",render:renderTrends},
       sales:{path:"/api/ecommerce",render:renderSales}, ads:{path:"/api/ads",render:renderAds},
       traffic:{path:"/api/sources",render:renderTraffic}, audience:{path:"/api/audience",render:renderAudience},
-      retention:{path:"/api/retention",render:renderRetention}, events:{path:"/api/events",render:renderEvents},
+      retention:{path:"/api/retention",render:renderRetention}, events:{path:"/api/events",render:renderEvents}, analyses:{path:"/api/analyses",render:renderAnalyses},
       pages:{path:"/api/pages",render:renderPages}, search:{path:"/api/search",render:renderSearch},
       health:{path:"/api/vitals",render:renderVitals},
       ranks:{path:"/api/rank-history",render:renderRanks},
@@ -1360,11 +1424,11 @@
       insights: ["insights"],
       performance: ["overview", "periods", "trends", "realtime", "goals"],
       salesads: ["sales", "ads"],
-      audience: ["traffic", "audience", "retention", "events"],
+      audience: ["traffic", "audience", "analyses", "retention", "events"],
       seo: ["ranks", "search", "pages", "health"],
       compare: ["compare"],
     };
-    const DOM_ORDER = ["insights","overview","trends","realtime","goals","sales","ads","traffic","audience","retention","events","ranks","search","pages","health","compare"];
+    const DOM_ORDER = ["insights","overview","trends","realtime","goals","sales","ads","traffic","audience","analyses","retention","events","ranks","search","pages","health","compare"];
 
     async function loadPart(name, force) {
       const t = PARTS[name], key = cacheKey();
@@ -1374,7 +1438,7 @@
         document.getElementById("updatedAt").textContent = "עודכן: " + new Date().toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" });
       } catch (err) { setStatus("שגיאה: " + err.message, "error"); }
     }
-    const SECTION_TITLES = { insights:"💡 תובנות", overview:"📈 סקירה", trends:"📉 מגמות", realtime:"⏱️ זמן אמת", goals:"🎯 יעדים", sales:"💰 מכירות", ads:"📣 פרסום (ROAS)", traffic:"🚦 מקורות תנועה", audience:"🌍 קהל", retention:"🔁 Retention", events:"🔔 אירועים", search:"🔍 חיפוש", pages:"📄 דפים מובילים", health:"🩺 בריאות האתר", ranks:"📈 מעקב מיקומים", compare:"📊 השוואת אתרים" };
+    const SECTION_TITLES = { insights:"💡 תובנות", overview:"📈 סקירה", trends:"📉 מגמות", realtime:"⏱️ זמן אמת", goals:"🎯 יעדים", sales:"💰 מכירות", ads:"📣 פרסום (ROAS)", traffic:"🚦 מקורות תנועה", audience:"🌍 קהל", analyses:"🗓️ ניתוחים", retention:"🔁 Retention", events:"🔔 אירועים", search:"🔍 חיפוש", pages:"📄 דפים מובילים", health:"🩺 בריאות האתר", ranks:"📈 מעקב מיקומים", compare:"📊 השוואת אתרים" };
     async function loadGroup(group, force) {
       document.getElementById("loadingBar").classList.add("loading");
       setStatus("טוען נתונים...", "info");
