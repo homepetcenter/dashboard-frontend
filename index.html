@@ -485,6 +485,22 @@
     </div>
   </section>
 
+  <!-- MERCHANT -->
+  <section data-screen="merchant" class="hidden">
+    <div id="mcUnavailable" class="hidden card text-amber-600 text-sm mb-4"></div>
+    <div id="mcKpis" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4"></div>
+    <div class="card mb-4">
+      <div class="text-slate-600 font-medium mb-1">⚠️ בעיות פיד נפוצות</div>
+      <div class="text-xs text-slate-400 mb-3">בעיות שחוזרות על הרבה מוצרים — תיקון אחד משפיע על כולם</div>
+      <div id="mcIssuesMount"></div>
+    </div>
+    <div class="card">
+      <div class="text-slate-600 font-medium mb-1">🔴 מוצרים שנדחו</div>
+      <div class="text-xs text-slate-400 mb-3">מוצרים שלא מופיעים ב-Shopping — כסף על הרצפה</div>
+      <div id="mcProductsMount"></div>
+    </div>
+  </section>
+
   <!-- HEALTH -->
   <section data-screen="health" class="hidden">
     <div class="card mb-4">
@@ -1241,6 +1257,19 @@
       ], kwMasterData.filter(pst.f), { defaultSort: pst.sort, scroll:true, expand:cannibExpand });
     }
 
+    function renderMerchant(d) {
+      const un = document.getElementById("mcUnavailable");
+      if (!d.available) { un.classList.remove("hidden"); un.textContent = "⚠️ Merchant Center לא זמין לאתר זה: " + (d.error || d.message || ""); document.getElementById("mcKpis").innerHTML = ""; document.getElementById("mcIssuesMount").innerHTML = ""; document.getElementById("mcProductsMount").innerHTML = ""; return; }
+      un.classList.add("hidden");
+      const k = (v, l, c) => `<div class="card"><div class="kpi-label">${l}</div><div class="kpi-val ${c||''}">${v}</div></div>`;
+      document.getElementById("mcKpis").innerHTML =
+        k(fmt(d.total), "מוצרים בפיד", "") +
+        k(fmt(d.approved), "מאושרים", "!text-emerald-600") +
+        k(fmt(d.disapproved), "נדחו", "!text-rose-600") +
+        k(fmt(d.pending), "ממתינים/בבדיקה", "!text-amber-500");
+      mountTable("mcIssuesMount", [ {key:"issue",label:"בעיה",align:"right",long:true},{key:"count",label:"כמה מוצרים",type:"num"} ], (d.topIssues||[]).slice(), { defaultSort:{key:"count",dir:"desc"}, scroll:true });
+      mountTable("mcProductsMount", [ {key:"title",label:"מוצר",align:"right",long:true},{key:"issue",label:"סיבת דחייה",align:"right",long:true},{key:"detail",label:"פירוט",align:"right",long:true} ], (d.problemProducts||[]).slice(), { defaultSort:{key:"title",dir:"asc"}, scroll:true });
+    }
     function renderVitals(d) {
       const el = document.getElementById("vitalsMount");
       if (!d.vitals) { el.innerHTML = `<div class="text-amber-600 text-sm">⚠️ חסר מפתח <b>CRUX_API_KEY</b> ב-Railway — הוסיפי אותו כדי לראות נתוני מהירות</div>`; return; }
@@ -1508,17 +1537,18 @@
       pages:{path:"/api/pages",render:renderPages}, search:{path:"/api/search",render:renderSearch},
       health:{path:"/api/vitals",render:renderVitals},
       ranks:{path:"/api/rank-history",render:renderRanks},
+      merchant:{path:"/api/merchant",render:renderMerchant},
     };
     // ---- Grouped navigation: 6 rich screens, each loads several endpoints ----
     const GROUPS = {
       insights: ["insights"],
       performance: ["overview", "periods", "trends", "realtime", "goals"],
-      salesads: ["sales", "ads"],
+      salesads: ["sales", "ads", "merchant"],
       audience: ["traffic", "audience", "analyses", "retention", "events"],
       seo: ["ranks", "search", "pages", "health"],
       compare: ["compare"],
     };
-    const DOM_ORDER = ["insights","overview","trends","realtime","goals","sales","ads","traffic","audience","analyses","retention","events","ranks","search","pages","health","compare"];
+    const DOM_ORDER = ["insights","overview","trends","realtime","goals","sales","ads","merchant","traffic","audience","analyses","retention","events","ranks","search","pages","health","compare"];
 
     async function loadPart(name, force) {
       const t = PARTS[name], key = cacheKey();
@@ -1528,7 +1558,7 @@
         document.getElementById("updatedAt").textContent = "עודכן: " + new Date().toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" });
       } catch (err) { setStatus("שגיאה: " + err.message, "error"); }
     }
-    const SECTION_TITLES = { insights:"💡 תובנות", overview:"📈 סקירה", trends:"📉 מגמות", realtime:"⏱️ זמן אמת", goals:"🎯 יעדים", sales:"💰 מכירות", ads:"📣 פרסום (ROAS)", traffic:"🚦 מקורות תנועה", audience:"🌍 קהל", analyses:"🗓️ ניתוחים", retention:"🔁 Retention", events:"🔔 אירועים", search:"🔍 חיפוש", pages:"📄 דפים מובילים", health:"🩺 בריאות האתר", ranks:"📈 מעקב מיקומים", compare:"📊 השוואת אתרים" };
+    const SECTION_TITLES = { insights:"💡 תובנות", overview:"📈 סקירה", trends:"📉 מגמות", realtime:"⏱️ זמן אמת", goals:"🎯 יעדים", sales:"💰 מכירות", ads:"📣 פרסום (ROAS)", merchant:"🛒 Merchant Center", traffic:"🚦 מקורות תנועה", audience:"🌍 קהל", analyses:"🗓️ ניתוחים", retention:"🔁 Retention", events:"🔔 אירועים", search:"🔍 חיפוש", pages:"📄 דפים מובילים", health:"🩺 בריאות האתר", ranks:"📈 מעקב מיקומים", compare:"📊 השוואת אתרים" };
     async function loadGroup(group, force) {
       document.getElementById("loadingBar").classList.add("loading");
       setStatus("טוען נתונים...", "info");
