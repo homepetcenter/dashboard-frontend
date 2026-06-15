@@ -371,10 +371,25 @@
       </div>
       <div id="seasGrid" class="overflow-x-auto"></div>
     </div>
-    <div class="card">
+    <div class="card mb-4">
       <div class="text-slate-600 font-medium mb-1">📱 המרה לפי מכשיר</div>
       <div class="text-xs text-slate-400 mb-3">האם המובייל ממיר פחות טוב מהדסקטופ? פער גדול = בעיה בחוויית המובייל</div>
       <div id="devConvMount"></div>
+    </div>
+    <div class="card mb-4">
+      <div class="text-slate-600 font-medium mb-1">🎯 מטריצת מוצרים</div>
+      <div class="text-xs text-slate-400 mb-2">⚠️ הזדמנות = הרבה צפיות ומעט קניות (בעיית דף/מחיר) · ⭐ מנצח = ממיר מצוין (לקדם)</div>
+      <div id="prodMatrixMount"></div>
+    </div>
+    <div class="card mb-4">
+      <div class="text-slate-600 font-medium mb-1">🔗 מקור / מדיום מפורט</div>
+      <div class="text-xs text-slate-400 mb-2">בדיוק מאיזה מקור מגיע הכסף (google/cpc, facebook, ניוזלטר...)</div>
+      <div id="srcMedMount"></div>
+    </div>
+    <div class="card">
+      <div class="text-slate-600 font-medium mb-1">🏷️ קטגוריות בעומק</div>
+      <div class="text-xs text-slate-400 mb-2">הכנסה, כמות ומחיר ממוצע לכל קטגוריה</div>
+      <div id="catDeepMount"></div>
     </div>
   </section>
 
@@ -793,6 +808,31 @@
         {key:"revenue",label:"הכנסה (₪)",type:"num"},
         {key:"bounceRate",label:"Bounce",type:"pct"},
       ], dev, { search:false, defaultSort:{key:"sessions",dir:"desc"} });
+      const flagCell = (v) => v.includes("הזדמנות") ? `<span class="text-amber-600 font-bold">${v}</span>` : v.includes("מנצח") ? `<span class="text-emerald-600 font-bold">${v}</span>` : "";
+      mountTable("prodMatrixMount", [
+        {key:"name",label:"מוצר",align:"right",long:true},
+        {key:"viewed",label:"צפיות",type:"num"},
+        {key:"carted",label:"לסל",type:"num"},
+        {key:"purchased",label:"נקנה",type:"num"},
+        {key:"cartRate",label:"% לסל",type:"pct"},
+        {key:"buyRate",label:"% קנייה",type:"pct"},
+        {key:"revenue",label:"הכנסה (₪)",type:"num"},
+        {key:"flag",label:"סטטוס",render:flagCell},
+      ], (d.productMatrix||[]).slice(), { defaultSort:{key:"viewed",dir:"desc"}, scroll:true });
+      mountTable("srcMedMount", [
+        {key:"name",label:"מקור / מדיום",align:"right",long:true},
+        {key:"sessions",label:"Sessions",type:"num"},
+        {key:"users",label:"Users",type:"num"},
+        {key:"transactions",label:"עסקאות",type:"num"},
+        {key:"convRate",label:"המרה",type:"pct"},
+        {key:"revenue",label:"הכנסה (₪)",type:"num"},
+      ], (d.sourceMedium||[]).slice(), { defaultSort:{key:"revenue",dir:"desc"}, scroll:true });
+      mountTable("catDeepMount", [
+        {key:"name",label:"קטגוריה",align:"right",long:true},
+        {key:"revenue",label:"הכנסה (₪)",type:"num"},
+        {key:"qty",label:"כמות שנמכרה",type:"num"},
+        {key:"avgPrice",label:"מחיר ממוצע (₪)",type:"num"},
+      ], (d.categoriesDeep||[]).slice(), { defaultSort:{key:"revenue",dir:"desc"}, scroll:true });
     }
     function renderInsights(d) {
       const C = d.counts || {};
