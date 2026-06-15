@@ -451,11 +451,22 @@
         </div>
       </div>
     </div>
-    <div class="card">
+    <div class="card mb-4">
       <div class="text-slate-600 font-medium mb-1">🔑 מילות מפתח — הכל בטבלה אחת</div>
       <div class="text-xs text-slate-400 mb-2">לחצי על סינון מהיר · לחיצה על שורה עם ⚠️ קניבליזציה פותחת את הדפים המתחרים</div>
       <div id="kwPresets" class="flex flex-wrap gap-2 mb-3"></div>
       <div id="kwMaster"></div>
+    </div>
+    <div class="card">
+      <div class="text-slate-600 font-medium mb-1">🐸 Query Fan-Out — מפת נושא</div>
+      <div class="text-xs text-slate-400 mb-3">הקלידי נושא → כל וריאציות החיפוש האמיתיות סביבו (מ-Search Console), ואיפה יש הזדמנויות תוכן</div>
+      <div class="flex gap-2 mb-3">
+        <input id="foInput" type="text" placeholder="נושא... (למשל: אוכל לכלב מבוגר)" class="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-400" />
+        <button id="foRun" class="bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-4 py-2 text-sm">פרק נושא</button>
+      </div>
+      <div id="foSummary" class="flex flex-wrap gap-3 mb-3"></div>
+      <div id="foStatus" class="text-sm text-blue-600 mb-2"></div>
+      <div id="foMount"></div>
     </div>
   </section>
 
@@ -1275,6 +1286,29 @@
       btn.disabled = false; btn.textContent = "הרץ סריקה";
     }
     document.getElementById("auditRun").addEventListener("click", runAudit);
+
+    // ---- Query Fan-Out ----
+    async function runFanout() {
+      const topic = document.getElementById("foInput").value.trim();
+      if (!topic) { document.getElementById("foStatus").textContent = "הקלידי נושא"; return; }
+      const btn = document.getElementById("foRun"), st = document.getElementById("foStatus");
+      btn.disabled = true; btn.textContent = "מפרק..."; st.textContent = "סורק חיפושים אמיתיים...";
+      try {
+        const site = document.getElementById("siteSelect").value;
+        const d = await (await fetch(`${BASE}/api/fanout?site=${site}&topic=${encodeURIComponent(topic)}`, { headers: { "X-Access-Key": accessKey } })).json();
+        if (d.error) { st.textContent = "שגיאה: " + d.error; }
+        else {
+          const chip = (n, l, c) => `<div class="card !py-2"><div class="text-xl font-bold ${c}">${n}</div><div class="text-xs text-slate-500">${l}</div></div>`;
+          document.getElementById("foSummary").innerHTML = chip(fmt(d.total), "וריאציות חיפוש", "text-slate-700") + chip(fmt(d.ranked), "🟢 מדורג עמוד 1", "text-emerald-600") + chip(fmt(d.opportunities), "🔴 הזדמנויות תוכן", "text-amber-600");
+          const stCell = (v) => v.includes("הזדמנות") ? `<span class="text-amber-600 font-medium">${v}</span>` : v.includes("עמוד 2") ? `<span class="text-amber-500">${v}</span>` : `<span class="text-emerald-600">${v}</span>`;
+          mountTable("foMount", [ {key:"key",label:"וריאציית חיפוש",align:"right",long:true},{key:"intent",label:"כוונה",align:"right"},{key:"impressions",label:"חשיפות",type:"num"},{key:"clicks",label:"קליקים",type:"num"},{key:"position",label:"מיקום"},{key:"status",label:"סטטוס",render:stCell} ], (d.subQueries||[]).slice(), { defaultSort:{key:"impressions",dir:"desc"}, scroll:true });
+          st.textContent = `✓ נמצאו ${d.total} וריאציות סביב "${topic}"`;
+        }
+      } catch (e) { st.textContent = "שגיאה: " + e.message; }
+      btn.disabled = false; btn.textContent = "פרק נושא";
+    }
+    document.getElementById("foRun").addEventListener("click", runFanout);
+    document.getElementById("foInput").addEventListener("keydown", (e) => { if (e.key === "Enter") runFanout(); });
 
     // ---- Position-bucket drill-down ----
     let sePosDetails = {};
