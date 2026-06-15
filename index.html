@@ -512,6 +512,32 @@
     </div>
   </section>
 
+  <!-- ENTITY AUTHORITY -->
+  <section data-screen="entity" class="hidden">
+    <div class="grid md:grid-cols-3 gap-4 mb-4">
+      <div class="card flex flex-col items-center justify-center">
+        <div class="kpi-label">ציון סמכות מותג</div>
+        <div id="entScore" class="text-5xl font-extrabold">–</div>
+        <div id="entLabel" class="text-sm mt-1 text-slate-500"></div>
+      </div>
+      <div class="card md:col-span-2">
+        <div class="text-slate-600 font-medium mb-2">ממה מורכב הציון</div>
+        <div id="entBreakdown"></div>
+      </div>
+    </div>
+    <div id="entKpis" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4"></div>
+    <div id="entKgCard" class="card mb-4"></div>
+    <div class="card mb-4">
+      <div class="text-slate-600 font-medium mb-2">📈 מגמת חיפושי מותג</div>
+      <div style="height:220px"><canvas id="entChart"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="text-slate-600 font-medium mb-1">🔎 שאילתות מותג</div>
+      <div class="text-xs text-slate-400 mb-3">מה אנשים מקלידים כדי למצוא אתכם — ודאו שאתם מדורגים #1 על כולן</div>
+      <div id="entQueriesMount"></div>
+    </div>
+  </section>
+
   <!-- HEALTH -->
   <section data-screen="health" class="hidden">
     <div class="card mb-4">
@@ -1312,6 +1338,33 @@
       document.getElementById("opSources").textContent = offline.length ? ("מקורות שלא נטענו הפעם (לכן ייתכן שחסרות הזדמנויות מהם): " + offline.join(", ")) : "";
       drawOpTable();
     }
+    function renderEntity(d) {
+      const score = d.authorityScore || 0;
+      const col = score >= 70 ? "text-emerald-600" : score >= 45 ? "text-amber-500" : "text-rose-500";
+      const es = document.getElementById("entScore"); es.textContent = score; es.className = "text-5xl font-extrabold " + col;
+      document.getElementById("entLabel").textContent = "מותג " + (d.authorityLabel || "");
+      document.getElementById("entBreakdown").innerHTML = (d.breakdown || []).map((b) => {
+        const pct = Math.round((b.points / b.max) * 100);
+        return `<div class="mb-2"><div class="flex justify-between text-sm"><span class="text-slate-600">${b.factor}</span><span class="text-slate-400">${b.value} · ${b.points}/${b.max}</span></div><div class="h-1.5 rounded bg-slate-200 overflow-hidden mt-1"><div style="width:${pct}%" class="h-full bg-blue-500"></div></div></div>`;
+      }).join("");
+      const k = (v, l, extra) => `<div class="card"><div class="kpi-label">${l}</div><div class="kpi-val ${extra || ""}">${v}</div></div>`;
+      const g = (n) => n == null ? "—" : (n > 0 ? "+" : "") + n + "%";
+      document.getElementById("entKpis").innerHTML =
+        k(d.brandedShare + "%", "נתח חיפושי מותג") +
+        k(g(d.brandGrowth), "צמיחת חיפושי מותג", d.brandGrowth > 0 ? "!text-emerald-600" : d.brandGrowth < 0 ? "!text-rose-600" : "") +
+        k(d.brandAvgPos != null ? d.brandAvgPos : "—", "מיקום ממוצע על המותג", d.ownsBrandSerp ? "!text-emerald-600" : "!text-amber-500") +
+        k(fmt(d.brandedClicks || 0), "קליקים ממותג");
+      const kg = d.knowledgeGraph || {};
+      if (kg.recognized) {
+        document.getElementById("entKgCard").innerHTML = `<div class="font-bold text-slate-800 mb-1">🧠 מזוהה כ-Entity בגוגל ✓</div><div class="text-sm text-slate-600"><b>${kg.name || ""}</b>${kg.types && kg.types.length ? ` · <span class="text-slate-400">${kg.types.join(", ")}</span>` : ""}</div>${kg.description ? `<div class="text-sm text-slate-500 mt-1">${kg.description}</div>` : ""}${kg.detail ? `<div class="text-xs text-slate-400 mt-2">${kg.detail.slice(0, 300)}</div>` : ""}${kg.detailUrl ? `<a href="${kg.detailUrl}" target="_blank" rel="noopener" class="text-blue-600 hover:underline text-xs">מקור ↗</a>` : ""}<div class="text-xs text-slate-400 mt-2">ציון התאמה של גוגל: ${kg.score || 0}</div>`;
+      } else {
+        const reason = kg.error ? ("שגיאת API: " + kg.error) : (kg.reason === "no API key" ? "לא הוגדר מפתח API — הפעילו את Knowledge Graph Search API על אותו מפתח Google של CrUX (או הוסיפו KG_API_KEY)" : "גוגל עדיין לא מזהה את המותג כ-Entity");
+        document.getElementById("entKgCard").innerHTML = `<div class="font-bold text-slate-800 mb-1">🧠 לא מזוהה כ-Entity בגוגל</div><div class="text-sm text-slate-500">${reason}</div><div class="text-xs text-slate-400 mt-2">כדי להפוך ל-Entity מוכר: דף "אודות" עשיר, סימון Organization Schema, פרופיל Google Business פעיל, אזכורים באתרים סמכותיים, וערך בויקיפדיה/ויקינתונים אם רלוונטי.</div>`;
+      }
+      const tr = d.trend || [];
+      makeChart("entChart", { type: "line", data: { labels: tr.map((p) => niceDate(p.date)), datasets: [{ label: "הופעות מותג", data: tr.map((p) => p.impressions), borderColor: "#7c3aed", backgroundColor: "rgba(124,58,237,0.08)", fill: true, tension: 0.35, pointRadius: 0 }, { label: "קליקים", data: tr.map((p) => p.clicks), borderColor: "#0ea5e9", borderWidth: 1.5, fill: false, tension: 0.35, pointRadius: 0 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true } } } });
+      mountTable("entQueriesMount", [{ key: "query", label: "שאילתה", align: "right", long: true }, { key: "clicks", label: "קליקים", type: "num" }, { key: "impressions", label: "הופעות", type: "num" }, { key: "ctr", label: "CTR%" }, { key: "position", label: "מיקום" }], (d.brandQueries || []).slice(), { defaultSort: { key: "impressions", dir: "desc" }, scroll: true });
+    }
     function renderMerchant(d) {
       const un = document.getElementById("mcUnavailable");
       if (!d.available) { un.classList.remove("hidden"); un.textContent = "⚠️ Merchant Center לא זמין לאתר זה: " + (d.error || d.message || ""); document.getElementById("mcKpis").innerHTML = ""; document.getElementById("mcIssuesMount").innerHTML = ""; document.getElementById("mcProductsMount").innerHTML = ""; return; }
@@ -1594,6 +1647,7 @@
       ranks:{path:"/api/rank-history",render:renderRanks},
       merchant:{path:"/api/merchant",render:renderMerchant},
       opportunities:{path:"/api/opportunities",render:renderOpportunities},
+      entity:{path:"/api/entity",render:renderEntity},
     };
     // ---- Grouped navigation: 6 rich screens, each loads several endpoints ----
     const GROUPS = {
@@ -1602,10 +1656,10 @@
       performance: ["overview", "periods", "trends", "realtime", "goals"],
       salesads: ["sales", "ads", "merchant"],
       audience: ["traffic", "audience", "analyses", "retention", "events"],
-      seo: ["ranks", "search", "pages", "health"],
+      seo: ["ranks", "search", "pages", "entity", "health"],
       compare: ["compare"],
     };
-    const DOM_ORDER = ["opportunities","insights","overview","trends","realtime","goals","sales","ads","merchant","traffic","audience","analyses","retention","events","ranks","search","pages","health","compare"];
+    const DOM_ORDER = ["opportunities","insights","overview","trends","realtime","goals","sales","ads","merchant","traffic","audience","analyses","retention","events","ranks","search","pages","entity","health","compare"];
 
     async function loadPart(name, force) {
       const t = PARTS[name], key = cacheKey();
@@ -1615,7 +1669,7 @@
         document.getElementById("updatedAt").textContent = "עודכן: " + new Date().toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" });
       } catch (err) { setStatus("שגיאה: " + err.message, "error"); }
     }
-    const SECTION_TITLES = { opportunities:"🎯 הזדמנויות השבוע", insights:"💡 תובנות", overview:"📈 סקירה", trends:"📉 מגמות", realtime:"⏱️ זמן אמת", goals:"🎯 יעדים", sales:"💰 מכירות", ads:"📣 פרסום (ROAS)", merchant:"🛒 Merchant Center", traffic:"🚦 מקורות תנועה", audience:"🌍 קהל", analyses:"🗓️ ניתוחים", retention:"🔁 Retention", events:"🔔 אירועים", search:"🔍 חיפוש", pages:"📄 דפים מובילים", health:"🩺 בריאות האתר", ranks:"📈 מעקב מיקומים", compare:"📊 השוואת אתרים" };
+    const SECTION_TITLES = { opportunities:"🎯 הזדמנויות השבוע", insights:"💡 תובנות", overview:"📈 סקירה", trends:"📉 מגמות", realtime:"⏱️ זמן אמת", goals:"🎯 יעדים", sales:"💰 מכירות", ads:"📣 פרסום (ROAS)", merchant:"🛒 Merchant Center", traffic:"🚦 מקורות תנועה", audience:"🌍 קהל", analyses:"🗓️ ניתוחים", retention:"🔁 Retention", events:"🔔 אירועים", search:"🔍 חיפוש", pages:"📄 דפים מובילים", health:"🩺 בריאות האתר", ranks:"📈 מעקב מיקומים", entity:"🏆 סמכות מותג", compare:"📊 השוואת אתרים" };
     async function loadGroup(group, force) {
       document.getElementById("loadingBar").classList.add("loading");
       setStatus("טוען נתונים...", "info");
