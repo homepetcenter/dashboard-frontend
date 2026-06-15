@@ -42,6 +42,20 @@
 <body class="bg-slate-100 min-h-screen p-4 md:p-6">
   <div id="loadingBar"></div>
 
+  <!-- Alerts panel (slides in from side) -->
+  <div id="bellPanel" class="hidden fixed inset-0 z-[65]">
+    <div id="bellBackdrop" class="absolute inset-0 bg-slate-900/40"></div>
+    <div class="absolute top-0 bottom-0 start-0 w-full max-w-md bg-slate-50 shadow-2xl overflow-y-auto p-4">
+      <div class="flex items-center justify-between mb-3">
+        <div class="text-lg font-bold text-slate-800">🔔 התראות והזדמנויות</div>
+        <button id="bellClose" class="text-slate-400 hover:text-slate-700 text-2xl">✕</button>
+      </div>
+      <div id="bellSummary" class="flex flex-wrap gap-2 mb-3"></div>
+      <div id="bellStatus" class="text-sm text-blue-600 mb-2"></div>
+      <div id="bellList" class="space-y-2"></div>
+    </div>
+  </div>
+
   <!-- Login overlay -->
   <div id="loginOverlay" class="fixed inset-0 z-50 bg-slate-800/60 backdrop-blur-sm flex items-center justify-center">
     <div class="bg-white rounded-2xl shadow-xl p-8 w-80 text-center">
@@ -78,6 +92,7 @@
       </select>
       <button id="refreshBtn" title="רענון" class="border border-slate-300 rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-100">🔄</button>
       <button id="darkBtn" title="מצב כהה/בהיר" class="border border-slate-300 rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-100">🌙</button>
+      <button id="bellBtn" title="התראות והזדמנויות" class="relative border border-slate-300 rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-100">🔔<span id="bellBadge" class="hidden absolute -top-2 -left-2 bg-rose-500 text-white text-xs rounded-full min-w-5 h-5 px-1 flex items-center justify-center">0</span></button>
     </div>
     <div class="w-full flex flex-wrap items-center gap-2 text-sm border-t border-slate-100 pt-2 mt-1">
       <span class="text-slate-500">⇄ השווה לתקופה:</span>
@@ -856,6 +871,7 @@
       const aiCard = document.getElementById("aiCard");
       if (d.aiSummary) { document.getElementById("aiText").textContent = d.aiSummary; aiCard.classList.remove("hidden"); }
       else aiCard.classList.add("hidden");
+      try { renderAlerts(d); alertsKey = cacheKey(); } catch (e) {}
       lastInsights = d.insights || [];
       document.getElementById("insList").innerHTML = lastInsights.map((x, i) => {
         const s = STYLE[x.level] || STYLE.warn;
@@ -1546,7 +1562,7 @@
       window.scrollTo({ top: 0, behavior: "smooth" });
       loadGroup(group);
     }
-    const reloadGroup = () => { Object.keys(cache).forEach((k) => delete cache[k]); loadGroup(currentGroup, true); };
+    const reloadGroup = () => { Object.keys(cache).forEach((k) => delete cache[k]); alertsKey = ""; loadGroup(currentGroup, true); };
 
     document.querySelectorAll(".tab-btn").forEach((b) => b.addEventListener("click", () => showGroup(b.dataset.group)));
     function setActiveRange(r) { currentRange = r; customStart = customEnd = null; localStorage.setItem("dashRange", r); document.querySelectorAll(".range-btn").forEach((b)=>b.classList.toggle("active", b.dataset.range===r)); }
@@ -1631,7 +1647,37 @@
     // Restore saved selections
     const savedSite = localStorage.getItem("dashSite"); if (savedSite) document.getElementById("siteSelect").value = savedSite;
     const savedRange = localStorage.getItem("dashRange") || "30d";
+    // ---- Alerts bell (central hub for opportunities/warnings/errors) ----
+    function renderAlerts(d) {
+      const ins = d.insights || [], C = d.counts || {};
+      const urgent = (C.bad || 0) + (C.warn || 0);
+      const badge = document.getElementById("bellBadge");
+      if (urgent > 0) { badge.textContent = urgent; badge.classList.remove("hidden"); } else badge.classList.add("hidden");
+      document.getElementById("bellSummary").innerHTML =
+        `<div class="card !py-1.5 flex items-center gap-1"><span>🔴</span><b class="text-rose-600">${C.bad||0}</b><span class="text-xs text-slate-500">דחוף</span></div>` +
+        `<div class="card !py-1.5 flex items-center gap-1"><span>🟡</span><b class="text-amber-500">${C.warn||0}</b><span class="text-xs text-slate-500">הזדמנויות</span></div>` +
+        `<div class="card !py-1.5 flex items-center gap-1"><span>🟢</span><b class="text-emerald-600">${C.good||0}</b><span class="text-xs text-slate-500">חוזקות</span></div>`;
+      const ST = { bad:{b:"border-rose-400",bg:"bg-rose-50",i:"🔴"}, warn:{b:"border-amber-400",bg:"bg-amber-50",i:"🟡"}, good:{b:"border-emerald-400",bg:"bg-emerald-50",i:"🟢"} };
+      document.getElementById("bellList").innerHTML = ins.map((x) => { const s = ST[x.level] || ST.warn;
+        return `<div class="card !p-3 border-r-4 ${s.b} ${s.bg}"><div class="font-bold text-sm text-slate-800 mb-1">${s.i} ${x.title}</div><div class="text-xs text-slate-600">💡 ${x.rec}</div></div>`; }).join("")
+        || `<div class="text-slate-400 text-sm">אין התראות כרגע</div>`;
+      document.getElementById("bellStatus").textContent = "";
+    }
+    let alertsKey = "";
+    async function loadAlerts(force) {
+      const key = cacheKey();
+      if (!force && alertsKey === key) return;
+      alertsKey = key;
+      document.getElementById("bellStatus").textContent = "טוען התראות...";
+      try { const d = await api("/api/insights"); renderAlerts(d); } catch (e) { document.getElementById("bellStatus").textContent = ""; }
+    }
+    document.getElementById("bellBtn").addEventListener("click", () => { document.getElementById("bellPanel").classList.remove("hidden"); loadAlerts(false); });
+    document.getElementById("bellClose").addEventListener("click", () => document.getElementById("bellPanel").classList.add("hidden"));
+    document.getElementById("bellBackdrop").addEventListener("click", () => document.getElementById("bellPanel").classList.add("hidden"));
+
     setActiveRange(savedRange); showGroup("performance");
+    // Load alerts in the background so the badge appears without opening the panel
+    setTimeout(() => loadAlerts(false), 2000);
     setInterval(() => { if (GROUPS[currentGroup] && GROUPS[currentGroup].includes("realtime") && !document.hidden) loadPart("realtime", true); }, 20000);
   </script>
 </body>
