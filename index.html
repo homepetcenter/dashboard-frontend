@@ -528,6 +528,56 @@
     </div>
   </section>
 
+  <!-- PAGES PERFORMANCE -->
+  <section data-screen="pageperf" class="hidden">
+    <div class="card">
+      <div class="font-bold text-slate-800 mb-1">📑 ביצועי עמודים</div>
+      <div class="text-xs text-slate-400 mb-3">אילו דפים מדורגים על הכי הרבה מילות מפתח (מקור: Search Console)</div>
+      <div id="ppMount"></div>
+    </div>
+  </section>
+
+  <!-- ORGANIC TRAFFIC: ESTIMATED vs POTENTIAL -->
+  <section data-screen="orgpotential" class="hidden">
+    <div id="opotKpis" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4"></div>
+    <div class="card">
+      <div class="font-bold text-slate-800 mb-1">🚀 מילים עם פוטנציאל לא ממומש</div>
+      <div class="text-xs text-slate-400 mb-3">כמה קליקים נוספים אפשר להשיג אם תגיעי ל-Top 3 (מקור: Search Console)</div>
+      <div id="opotMount"></div>
+    </div>
+  </section>
+
+  <!-- SPIDER GOGGLES -->
+  <section data-screen="spider" class="hidden">
+    <div class="card">
+      <div class="font-bold text-slate-800 mb-1">🕷️ Spider Goggles — מה גוגל רואה בעמוד</div>
+      <div class="text-xs text-slate-400 mb-3">הדביקי כתובת URL כדי לראות את המילים והביטויים הכי תכופים בדף (כפי שגוגל קורא אותו)</div>
+      <div class="flex gap-2 flex-wrap">
+        <input id="spUrl" type="text" placeholder="https://homepetcenter.co.il/..." class="flex-1 min-w-[240px] border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-400">
+        <button onclick="loadSpider()" class="bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-4 py-2 text-sm font-medium">נתח דף</button>
+      </div>
+      <div id="spMeta" class="mt-4"></div>
+      <div id="spWrap" class="grid md:grid-cols-2 gap-4 mt-4 hidden">
+        <div><div class="text-slate-600 font-medium mb-2">מילים בודדות</div><div id="spWords"></div></div>
+        <div><div class="text-slate-600 font-medium mb-2">ביטויים (2 מילים)</div><div id="spBg"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- GOOGLE UPDATES + WEATHER -->
+  <section data-screen="gupdates" class="hidden">
+    <div class="card mb-4">
+      <div class="font-bold text-slate-800 mb-1">🌦️ מזג האוויר בגוגל — תנודתיות SERP</div>
+      <div class="text-xs text-slate-400 mb-2">שינוי מיקום ממוצע ליום במילים שאת עוקבת אחריהן (גבוה = תנודתיות, אולי עדכון אלגוריתם)</div>
+      <div style="height:220px"><canvas id="guChart"></canvas></div>
+      <div id="guNote" class="text-xs text-slate-400 mt-2"></div>
+    </div>
+    <div class="card">
+      <div class="font-bold text-slate-800 mb-2">📅 עדכוני אלגוריתם של גוגל</div>
+      <div id="guUpdates"></div>
+    </div>
+  </section>
+
   <!-- TEXT ANALYSIS -->
   <section data-screen="textanalysis" class="hidden">
     <div class="card">
@@ -1424,6 +1474,65 @@
       document.getElementById("opSources").textContent = offline.length ? ("מקורות שלא נטענו הפעם (לכן ייתכן שחסרות הזדמנויות מהם): " + offline.join(", ")) : "";
       drawOpTable();
     }
+    function renderPagePerf(d) {
+      mountTable("ppMount", [
+        { key: "page", label: "דף", align: "right", long: true, url: true },
+        { key: "keywords", label: "מילות מפתח", type: "num" },
+        { key: "top10", label: "ב-Top 10", type: "num" },
+        { key: "top3", label: "ב-Top 3", type: "num" },
+        { key: "clicks", label: "קליקים", type: "num" },
+        { key: "impressions", label: "חשיפות", type: "num" },
+        { key: "avgPos", label: "מיקום ממוצע" },
+      ], (d.pages || []).slice(), { defaultSort: { key: "keywords", dir: "desc" }, scroll: true, totals: false });
+    }
+    function renderOrgPotential(d) {
+      const k = (v, l, extra) => `<div class="card"><div class="kpi-label">${l}</div><div class="kpi-val ${extra || ""}">${v}</div></div>`;
+      document.getElementById("opotKpis").innerHTML =
+        k(fmt(d.currentClicks || 0), "קליקים אורגניים נוכחיים", "") +
+        k(fmt(d.potentialClicks || 0), "פוטנציאל (אם Top 3)", "!text-emerald-600") +
+        k("+" + fmt(d.gap || 0), "פער / הזדמנות", "!text-blue-600");
+      mountTable("opotMount", [
+        { key: "query", label: "מילה", align: "right", long: true },
+        { key: "position", label: "מיקום" },
+        { key: "impressions", label: "חשיפות", type: "num" },
+        { key: "clicks", label: "קליקים", type: "num" },
+        { key: "potential", label: "קליקים פוטנציאליים", type: "num" },
+      ], (d.keywords || []).slice(), { defaultSort: { key: "potential", dir: "desc" }, scroll: true, totals: false });
+    }
+    async function loadSpider() {
+      const u = document.getElementById("spUrl").value.trim();
+      if (!u) { setStatus("הדביקי כתובת URL", "error"); return; }
+      try {
+        setStatus("שולף ומנתח את הדף…", "info");
+        const res = await fetch(`${BASE}/api/spider?url=${encodeURIComponent(u)}`, { headers: { "X-Access-Key": accessKey } });
+        if (res.status === 401) { showLogin(); return; }
+        const d = await res.json(); setStatus("", "");
+        if (d.error) { document.getElementById("spMeta").innerHTML = `<div class="text-rose-600 text-sm">שגיאה בשליפת הדף: ${d.error}</div>`; document.getElementById("spWrap").classList.add("hidden"); return; }
+        renderSpider(d);
+      } catch (e) { setStatus("שגיאה: " + e.message, "error"); }
+    }
+    function renderSpider(d) {
+      document.getElementById("spMeta").innerHTML =
+        `<div class="text-sm"><b>Title:</b> ${d.title || "—"} <span class="text-slate-400">(${(d.title || "").length} תווים)</span></div>` +
+        `<div class="text-sm mt-1"><b>Meta description:</b> ${d.metaDesc || "<span class='text-rose-500'>חסר</span>"}</div>` +
+        `<div class="text-sm mt-1"><b>H1:</b> ${(d.h1s || []).join(" · ") || "<span class='text-rose-500'>חסר</span>"}</div>` +
+        (d.h2s && d.h2s.length ? `<div class="text-sm mt-1 text-slate-500"><b>H2:</b> ${d.h2s.join(" · ")}</div>` : "") +
+        `<div class="text-xs text-slate-400 mt-1">סה"כ מילים בדף: ${fmt(d.wordCount || 0)}</div>`;
+      document.getElementById("spWrap").classList.remove("hidden");
+      mountTable("spWords", [{ key: "word", label: "מילה", align: "right" }, { key: "count", label: "מופעים", type: "num" }], (d.top || []).slice(), { defaultSort: { key: "count", dir: "desc" }, scroll: true, totals: false, search: false });
+      mountTable("spBg", [{ key: "phrase", label: "ביטוי", align: "right", long: true }, { key: "count", label: "מופעים", type: "num" }], (d.topBg || []).slice(), { defaultSort: { key: "count", dir: "desc" }, scroll: true, totals: false, search: false });
+    }
+    function renderGUpdates(d) {
+      const s = d.series || [];
+      if (s.length) {
+        makeChart("guChart", { type: "line", data: { labels: s.map((p) => niceDate(p.date)), datasets: [{ label: "תנודתיות", data: s.map((p) => p.volatility), borderColor: "#f59e0b", backgroundColor: "rgba(245,158,11,0.1)", fill: true, tension: 0.3, pointRadius: 0 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } } });
+        applyGUpdates("guChart", s.map((p) => p.date));
+      } else if (charts["guChart"]) { charts["guChart"].destroy(); }
+      document.getElementById("guNote").textContent = s.length ? "" : "אין עדיין מספיק היסטוריית מעקב מיקומים לחישוב תנודתיות — הריצי את מעקב המיקומים כמה ימים.";
+      document.getElementById("guUpdates").innerHTML =
+        GOOGLE_UPDATES.slice().reverse().map((u) => `<div class="flex items-center gap-3 py-2 border-b border-slate-100 last:border-0"><span class="text-xs text-slate-400 w-24">${u.date}</span><span class="text-sm text-slate-700">${u.name}</span></div>`).join("") +
+        `<div class="text-xs text-slate-400 mt-3">מקורות חיים: <a href="https://status.search.google.com/products/rGHU1u87FJnkP6W2GwMi/history" target="_blank" rel="noopener" class="text-blue-600 hover:underline">Google Search Status</a> · <a href="https://www.searchenginejournal.com/google-algorithm-history/" target="_blank" rel="noopener" class="text-blue-600 hover:underline">היסטוריית עדכונים</a></div>`;
+    }
     const TA_STOP = new Set(["של","את","על","עם","אני","אתה","הוא","היא","אנחנו","הם","הן","זה","זו","גם","כי","אבל","או","אם","יש","אין","לא","כל","אל","מה","מי","היו","היה","הייתה","אשר","כמו","עוד","רק","כך","אז","כדי","עד","בין","לפי","אחרי","לפני","the","a","an","and","or","of","to","in","on","for","is","are","was","were","with","that","this","it","as","at","by","be","from","you","your","we","our","they"]);
     function analyzeText() {
       const raw = document.getElementById("taText").value || "";
@@ -1844,6 +1953,10 @@
       rankdist:{path:"/api/rankdist",render:renderRankDist},
       summary:{path:"/api/summary",render:renderSummary},
       content:{path:"/api/content",render:renderContent},
+      pageperf:{path:"/api/pageperf",render:renderPagePerf},
+      orgpotential:{path:"/api/orgpotential",render:renderOrgPotential},
+      spider:{static:true,render:()=>{}},
+      gupdates:{path:"/api/volatility",render:renderGUpdates},
       textanalysis:{static:true,render:()=>{}},
     };
     // ---- Grouped navigation: 6 rich screens, each loads several endpoints ----
@@ -1853,10 +1966,10 @@
       performance: ["summary", "overview", "periods", "trends", "realtime", "goals"],
       salesads: ["sales", "ads", "merchant"],
       audience: ["traffic", "audience", "analyses", "retention", "events"],
-      seo: ["ranks", "rankdist", "content", "search", "pages", "entity", "textanalysis", "health"],
+      seo: ["ranks", "rankdist", "content", "pageperf", "orgpotential", "spider", "search", "pages", "entity", "textanalysis", "gupdates", "health"],
       compare: ["compare"],
     };
-    const DOM_ORDER = ["opportunities","insights","summary","overview","trends","realtime","goals","sales","ads","merchant","traffic","audience","analyses","retention","events","ranks","rankdist","content","search","pages","entity","textanalysis","health","compare"];
+    const DOM_ORDER = ["opportunities","insights","summary","overview","trends","realtime","goals","sales","ads","merchant","traffic","audience","analyses","retention","events","ranks","rankdist","content","pageperf","orgpotential","spider","search","pages","entity","textanalysis","gupdates","health","compare"];
 
     async function loadPart(name, force) {
       const t = PARTS[name], key = cacheKey();
@@ -1867,7 +1980,7 @@
         document.getElementById("updatedAt").textContent = "עודכן: " + new Date().toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" });
       } catch (err) { setStatus("שגיאה: " + err.message, "error"); }
     }
-    const SECTION_TITLES = { opportunities:"🎯 הזדמנויות השבוע", insights:"💡 תובנות", summary:"📋 סיכום מנהלים", overview:"📈 סקירה", trends:"📉 מגמות", realtime:"⏱️ זמן אמת", goals:"🎯 יעדים", sales:"💰 מכירות", ads:"📣 פרסום (ROAS)", merchant:"🛒 Merchant Center", traffic:"🚦 מקורות תנועה", audience:"🌍 קהל", analyses:"🗓️ ניתוחים", retention:"🔁 Retention", events:"🔔 אירועים", search:"🔍 חיפוש", pages:"📄 דפים מובילים", health:"🩺 בריאות האתר", ranks:"📈 מעקב מיקומים", rankdist:"📊 פיזור דירוג", content:"📈 ביצועי תוכן", entity:"🏆 סמכות מותג", textanalysis:"📝 ניתוח טקסט", compare:"📊 השוואת אתרים" };
+    const SECTION_TITLES = { opportunities:"🎯 הזדמנויות השבוע", insights:"💡 תובנות", summary:"📋 סיכום מנהלים", overview:"📈 סקירה", trends:"📉 מגמות", realtime:"⏱️ זמן אמת", goals:"🎯 יעדים", sales:"💰 מכירות", ads:"📣 פרסום (ROAS)", merchant:"🛒 Merchant Center", traffic:"🚦 מקורות תנועה", audience:"🌍 קהל", analyses:"🗓️ ניתוחים", retention:"🔁 Retention", events:"🔔 אירועים", search:"🔍 חיפוש", pages:"📄 דפים מובילים", health:"🩺 בריאות האתר", ranks:"📈 מעקב מיקומים", rankdist:"📊 פיזור דירוג", content:"📈 ביצועי תוכן", pageperf:"📑 ביצועי עמודים", orgpotential:"🚀 פוטנציאל אורגני", spider:"🕷️ Spider Goggles", gupdates:"🌦️ עדכוני גוגל", entity:"🏆 סמכות מותג", textanalysis:"📝 ניתוח טקסט", compare:"📊 השוואת אתרים" };
     async function loadGroup(group, force) {
       document.getElementById("loadingBar").classList.add("loading");
       setStatus("טוען נתונים...", "info");
