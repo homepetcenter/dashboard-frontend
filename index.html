@@ -528,6 +528,55 @@
     </div>
   </section>
 
+  <!-- TEXT ANALYSIS -->
+  <section data-screen="textanalysis" class="hidden">
+    <div class="card">
+      <div class="font-bold text-slate-800 mb-1">📝 ניתוח טקסט: ספירת מילים ותדירות</div>
+      <div class="text-xs text-slate-400 mb-3">הדביקי טקסט (תיאור מוצר, מאמר, דף) כדי לראות ספירת מילים, מילים ייחודיות וצפיפות — שימושי לבדיקת מילות מפתח</div>
+      <textarea id="taText" rows="8" placeholder="הדביקי את הטקסט כאן…" class="w-full border border-slate-300 rounded-lg p-3 text-sm outline-none focus:ring-2 focus:ring-blue-400"></textarea>
+      <div class="flex flex-wrap items-center gap-3 mt-3">
+        <button onclick="analyzeText()" class="bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-4 py-2 text-sm font-medium">מה התדירות?</button>
+        <label class="text-sm text-slate-600">אורך ביטוי:
+          <select id="taN" class="border border-slate-300 rounded-lg px-2 py-1 text-sm ml-1">
+            <option value="1" selected>מילה בודדת</option>
+            <option value="2">2 מילים</option>
+            <option value="3">3 מילים</option>
+          </select>
+        </label>
+        <label class="text-sm text-slate-600 flex items-center gap-1"><input type="checkbox" id="taStop" class="accent-blue-600"> התעלם ממילות קישור נפוצות</label>
+      </div>
+      <div id="taStats" class="grid grid-cols-2 md:grid-cols-5 gap-3 mt-4"></div>
+      <div id="taFreqWrap" class="mt-4 hidden">
+        <div class="text-slate-600 font-medium mb-2">📊 תדירות</div>
+        <div id="taFreqMount"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONTENT PERFORMANCE -->
+  <section data-screen="content" class="hidden">
+    <div class="card mb-4">
+      <div class="flex items-center justify-between mb-2 flex-wrap gap-2">
+        <div class="font-bold text-slate-800">📈 ביצועי תוכן</div>
+        <select id="ctMonths" onchange="loadContent(this.value)" class="border border-slate-300 rounded-lg px-3 py-1 text-sm outline-none focus:ring-2 focus:ring-blue-400">
+          <option value="1" selected>חודש</option>
+          <option value="3">3 חודשים</option>
+          <option value="6">6 חודשים</option>
+          <option value="12">שנה</option>
+          <option value="18">שנה וחצי</option>
+        </select>
+      </div>
+      <div class="text-xs text-slate-400 mb-2">קליקים · חשיפות · CTR · מיקום ממוצע — לפי יום (מקור: Search Console)</div>
+      <div style="height:340px"><canvas id="ctChart"></canvas></div>
+      <div id="ctNote" class="text-xs text-amber-600 mt-2"></div>
+    </div>
+    <div class="card">
+      <div class="font-bold text-slate-800 mb-1">📅 ביצועים חודשיים (12 חודשים)</div>
+      <div class="text-xs text-slate-400 mb-3">קליקים אורגניים (GSC) · Referral · סה"כ סשנים · משך ביקור אורגני (GA4)</div>
+      <div id="ctMonthlyMount"></div>
+    </div>
+  </section>
+
   <!-- ORGANIC RANKING DISTRIBUTION -->
   <section data-screen="rankdist" class="hidden">
     <div class="card">
@@ -1375,6 +1424,66 @@
       document.getElementById("opSources").textContent = offline.length ? ("מקורות שלא נטענו הפעם (לכן ייתכן שחסרות הזדמנויות מהם): " + offline.join(", ")) : "";
       drawOpTable();
     }
+    const TA_STOP = new Set(["של","את","על","עם","אני","אתה","הוא","היא","אנחנו","הם","הן","זה","זו","גם","כי","אבל","או","אם","יש","אין","לא","כל","אל","מה","מי","היו","היה","הייתה","אשר","כמו","עוד","רק","כך","אז","כדי","עד","בין","לפי","אחרי","לפני","the","a","an","and","or","of","to","in","on","for","is","are","was","were","with","that","this","it","as","at","by","be","from","you","your","we","our","they"]);
+    function analyzeText() {
+      const raw = document.getElementById("taText").value || "";
+      const ignore = document.getElementById("taStop").checked;
+      const n = Number(document.getElementById("taN").value || 1);
+      const tokens = (raw.toLowerCase().match(/[\p{L}\p{N}']+/gu) || []);
+      const words = tokens.filter((w) => !ignore || !TA_STOP.has(w));
+      let grams = [];
+      if (n === 1) grams = words;
+      else for (let i = 0; i + n <= words.length; i++) grams.push(words.slice(i, i + n).join(" "));
+      const freq = {}; grams.forEach((g) => (freq[g] = (freq[g] || 0) + 1));
+      const totalGrams = grams.length || 1;
+      const chars = raw.length, charsNoSpace = raw.replace(/\s/g, "").length;
+      const sentences = (raw.match(/[.!?\n]+/g) || []).length || (raw.trim() ? 1 : 0);
+      document.getElementById("taStats").innerHTML = [
+        ["מילים", fmt(words.length)], ["מילים ייחודיות", fmt(new Set(words).size)],
+        ["תווים", fmt(chars)], ["תווים ללא רווח", fmt(charsNoSpace)], ["משפטים", fmt(sentences)],
+      ].map(([l, v]) => `<div class="card"><div class="kpi-label">${l}</div><div class="kpi-val">${v}</div></div>`).join("");
+      const rows = Object.entries(freq).map(([word, count]) => ({ word, count, pct: Number(((count / totalGrams) * 100).toFixed(1)) })).sort((a, b) => b.count - a.count);
+      document.getElementById("taFreqWrap").classList.remove("hidden");
+      mountTable("taFreqMount", [
+        { key: "word", label: n === 1 ? "מילה" : "ביטוי", align: "right", long: true },
+        { key: "count", label: "מופעים", type: "num" },
+        { key: "pct", label: "% מהטקסט" },
+      ], rows, { defaultSort: { key: "count", dir: "desc" }, scroll: true, totals: false });
+    }
+    async function loadContent(months) {
+      const site = document.getElementById("siteSelect").value;
+      try {
+        setStatus("טוען ביצועי תוכן…", "info");
+        const res = await fetch(`${BASE}/api/content?site=${encodeURIComponent(site)}&months=${months}`, { headers: { "X-Access-Key": accessKey } });
+        if (res.status === 401) { showLogin(); return; }
+        const d = await res.json(); if (d.error) throw new Error(d.error);
+        setStatus("", ""); renderContent(d);
+      } catch (e) { setStatus("שגיאה: " + e.message, "error"); }
+    }
+    function renderContent(d) {
+      const sel = document.getElementById("ctMonths"); if (sel && d.months) sel.value = String(d.months);
+      document.getElementById("ctNote").textContent = d.capped ? "הערה: Search Console שומר עד ~16 חודשים, לכן התקופה נחתכה." : "";
+      const s = d.chartSeries || [];
+      makeChart("ctChart", { type: "line", data: { labels: s.map((r) => niceDate(r.date)), datasets: [
+        { label: "קליקים", data: s.map((r) => r.clicks), borderColor: "#2563eb", backgroundColor: "rgba(37,99,235,0.06)", yAxisID: "yC", tension: 0.3, pointRadius: 0, borderWidth: 2 },
+        { label: "חשיפות", data: s.map((r) => r.impressions), borderColor: "#fb923c", yAxisID: "yI", tension: 0.3, pointRadius: 0, borderWidth: 2 },
+        { label: "CTR %", data: s.map((r) => r.ctr), borderColor: "#22c55e", yAxisID: "yR", tension: 0.3, pointRadius: 0, borderWidth: 1.5, borderDash: [4, 3] },
+        { label: "מיקום ממוצע", data: s.map((r) => r.position), borderColor: "#64748b", yAxisID: "yP", tension: 0.3, pointRadius: 0, borderWidth: 1.5, borderDash: [4, 3] },
+      ] }, options: { responsive: true, maintainAspectRatio: false, interaction: { mode: "index", intersect: false }, plugins: { legend: { display: true, position: "top", labels: { boxWidth: 12, font: { size: 10 } } } }, scales: {
+        yC: { type: "linear", position: "left", beginAtZero: true, title: { display: true, text: "קליקים" } },
+        yI: { type: "linear", position: "right", beginAtZero: true, grid: { drawOnChartArea: false }, title: { display: true, text: "חשיפות" } },
+        yR: { display: false, beginAtZero: true },
+        yP: { display: false, reverse: true, min: 1 },
+        x: { ticks: { maxTicksLimit: 25, autoSkip: true, maxRotation: 0 } },
+      } } });
+      mountTable("ctMonthlyMount", [
+        { key: "month", label: "חודש", align: "right" },
+        { key: "organicClicks", label: "קליקים אורגניים", type: "num" },
+        { key: "referralClicks", label: "Referral", type: "num" },
+        { key: "allClicks", label: "סה\"כ סשנים", type: "num" },
+        { key: "organicDuration", label: "משך ביקור אורגני", render: (v) => fmtDur(v || 0) },
+      ], (d.monthly || []).slice().reverse(), { defaultSort: { key: "month", dir: "desc" }, totals: false });
+    }
     function renderSummary(d) {
       const c = d.rankingCurrent || {}, i = d.rankingInitial || {};
       const badge = (v) => `<span class="inline-block bg-amber-100 text-amber-800 font-bold rounded px-3 py-1 text-sm">${v}%</span>`;
@@ -1734,6 +1843,8 @@
       entity:{path:"/api/entity",render:renderEntity},
       rankdist:{path:"/api/rankdist",render:renderRankDist},
       summary:{path:"/api/summary",render:renderSummary},
+      content:{path:"/api/content",render:renderContent},
+      textanalysis:{static:true,render:()=>{}},
     };
     // ---- Grouped navigation: 6 rich screens, each loads several endpoints ----
     const GROUPS = {
@@ -1742,20 +1853,21 @@
       performance: ["summary", "overview", "periods", "trends", "realtime", "goals"],
       salesads: ["sales", "ads", "merchant"],
       audience: ["traffic", "audience", "analyses", "retention", "events"],
-      seo: ["ranks", "rankdist", "search", "pages", "entity", "health"],
+      seo: ["ranks", "rankdist", "content", "search", "pages", "entity", "textanalysis", "health"],
       compare: ["compare"],
     };
-    const DOM_ORDER = ["opportunities","insights","summary","overview","trends","realtime","goals","sales","ads","merchant","traffic","audience","analyses","retention","events","ranks","rankdist","search","pages","entity","health","compare"];
+    const DOM_ORDER = ["opportunities","insights","summary","overview","trends","realtime","goals","sales","ads","merchant","traffic","audience","analyses","retention","events","ranks","rankdist","content","search","pages","entity","textanalysis","health","compare"];
 
     async function loadPart(name, force) {
       const t = PARTS[name], key = cacheKey();
+      if (t.static) { t.render(); return; } // client-only tool, no backend fetch
       if (!force && cache[name] && cache[name].key === key) { t.render(cache[name].data); return; }
       try {
         const data = await api(t.path); cache[name] = { key, data }; t.render(data);
         document.getElementById("updatedAt").textContent = "עודכן: " + new Date().toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" });
       } catch (err) { setStatus("שגיאה: " + err.message, "error"); }
     }
-    const SECTION_TITLES = { opportunities:"🎯 הזדמנויות השבוע", insights:"💡 תובנות", summary:"📋 סיכום מנהלים", overview:"📈 סקירה", trends:"📉 מגמות", realtime:"⏱️ זמן אמת", goals:"🎯 יעדים", sales:"💰 מכירות", ads:"📣 פרסום (ROAS)", merchant:"🛒 Merchant Center", traffic:"🚦 מקורות תנועה", audience:"🌍 קהל", analyses:"🗓️ ניתוחים", retention:"🔁 Retention", events:"🔔 אירועים", search:"🔍 חיפוש", pages:"📄 דפים מובילים", health:"🩺 בריאות האתר", ranks:"📈 מעקב מיקומים", rankdist:"📊 פיזור דירוג", entity:"🏆 סמכות מותג", compare:"📊 השוואת אתרים" };
+    const SECTION_TITLES = { opportunities:"🎯 הזדמנויות השבוע", insights:"💡 תובנות", summary:"📋 סיכום מנהלים", overview:"📈 סקירה", trends:"📉 מגמות", realtime:"⏱️ זמן אמת", goals:"🎯 יעדים", sales:"💰 מכירות", ads:"📣 פרסום (ROAS)", merchant:"🛒 Merchant Center", traffic:"🚦 מקורות תנועה", audience:"🌍 קהל", analyses:"🗓️ ניתוחים", retention:"🔁 Retention", events:"🔔 אירועים", search:"🔍 חיפוש", pages:"📄 דפים מובילים", health:"🩺 בריאות האתר", ranks:"📈 מעקב מיקומים", rankdist:"📊 פיזור דירוג", content:"📈 ביצועי תוכן", entity:"🏆 סמכות מותג", textanalysis:"📝 ניתוח טקסט", compare:"📊 השוואת אתרים" };
     async function loadGroup(group, force) {
       document.getElementById("loadingBar").classList.add("loading");
       setStatus("טוען נתונים...", "info");
