@@ -512,6 +512,27 @@
     </div>
   </section>
 
+  <!-- ORGANIC RANKING DISTRIBUTION -->
+  <section data-screen="rankdist" class="hidden">
+    <div class="card">
+      <div class="flex items-center justify-between mb-2 flex-wrap gap-2">
+        <div class="font-bold text-slate-800">📊 פיזור דירוג אורגני</div>
+        <select id="rdMonths" onchange="loadRankDist(this.value)" class="border border-slate-300 rounded-lg px-3 py-1 text-sm outline-none focus:ring-2 focus:ring-blue-400">
+          <option value="1">חודש</option>
+          <option value="3">3 חודשים</option>
+          <option value="6" selected>6 חודשים</option>
+          <option value="12">שנה</option>
+          <option value="18">שנה וחצי</option>
+          <option value="24">שנתיים</option>
+        </select>
+      </div>
+      <div class="text-xs text-slate-400 mb-2">כמה ממילות המפתח שלך מדורגות בכל טווח מיקומים, לפי יום (מקור: Search Console)</div>
+      <div id="rdTotals" class="mb-2"></div>
+      <div style="height:340px"><canvas id="rdChart"></canvas></div>
+      <div id="rdNote" class="text-xs text-amber-600 mt-2"></div>
+    </div>
+  </section>
+
   <!-- ENTITY AUTHORITY -->
   <section data-screen="entity" class="hidden">
     <div class="grid md:grid-cols-3 gap-4 mb-4">
@@ -1338,6 +1359,31 @@
       document.getElementById("opSources").textContent = offline.length ? ("מקורות שלא נטענו הפעם (לכן ייתכן שחסרות הזדמנויות מהם): " + offline.join(", ")) : "";
       drawOpTable();
     }
+    const RD_COLORS = { r51_100:"#f97316", r41_50:"#fb923c", r31_40:"#fdba74", r21_30:"#facc15", r11_20:"#fde047", r6_10:"#d9f99d", r4_5:"#a3e635", r2_3:"#4ade80", r1:"#16a34a" };
+    const RD_LABELS = { r1:"מקום 1", r2_3:"2-3", r4_5:"4-5", r6_10:"6-10", r11_20:"11-20", r21_30:"21-30", r31_40:"31-40", r41_50:"41-50", r51_100:"51-100" };
+    const RD_ORDER = ["r51_100","r41_50","r31_40","r21_30","r11_20","r6_10","r4_5","r2_3","r1"]; // bottom → top
+    async function loadRankDist(months) {
+      const site = document.getElementById("siteSelect").value;
+      try {
+        setStatus("טוען פיזור דירוג… (עד כמה שניות)", "info");
+        const res = await fetch(`${BASE}/api/rankdist?site=${encodeURIComponent(site)}&months=${months}`, { headers: { "X-Access-Key": accessKey } });
+        if (res.status === 401) { showLogin(); return; }
+        const d = await res.json(); if (d.error) throw new Error(d.error);
+        setStatus("", ""); renderRankDist(d);
+      } catch (e) { setStatus("שגיאה: " + e.message, "error"); }
+    }
+    function renderRankDist(d) {
+      const sel = document.getElementById("rdMonths"); if (sel && d.months) sel.value = String(d.months);
+      document.getElementById("rdNote").textContent = d.capped ? "הערה: Search Console שומר עד ~16 חודשים, לכן התקופה נחתכה לגבול הזה." : "";
+      const s = d.series || [];
+      const datasets = RD_ORDER.map((b) => ({ label: RD_LABELS[b], data: s.map((row) => row[b] || 0), backgroundColor: RD_COLORS[b], borderWidth: 0 }));
+      makeChart("rdChart", { type: "bar", data: { labels: s.map((row) => niceDate(row.date)), datasets },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: "top", labels: { boxWidth: 12, font: { size: 10 } } }, tooltip: { mode: "index", intersect: false } }, scales: { x: { stacked: true, ticks: { maxTicksLimit: 30, autoSkip: true, maxRotation: 0 } }, y: { stacked: true, beginAtZero: true } } } });
+      const last = s[s.length - 1] || {};
+      document.getElementById("rdTotals").innerHTML = last.date
+        ? `<span class="text-xs text-slate-500">היום האחרון (${niceDate(last.date)}): </span>` + RD_ORDER.slice().reverse().map((b) => `<span class="inline-flex items-center gap-1 ml-3 text-xs"><span style="width:10px;height:10px;border-radius:2px;background:${RD_COLORS[b]};display:inline-block"></span>${RD_LABELS[b]}: <b>${fmt(last[b] || 0)}</b></span>`).join("")
+        : "";
+    }
     function renderEntity(d) {
       const score = d.authorityScore || 0;
       const col = score >= 70 ? "text-emerald-600" : score >= 45 ? "text-amber-500" : "text-rose-500";
@@ -1648,6 +1694,7 @@
       merchant:{path:"/api/merchant",render:renderMerchant},
       opportunities:{path:"/api/opportunities",render:renderOpportunities},
       entity:{path:"/api/entity",render:renderEntity},
+      rankdist:{path:"/api/rankdist",render:renderRankDist},
     };
     // ---- Grouped navigation: 6 rich screens, each loads several endpoints ----
     const GROUPS = {
@@ -1656,10 +1703,10 @@
       performance: ["overview", "periods", "trends", "realtime", "goals"],
       salesads: ["sales", "ads", "merchant"],
       audience: ["traffic", "audience", "analyses", "retention", "events"],
-      seo: ["ranks", "search", "pages", "entity", "health"],
+      seo: ["ranks", "rankdist", "search", "pages", "entity", "health"],
       compare: ["compare"],
     };
-    const DOM_ORDER = ["opportunities","insights","overview","trends","realtime","goals","sales","ads","merchant","traffic","audience","analyses","retention","events","ranks","search","pages","entity","health","compare"];
+    const DOM_ORDER = ["opportunities","insights","overview","trends","realtime","goals","sales","ads","merchant","traffic","audience","analyses","retention","events","ranks","rankdist","search","pages","entity","health","compare"];
 
     async function loadPart(name, force) {
       const t = PARTS[name], key = cacheKey();
@@ -1669,7 +1716,7 @@
         document.getElementById("updatedAt").textContent = "עודכן: " + new Date().toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" });
       } catch (err) { setStatus("שגיאה: " + err.message, "error"); }
     }
-    const SECTION_TITLES = { opportunities:"🎯 הזדמנויות השבוע", insights:"💡 תובנות", overview:"📈 סקירה", trends:"📉 מגמות", realtime:"⏱️ זמן אמת", goals:"🎯 יעדים", sales:"💰 מכירות", ads:"📣 פרסום (ROAS)", merchant:"🛒 Merchant Center", traffic:"🚦 מקורות תנועה", audience:"🌍 קהל", analyses:"🗓️ ניתוחים", retention:"🔁 Retention", events:"🔔 אירועים", search:"🔍 חיפוש", pages:"📄 דפים מובילים", health:"🩺 בריאות האתר", ranks:"📈 מעקב מיקומים", entity:"🏆 סמכות מותג", compare:"📊 השוואת אתרים" };
+    const SECTION_TITLES = { opportunities:"🎯 הזדמנויות השבוע", insights:"💡 תובנות", overview:"📈 סקירה", trends:"📉 מגמות", realtime:"⏱️ זמן אמת", goals:"🎯 יעדים", sales:"💰 מכירות", ads:"📣 פרסום (ROAS)", merchant:"🛒 Merchant Center", traffic:"🚦 מקורות תנועה", audience:"🌍 קהל", analyses:"🗓️ ניתוחים", retention:"🔁 Retention", events:"🔔 אירועים", search:"🔍 חיפוש", pages:"📄 דפים מובילים", health:"🩺 בריאות האתר", ranks:"📈 מעקב מיקומים", rankdist:"📊 פיזור דירוג", entity:"🏆 סמכות מותג", compare:"📊 השוואת אתרים" };
     async function loadGroup(group, force) {
       document.getElementById("loadingBar").classList.add("loading");
       setStatus("טוען נתונים...", "info");
