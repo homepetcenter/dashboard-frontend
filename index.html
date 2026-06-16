@@ -512,6 +512,22 @@
     </div>
   </section>
 
+  <!-- EXECUTIVE SUMMARY -->
+  <section data-screen="summary" class="hidden">
+    <div class="grid md:grid-cols-2 gap-4">
+      <div class="card">
+        <div class="text-center font-bold text-slate-800 mb-4">📋 Executive Summary — סיכום דירוגים</div>
+        <div class="grid grid-cols-3 text-xs text-slate-400 mb-1"><span></span><span class="text-center font-medium">עכשיו</span><span class="text-center font-medium">בסיס (התחלה)</span></div>
+        <div id="sumRanking"></div>
+        <div class="text-xs text-slate-400 mt-3" id="sumInitNote"></div>
+      </div>
+      <div class="card">
+        <div class="text-center font-bold text-slate-800 mb-4" id="sumTrafficTitle">📊 נתוני תנועה לאתר</div>
+        <div id="sumTraffic"></div>
+      </div>
+    </div>
+  </section>
+
   <!-- ORGANIC RANKING DISTRIBUTION -->
   <section data-screen="rankdist" class="hidden">
     <div class="card">
@@ -1359,6 +1375,28 @@
       document.getElementById("opSources").textContent = offline.length ? ("מקורות שלא נטענו הפעם (לכן ייתכן שחסרות הזדמנויות מהם): " + offline.join(", ")) : "";
       drawOpTable();
     }
+    function renderSummary(d) {
+      const c = d.rankingCurrent || {}, i = d.rankingInitial || {};
+      const badge = (v) => `<span class="inline-block bg-amber-100 text-amber-800 font-bold rounded px-3 py-1 text-sm">${v}%</span>`;
+      const row = (label, cur, init) => `<div class="grid grid-cols-3 items-center py-2 border-b border-slate-100 last:border-0"><span class="text-sm text-slate-600">${label}</span><span class="text-center">${badge(cur)}</span><span class="text-center">${badge(init)}</span></div>`;
+      document.getElementById("sumRanking").innerHTML =
+        row("% מילות מפתח ב-Top 5", c.top5 || 0, i.top5 || 0) +
+        row("% מילות מפתח ב-Top 10", c.top10 || 0, i.top10 || 0) +
+        row("% מילות מפתח ב-Top 20", c.top20 || 0, i.top20 || 0);
+      document.getElementById("sumInitNote").textContent = `"בסיס" = חלון התחלה ${d.initialPeriod || ""} · סה"כ מילים מדורגות עכשיו: ${fmt(c.total || 0)}`;
+      const t = d.traffic || {};
+      const vbadge = (v) => `<span class="inline-block bg-amber-100 text-amber-800 font-bold rounded px-3 py-1 text-sm">${v}</span>`;
+      const trow = (label, val) => `<div class="flex items-center justify-between py-2 border-b border-slate-100 last:border-0"><span class="text-sm text-slate-600">${label}</span>${vbadge(val)}</div>`;
+      document.getElementById("sumTraffic").innerHTML =
+        trow("סה\"כ תנועה לאתר (כל המקורות)", fmt(t.totalSessions || 0)) +
+        trow("תנועה אורגנית (GA4)", fmt(t.organic || 0)) +
+        trow("% אורגני מסך התנועה", (t.organicPct || 0) + "%") +
+        trow("צפיות בעמודים", fmt(t.pageviews || 0)) +
+        trow("צפיות ממוצעות לכל ביקור", t.pagesPerSession || 0) +
+        trow("משך ביקור ממוצע", fmtDur(t.avgSessionDuration || 0)) +
+        trow("שיעור נטישה", (t.bounceRate || 0) + "%");
+      document.getElementById("sumTrafficTitle").textContent = `📊 נתוני תנועה · ${d.period || ""}`;
+    }
     const RD_COLORS = { r51_100:"#f97316", r41_50:"#fb923c", r31_40:"#fdba74", r21_30:"#facc15", r11_20:"#fde047", r6_10:"#d9f99d", r4_5:"#a3e635", r2_3:"#4ade80", r1:"#16a34a" };
     const RD_LABELS = { r1:"מקום 1", r2_3:"2-3", r4_5:"4-5", r6_10:"6-10", r11_20:"11-20", r21_30:"21-30", r31_40:"31-40", r41_50:"41-50", r51_100:"51-100" };
     const RD_ORDER = ["r51_100","r41_50","r31_40","r21_30","r11_20","r6_10","r4_5","r2_3","r1"]; // bottom → top
@@ -1695,18 +1733,19 @@
       opportunities:{path:"/api/opportunities",render:renderOpportunities},
       entity:{path:"/api/entity",render:renderEntity},
       rankdist:{path:"/api/rankdist",render:renderRankDist},
+      summary:{path:"/api/summary",render:renderSummary},
     };
     // ---- Grouped navigation: 6 rich screens, each loads several endpoints ----
     const GROUPS = {
       opportunities: ["opportunities"],
       insights: ["insights"],
-      performance: ["overview", "periods", "trends", "realtime", "goals"],
+      performance: ["summary", "overview", "periods", "trends", "realtime", "goals"],
       salesads: ["sales", "ads", "merchant"],
       audience: ["traffic", "audience", "analyses", "retention", "events"],
       seo: ["ranks", "rankdist", "search", "pages", "entity", "health"],
       compare: ["compare"],
     };
-    const DOM_ORDER = ["opportunities","insights","overview","trends","realtime","goals","sales","ads","merchant","traffic","audience","analyses","retention","events","ranks","rankdist","search","pages","entity","health","compare"];
+    const DOM_ORDER = ["opportunities","insights","summary","overview","trends","realtime","goals","sales","ads","merchant","traffic","audience","analyses","retention","events","ranks","rankdist","search","pages","entity","health","compare"];
 
     async function loadPart(name, force) {
       const t = PARTS[name], key = cacheKey();
@@ -1716,7 +1755,7 @@
         document.getElementById("updatedAt").textContent = "עודכן: " + new Date().toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" });
       } catch (err) { setStatus("שגיאה: " + err.message, "error"); }
     }
-    const SECTION_TITLES = { opportunities:"🎯 הזדמנויות השבוע", insights:"💡 תובנות", overview:"📈 סקירה", trends:"📉 מגמות", realtime:"⏱️ זמן אמת", goals:"🎯 יעדים", sales:"💰 מכירות", ads:"📣 פרסום (ROAS)", merchant:"🛒 Merchant Center", traffic:"🚦 מקורות תנועה", audience:"🌍 קהל", analyses:"🗓️ ניתוחים", retention:"🔁 Retention", events:"🔔 אירועים", search:"🔍 חיפוש", pages:"📄 דפים מובילים", health:"🩺 בריאות האתר", ranks:"📈 מעקב מיקומים", rankdist:"📊 פיזור דירוג", entity:"🏆 סמכות מותג", compare:"📊 השוואת אתרים" };
+    const SECTION_TITLES = { opportunities:"🎯 הזדמנויות השבוע", insights:"💡 תובנות", summary:"📋 סיכום מנהלים", overview:"📈 סקירה", trends:"📉 מגמות", realtime:"⏱️ זמן אמת", goals:"🎯 יעדים", sales:"💰 מכירות", ads:"📣 פרסום (ROAS)", merchant:"🛒 Merchant Center", traffic:"🚦 מקורות תנועה", audience:"🌍 קהל", analyses:"🗓️ ניתוחים", retention:"🔁 Retention", events:"🔔 אירועים", search:"🔍 חיפוש", pages:"📄 דפים מובילים", health:"🩺 בריאות האתר", ranks:"📈 מעקב מיקומים", rankdist:"📊 פיזור דירוג", entity:"🏆 סמכות מותג", compare:"📊 השוואת אתרים" };
     async function loadGroup(group, force) {
       document.getElementById("loadingBar").classList.add("loading");
       setStatus("טוען נתונים...", "info");
