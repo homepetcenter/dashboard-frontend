@@ -512,6 +512,32 @@
     </div>
   </section>
 
+  <!-- MONTHLY USERS -->
+  <section data-screen="monthlyusers" class="hidden">
+    <div class="card">
+      <div class="flex items-center justify-between mb-2 flex-wrap gap-2">
+        <div class="font-bold text-slate-800">👥 משתמשים חודשי</div>
+        <div class="flex gap-2">
+          <select id="muSource" onchange="loadMonthlyUsers()" class="border border-slate-300 rounded-lg px-3 py-1 text-sm outline-none focus:ring-2 focus:ring-blue-400">
+            <option value="all" selected>כל המקורות</option>
+            <option value="organic">תנועה אורגנית</option>
+            <option value="paid">תנועה ממומנת</option>
+          </select>
+          <select id="muMonths" onchange="loadMonthlyUsers()" class="border border-slate-300 rounded-lg px-3 py-1 text-sm outline-none focus:ring-2 focus:ring-blue-400">
+            <option value="1">חודש</option>
+            <option value="3">3 חודשים</option>
+            <option value="6">6 חודשים</option>
+            <option value="12">שנה</option>
+            <option value="18" selected>שנה וחצי</option>
+            <option value="24">שנתיים</option>
+          </select>
+        </div>
+      </div>
+      <div class="text-xs text-slate-400 mb-2">משתמשים לפי חודש, מחולק לשליש בחודש (ימים 1-10 / 11-20 / 21-31). הקו = נפח חודשי כולל. מקור: GA4</div>
+      <div style="height:340px"><canvas id="muChart"></canvas></div>
+    </div>
+  </section>
+
   <!-- EXECUTIVE SUMMARY -->
   <section data-screen="summary" class="hidden">
     <div class="grid md:grid-cols-2 gap-4">
@@ -1593,6 +1619,28 @@
         { key: "organicDuration", label: "משך ביקור אורגני", render: (v) => fmtDur(v || 0) },
       ], (d.monthly || []).slice().reverse(), { defaultSort: { key: "month", dir: "desc" }, totals: false });
     }
+    async function loadMonthlyUsers() {
+      const site = document.getElementById("siteSelect").value;
+      const m = document.getElementById("muMonths").value, src = document.getElementById("muSource").value;
+      try {
+        setStatus("טוען משתמשים חודשי…", "info");
+        const res = await fetch(`${BASE}/api/monthlyusers?site=${encodeURIComponent(site)}&months=${m}&source=${src}`, { headers: { "X-Access-Key": accessKey } });
+        if (res.status === 401) { showLogin(); return; }
+        const d = await res.json(); if (d.error) throw new Error(d.error);
+        setStatus("", ""); renderMonthlyUsers(d);
+      } catch (e) { setStatus("שגיאה: " + e.message, "error"); }
+    }
+    function renderMonthlyUsers(d) {
+      const ms = document.getElementById("muSource"); if (ms && d.source) ms.value = d.source;
+      const mm = document.getElementById("muMonths"); if (mm && d.months) mm.value = String(d.months);
+      const s = d.series || [];
+      makeChart("muChart", { type: "bar", data: { labels: s.map((r) => r.month), datasets: [
+        { type: "bar", label: "ימים 1-10", data: s.map((r) => r.d1), backgroundColor: "#1d4ed8", stack: "s" },
+        { type: "bar", label: "ימים 11-20", data: s.map((r) => r.d2), backgroundColor: "#3b82f6", stack: "s" },
+        { type: "bar", label: "ימים 21-31", data: s.map((r) => r.d3), backgroundColor: "#93c5fd", stack: "s" },
+        { type: "line", label: "נפח חודשי", data: s.map((r) => r.total), borderColor: "#1e3a5f", backgroundColor: "transparent", pointRadius: 3, tension: 0.3, stack: "line" },
+      ] }, options: { responsive: true, maintainAspectRatio: false, interaction: { mode: "index", intersect: false }, plugins: { legend: { display: true, position: "top", labels: { boxWidth: 12, font: { size: 10 } } } }, scales: { x: { stacked: true, ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 24 } }, y: { stacked: true, beginAtZero: true } } } });
+    }
     function renderSummary(d) {
       const c = d.rankingCurrent || {}, i = d.rankingInitial || {};
       const badge = (v) => `<span class="inline-block bg-amber-100 text-amber-800 font-bold rounded px-3 py-1 text-sm">${v}%</span>`;
@@ -1952,6 +2000,7 @@
       entity:{path:"/api/entity",render:renderEntity},
       rankdist:{path:"/api/rankdist",render:renderRankDist},
       summary:{path:"/api/summary",render:renderSummary},
+      monthlyusers:{path:"/api/monthlyusers",render:renderMonthlyUsers},
       content:{path:"/api/content",render:renderContent},
       pageperf:{path:"/api/pageperf",render:renderPagePerf},
       orgpotential:{path:"/api/orgpotential",render:renderOrgPotential},
@@ -1963,13 +2012,13 @@
     const GROUPS = {
       opportunities: ["opportunities"],
       insights: ["insights"],
-      performance: ["summary", "overview", "periods", "trends", "realtime", "goals"],
+      performance: ["summary", "monthlyusers", "overview", "periods", "trends", "realtime", "goals"],
       salesads: ["sales", "ads", "merchant"],
       audience: ["traffic", "audience", "analyses", "retention", "events"],
       seo: ["ranks", "rankdist", "content", "pageperf", "orgpotential", "spider", "search", "pages", "entity", "textanalysis", "gupdates", "health"],
       compare: ["compare"],
     };
-    const DOM_ORDER = ["opportunities","insights","summary","overview","trends","realtime","goals","sales","ads","merchant","traffic","audience","analyses","retention","events","ranks","rankdist","content","pageperf","orgpotential","spider","search","pages","entity","textanalysis","gupdates","health","compare"];
+    const DOM_ORDER = ["opportunities","insights","summary","monthlyusers","overview","trends","realtime","goals","sales","ads","merchant","traffic","audience","analyses","retention","events","ranks","rankdist","content","pageperf","orgpotential","spider","search","pages","entity","textanalysis","gupdates","health","compare"];
 
     async function loadPart(name, force) {
       const t = PARTS[name], key = cacheKey();
@@ -1980,7 +2029,7 @@
         document.getElementById("updatedAt").textContent = "עודכן: " + new Date().toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" });
       } catch (err) { setStatus("שגיאה: " + err.message, "error"); }
     }
-    const SECTION_TITLES = { opportunities:"🎯 הזדמנויות השבוע", insights:"💡 תובנות", summary:"📋 סיכום מנהלים", overview:"📈 סקירה", trends:"📉 מגמות", realtime:"⏱️ זמן אמת", goals:"🎯 יעדים", sales:"💰 מכירות", ads:"📣 פרסום (ROAS)", merchant:"🛒 Merchant Center", traffic:"🚦 מקורות תנועה", audience:"🌍 קהל", analyses:"🗓️ ניתוחים", retention:"🔁 Retention", events:"🔔 אירועים", search:"🔍 חיפוש", pages:"📄 דפים מובילים", health:"🩺 בריאות האתר", ranks:"📈 מעקב מיקומים", rankdist:"📊 פיזור דירוג", content:"📈 ביצועי תוכן", pageperf:"📑 ביצועי עמודים", orgpotential:"🚀 פוטנציאל אורגני", spider:"🕷️ Spider Goggles", gupdates:"🌦️ עדכוני גוגל", entity:"🏆 סמכות מותג", textanalysis:"📝 ניתוח טקסט", compare:"📊 השוואת אתרים" };
+    const SECTION_TITLES = { opportunities:"🎯 הזדמנויות השבוע", insights:"💡 תובנות", summary:"📋 סיכום מנהלים", monthlyusers:"👥 משתמשים חודשי", overview:"📈 סקירה", trends:"📉 מגמות", realtime:"⏱️ זמן אמת", goals:"🎯 יעדים", sales:"💰 מכירות", ads:"📣 פרסום (ROAS)", merchant:"🛒 Merchant Center", traffic:"🚦 מקורות תנועה", audience:"🌍 קהל", analyses:"🗓️ ניתוחים", retention:"🔁 Retention", events:"🔔 אירועים", search:"🔍 חיפוש", pages:"📄 דפים מובילים", health:"🩺 בריאות האתר", ranks:"📈 מעקב מיקומים", rankdist:"📊 פיזור דירוג", content:"📈 ביצועי תוכן", pageperf:"📑 ביצועי עמודים", orgpotential:"🚀 פוטנציאל אורגני", spider:"🕷️ Spider Goggles", gupdates:"🌦️ עדכוני גוגל", entity:"🏆 סמכות מותג", textanalysis:"📝 ניתוח טקסט", compare:"📊 השוואת אתרים" };
     async function loadGroup(group, force) {
       document.getElementById("loadingBar").classList.add("loading");
       setStatus("טוען נתונים...", "info");
