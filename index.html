@@ -528,6 +528,30 @@
     </div>
   </section>
 
+  <!-- ORDER HISTORY (Supabase-stored: backfill + webhook) -->
+  <section data-screen="orderhist" class="hidden">
+    <div class="card mb-4">
+      <div class="flex items-center justify-between flex-wrap gap-2">
+        <div>
+          <div class="font-bold text-slate-800">📜 היסטוריית הזמנות</div>
+          <div class="text-xs text-slate-400">כל ההזמנות שנשמרו ב-Supabase — היסטוריות (ייבוא) + חדשות (webhook)</div>
+        </div>
+        <div class="flex gap-2 items-center">
+          <select id="bfMonths" class="border border-slate-300 rounded-lg px-2 py-1 text-sm">
+            <option value="0" selected>כל ההיסטוריה</option>
+            <option value="12">שנה אחרונה</option>
+            <option value="24">שנתיים</option>
+          </select>
+          <button onclick="loadBackfill()" class="bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-4 py-2 text-sm font-medium">⬇ ייבא הזמנות היסטוריות</button>
+        </div>
+      </div>
+      <div id="bfStatus" class="text-xs mt-2"></div>
+    </div>
+    <div id="ohKpis" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4"></div>
+    <div class="card mb-4"><div class="font-bold text-slate-800 mb-2">לפי סטטוס</div><div id="ohStatus" class="flex flex-wrap gap-2"></div></div>
+    <div class="card"><div class="font-bold text-slate-800 mb-2">הזמנות</div><div id="ohMount"></div></div>
+  </section>
+
   <!-- WOOCOMMERCE CUSTOMERS -->
   <section data-screen="woocust" class="hidden">
     <div id="wcMsg" class="hidden card mb-4 text-sm text-slate-500"></div>
@@ -1742,6 +1766,31 @@
       makeChart("entChart", { type: "line", data: { labels: tr.map((p) => niceDate(p.date)), datasets: [{ label: "הופעות מותג", data: tr.map((p) => p.impressions), borderColor: "#7c3aed", backgroundColor: "rgba(124,58,237,0.08)", fill: true, tension: 0.35, pointRadius: 0 }, { label: "קליקים", data: tr.map((p) => p.clicks), borderColor: "#0ea5e9", borderWidth: 1.5, fill: false, tension: 0.35, pointRadius: 0 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true } } } });
       mountTable("entQueriesMount", [{ key: "query", label: "שאילתה", align: "right", long: true }, { key: "clicks", label: "קליקים", type: "num" }, { key: "impressions", label: "הופעות", type: "num" }, { key: "ctr", label: "CTR%" }, { key: "position", label: "מיקום" }], (d.brandQueries || []).slice(), { defaultSort: { key: "impressions", dir: "desc" }, scroll: true });
     }
+    async function loadBackfill() {
+      const site = document.getElementById("siteSelect").value, m = document.getElementById("bfMonths").value;
+      const st = document.getElementById("bfStatus");
+      st.innerHTML = '<span class="text-blue-600">מייבא… זה יכול לקחת כמה שניות (תלוי בכמות ההזמנות)</span>';
+      try {
+        const res = await fetch(`${BASE}/api/woo-backfill?site=${encodeURIComponent(site)}&months=${m}`, { headers: { "X-Access-Key": accessKey } });
+        if (res.status === 401) { showLogin(); return; }
+        const d = await res.json();
+        if (!d.ok) { st.innerHTML = `<span class="text-rose-600">שגיאה: ${d.message || "ייבוא נכשל"}</span>`; return; }
+        st.innerHTML = `<span class="text-emerald-600">✓ יובאו ${fmt(d.stored)} הזמנות. טוען…</span>`;
+        loadPart("orderhist", true);
+      } catch (e) { st.innerHTML = `<span class="text-rose-600">שגיאה: ${e.message}</span>`; }
+    }
+    function renderOrderHist(d) {
+      const k = (v, l, extra) => `<div class="card"><div class="kpi-label">${l}</div><div class="kpi-val ${extra || ""}">${v}</div></div>`;
+      const completed = (d.byStatus || []).find((x) => x.status === "completed");
+      document.getElementById("ohKpis").innerHTML =
+        k(fmt(d.count || 0), "סה\"כ הזמנות שמורות", "") +
+        k("₪" + fmt(d.revenue || 0), "הכנסה (שולמו)", "!text-emerald-600") +
+        k(fmt(completed ? completed.count : 0), "הושלמו", "") +
+        k(fmt((d.orders || []).length), "מוצגות", "");
+      const STC = { completed: "bg-emerald-100 text-emerald-700", processing: "bg-blue-100 text-blue-700", "on-hold": "bg-amber-100 text-amber-700", pending: "bg-slate-100 text-slate-600", cancelled: "bg-rose-100 text-rose-700", refunded: "bg-rose-100 text-rose-700", failed: "bg-rose-100 text-rose-700" };
+      document.getElementById("ohStatus").innerHTML = (d.byStatus || []).map((x) => `<span class="text-sm px-3 py-1 rounded-full ${STC[x.status] || "bg-slate-100 text-slate-600"}">${x.status}: <b>${fmt(x.count)}</b></span>`).join("") || '<span class="text-slate-400 text-sm">אין הזמנות שמורות עדיין — לחצי "ייבא הזמנות היסטוריות" או חכי שה-webhook ידחוף חדשות</span>';
+      mountTable("ohMount", [{ key: "id", label: "מס׳", align: "right" }, { key: "date", label: "תאריך" }, { key: "status", label: "סטטוס" }, { key: "customer", label: "לקוח", align: "right", long: true }, { key: "items", label: "פריטים", type: "num" }, { key: "total", label: "סכום", type: "num" }], (d.orders || []).slice(), { defaultSort: { key: "date", dir: "desc" }, scroll: true, totals: false });
+    }
     function renderWooCust(d) {
       const msg = document.getElementById("wcMsg");
       if (!d.available) {
@@ -2074,6 +2123,7 @@
       merchant:{path:"/api/merchant",render:renderMerchant},
       woo:{path:"/api/woo",render:renderWoo},
       woocust:{path:"/api/woocustomers",render:renderWooCust},
+      orderhist:{path:"/api/orders",render:renderOrderHist},
       opportunities:{path:"/api/opportunities",render:renderOpportunities},
       entity:{path:"/api/entity",render:renderEntity},
       rankdist:{path:"/api/rankdist",render:renderRankDist},
@@ -2091,12 +2141,12 @@
       opportunities: ["opportunities"],
       insights: ["insights"],
       performance: ["summary", "monthlyusers", "overview", "periods", "trends", "realtime", "goals"],
-      salesads: ["sales", "ads", "woo", "woocust", "merchant"],
+      salesads: ["sales", "ads", "woo", "woocust", "orderhist", "merchant"],
       audience: ["traffic", "audience", "analyses", "retention", "events"],
       seo: ["ranks", "rankdist", "content", "pageperf", "orgpotential", "spider", "search", "pages", "entity", "textanalysis", "gupdates", "health"],
       compare: ["compare"],
     };
-    const DOM_ORDER = ["opportunities","insights","summary","monthlyusers","overview","trends","realtime","goals","sales","ads","woo","woocust","merchant","traffic","audience","analyses","retention","events","ranks","rankdist","content","pageperf","orgpotential","spider","search","pages","entity","textanalysis","gupdates","health","compare"];
+    const DOM_ORDER = ["opportunities","insights","summary","monthlyusers","overview","trends","realtime","goals","sales","ads","woo","woocust","orderhist","merchant","traffic","audience","analyses","retention","events","ranks","rankdist","content","pageperf","orgpotential","spider","search","pages","entity","textanalysis","gupdates","health","compare"];
 
     async function loadPart(name, force) {
       const t = PARTS[name], key = cacheKey();
@@ -2107,7 +2157,7 @@
         document.getElementById("updatedAt").textContent = "עודכן: " + new Date().toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" });
       } catch (err) { setStatus("שגיאה: " + err.message, "error"); }
     }
-    const SECTION_TITLES = { opportunities:"🎯 הזדמנויות השבוע", insights:"💡 תובנות", summary:"📋 סיכום מנהלים", monthlyusers:"👥 משתמשים חודשי", overview:"📈 סקירה", trends:"📉 מגמות", realtime:"⏱️ זמן אמת", goals:"🎯 יעדים", sales:"💰 מכירות", ads:"📣 פרסום (ROAS)", woo:"🛍️ חנות (WooCommerce)", woocust:"👤 לקוחות", merchant:"🛒 Merchant Center", traffic:"🚦 מקורות תנועה", audience:"🌍 קהל", analyses:"🗓️ ניתוחים", retention:"🔁 Retention", events:"🔔 אירועים", search:"🔍 חיפוש", pages:"📄 דפים מובילים", health:"🩺 בריאות האתר", ranks:"📈 מעקב מיקומים", rankdist:"📊 פיזור דירוג", content:"📈 ביצועי תוכן", pageperf:"📑 ביצועי עמודים", orgpotential:"🚀 פוטנציאל אורגני", spider:"🕷️ Spider Goggles", gupdates:"🌦️ עדכוני גוגל", entity:"🏆 סמכות מותג", textanalysis:"📝 ניתוח טקסט", compare:"📊 השוואת אתרים" };
+    const SECTION_TITLES = { opportunities:"🎯 הזדמנויות השבוע", insights:"💡 תובנות", summary:"📋 סיכום מנהלים", monthlyusers:"👥 משתמשים חודשי", overview:"📈 סקירה", trends:"📉 מגמות", realtime:"⏱️ זמן אמת", goals:"🎯 יעדים", sales:"💰 מכירות", ads:"📣 פרסום (ROAS)", woo:"🛍️ חנות (WooCommerce)", woocust:"👤 לקוחות", orderhist:"📜 היסטוריית הזמנות", merchant:"🛒 Merchant Center", traffic:"🚦 מקורות תנועה", audience:"🌍 קהל", analyses:"🗓️ ניתוחים", retention:"🔁 Retention", events:"🔔 אירועים", search:"🔍 חיפוש", pages:"📄 דפים מובילים", health:"🩺 בריאות האתר", ranks:"📈 מעקב מיקומים", rankdist:"📊 פיזור דירוג", content:"📈 ביצועי תוכן", pageperf:"📑 ביצועי עמודים", orgpotential:"🚀 פוטנציאל אורגני", spider:"🕷️ Spider Goggles", gupdates:"🌦️ עדכוני גוגל", entity:"🏆 סמכות מותג", textanalysis:"📝 ניתוח טקסט", compare:"📊 השוואת אתרים" };
     async function loadGroup(group, force) {
       document.getElementById("loadingBar").classList.add("loading");
       setStatus("טוען נתונים...", "info");
