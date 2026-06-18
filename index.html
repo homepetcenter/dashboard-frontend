@@ -512,6 +512,22 @@
     </div>
   </section>
 
+  <!-- WOOCOMMERCE STORE -->
+  <section data-screen="woo" class="hidden">
+    <div id="wooMsg" class="hidden card mb-4 text-sm text-slate-500"></div>
+    <div id="wooKpis" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4"></div>
+    <div class="card mb-4">
+      <div class="font-bold text-slate-800 mb-2">📦 הזמנות לפי סטטוס</div>
+      <div id="wooStatus" class="flex flex-wrap gap-2"></div>
+    </div>
+    <div class="grid md:grid-cols-2 gap-4">
+      <div class="card"><div class="font-bold text-slate-800 mb-2">🧾 הזמנות אחרונות</div><div id="wooOrders"></div></div>
+      <div class="card"><div class="font-bold text-slate-800 mb-2">🏆 מוצרים נמכרים (החודש)</div><div id="wooTop"></div></div>
+      <div class="card"><div class="font-bold text-slate-800 mb-2">🗂️ קטגוריות</div><div id="wooCats"></div></div>
+      <div class="card"><div class="font-bold text-slate-800 mb-2">⚠️ אזל מהמלאי</div><div id="wooStock"></div></div>
+    </div>
+  </section>
+
   <!-- MONTHLY USERS -->
   <section data-screen="monthlyusers" class="hidden">
     <div class="card">
@@ -1715,6 +1731,30 @@
       makeChart("entChart", { type: "line", data: { labels: tr.map((p) => niceDate(p.date)), datasets: [{ label: "הופעות מותג", data: tr.map((p) => p.impressions), borderColor: "#7c3aed", backgroundColor: "rgba(124,58,237,0.08)", fill: true, tension: 0.35, pointRadius: 0 }, { label: "קליקים", data: tr.map((p) => p.clicks), borderColor: "#0ea5e9", borderWidth: 1.5, fill: false, tension: 0.35, pointRadius: 0 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true } } } });
       mountTable("entQueriesMount", [{ key: "query", label: "שאילתה", align: "right", long: true }, { key: "clicks", label: "קליקים", type: "num" }, { key: "impressions", label: "הופעות", type: "num" }, { key: "ctr", label: "CTR%" }, { key: "position", label: "מיקום" }], (d.brandQueries || []).slice(), { defaultSort: { key: "impressions", dir: "desc" }, scroll: true });
     }
+    function renderWoo(d) {
+      const msg = document.getElementById("wooMsg");
+      const ids = ["wooKpis", "wooStatus", "wooOrders", "wooTop", "wooCats", "wooStock"];
+      if (!d.available) {
+        msg.classList.remove("hidden");
+        msg.innerHTML = `🛍️ WooCommerce לא מחובר לאתר הזה. ${d.message || ""}<br>צרי מפתח API (הרשאת Read) ב-WooCommerce → Settings → Advanced → REST API, והוסיפי ב-Railway את <b>WC_CK_&lt;SITE&gt;</b> ו-<b>WC_CS_&lt;SITE&gt;</b>.`;
+        ids.forEach((id) => (document.getElementById(id).innerHTML = ""));
+        return;
+      }
+      msg.classList.add("hidden");
+      const ps = d.periodSales || {};
+      const k = (v, l, extra) => `<div class="card"><div class="kpi-label">${l}</div><div class="kpi-val ${extra || ""}">${v}</div></div>`;
+      document.getElementById("wooKpis").innerHTML =
+        k("₪" + fmt(ps.revenue || 0), "מכירות בתקופה", "") +
+        k(fmt(ps.orders || 0), "הזמנות", "") +
+        k("₪" + fmt(ps.avgOrder || 0), "ערך הזמנה ממוצע", "") +
+        k(fmt((d.outOfStock || []).length), "מוצרים שאזלו", (d.outOfStock || []).length ? "!text-rose-600" : "");
+      const STC = { completed: "bg-emerald-100 text-emerald-700", processing: "bg-blue-100 text-blue-700", "on-hold": "bg-amber-100 text-amber-700", pending: "bg-slate-100 text-slate-600", cancelled: "bg-rose-100 text-rose-700", refunded: "bg-rose-100 text-rose-700", failed: "bg-rose-100 text-rose-700" };
+      document.getElementById("wooStatus").innerHTML = (d.ordersByStatus || []).map((x) => `<span class="text-sm px-3 py-1 rounded-full ${STC[x.status] || "bg-slate-100 text-slate-600"}">${x.label}: <b>${fmt(x.count)}</b></span>`).join("") || '<span class="text-slate-400 text-sm">אין נתונים</span>';
+      mountTable("wooOrders", [{ key: "id", label: "מס׳", align: "right" }, { key: "date", label: "תאריך" }, { key: "status", label: "סטטוס" }, { key: "items", label: "פריטים", type: "num" }, { key: "total", label: "סכום", type: "num" }], (d.recentOrders || []).slice(), { search: false, totals: false, defaultSort: { key: "date", dir: "desc" } });
+      mountTable("wooTop", [{ key: "name", label: "מוצר", align: "right", long: true }, { key: "sold", label: "נמכרו", type: "num" }], (d.topSellers || []).slice(), { defaultSort: { key: "sold", dir: "desc" }, scroll: true, totals: false });
+      mountTable("wooCats", [{ key: "name", label: "קטגוריה", align: "right", long: true }, { key: "count", label: "מוצרים", type: "num" }], (d.categories || []).slice(), { defaultSort: { key: "count", dir: "desc" }, scroll: true, totals: false });
+      mountTable("wooStock", [{ key: "name", label: "מוצר", align: "right", long: true }, { key: "sku", label: "מק״ט" }, { key: "price", label: "מחיר", type: "num" }], (d.outOfStock || []).slice(), { scroll: true, totals: false });
+    }
     function renderMerchant(d) {
       const un = document.getElementById("mcUnavailable");
       if (!d.available) { un.classList.remove("hidden"); un.textContent = "⚠️ Merchant Center לא זמין לאתר זה: " + (d.error || d.message || ""); document.getElementById("mcKpis").innerHTML = ""; document.getElementById("mcIssuesMount").innerHTML = ""; document.getElementById("mcProductsMount").innerHTML = ""; return; }
@@ -1996,6 +2036,7 @@
       health:{path:"/api/vitals",render:renderVitals},
       ranks:{path:"/api/rank-history",render:renderRanks},
       merchant:{path:"/api/merchant",render:renderMerchant},
+      woo:{path:"/api/woo",render:renderWoo},
       opportunities:{path:"/api/opportunities",render:renderOpportunities},
       entity:{path:"/api/entity",render:renderEntity},
       rankdist:{path:"/api/rankdist",render:renderRankDist},
@@ -2013,12 +2054,12 @@
       opportunities: ["opportunities"],
       insights: ["insights"],
       performance: ["summary", "monthlyusers", "overview", "periods", "trends", "realtime", "goals"],
-      salesads: ["sales", "ads", "merchant"],
+      salesads: ["sales", "ads", "woo", "merchant"],
       audience: ["traffic", "audience", "analyses", "retention", "events"],
       seo: ["ranks", "rankdist", "content", "pageperf", "orgpotential", "spider", "search", "pages", "entity", "textanalysis", "gupdates", "health"],
       compare: ["compare"],
     };
-    const DOM_ORDER = ["opportunities","insights","summary","monthlyusers","overview","trends","realtime","goals","sales","ads","merchant","traffic","audience","analyses","retention","events","ranks","rankdist","content","pageperf","orgpotential","spider","search","pages","entity","textanalysis","gupdates","health","compare"];
+    const DOM_ORDER = ["opportunities","insights","summary","monthlyusers","overview","trends","realtime","goals","sales","ads","woo","merchant","traffic","audience","analyses","retention","events","ranks","rankdist","content","pageperf","orgpotential","spider","search","pages","entity","textanalysis","gupdates","health","compare"];
 
     async function loadPart(name, force) {
       const t = PARTS[name], key = cacheKey();
@@ -2029,7 +2070,7 @@
         document.getElementById("updatedAt").textContent = "עודכן: " + new Date().toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" });
       } catch (err) { setStatus("שגיאה: " + err.message, "error"); }
     }
-    const SECTION_TITLES = { opportunities:"🎯 הזדמנויות השבוע", insights:"💡 תובנות", summary:"📋 סיכום מנהלים", monthlyusers:"👥 משתמשים חודשי", overview:"📈 סקירה", trends:"📉 מגמות", realtime:"⏱️ זמן אמת", goals:"🎯 יעדים", sales:"💰 מכירות", ads:"📣 פרסום (ROAS)", merchant:"🛒 Merchant Center", traffic:"🚦 מקורות תנועה", audience:"🌍 קהל", analyses:"🗓️ ניתוחים", retention:"🔁 Retention", events:"🔔 אירועים", search:"🔍 חיפוש", pages:"📄 דפים מובילים", health:"🩺 בריאות האתר", ranks:"📈 מעקב מיקומים", rankdist:"📊 פיזור דירוג", content:"📈 ביצועי תוכן", pageperf:"📑 ביצועי עמודים", orgpotential:"🚀 פוטנציאל אורגני", spider:"🕷️ Spider Goggles", gupdates:"🌦️ עדכוני גוגל", entity:"🏆 סמכות מותג", textanalysis:"📝 ניתוח טקסט", compare:"📊 השוואת אתרים" };
+    const SECTION_TITLES = { opportunities:"🎯 הזדמנויות השבוע", insights:"💡 תובנות", summary:"📋 סיכום מנהלים", monthlyusers:"👥 משתמשים חודשי", overview:"📈 סקירה", trends:"📉 מגמות", realtime:"⏱️ זמן אמת", goals:"🎯 יעדים", sales:"💰 מכירות", ads:"📣 פרסום (ROAS)", woo:"🛍️ חנות (WooCommerce)", merchant:"🛒 Merchant Center", traffic:"🚦 מקורות תנועה", audience:"🌍 קהל", analyses:"🗓️ ניתוחים", retention:"🔁 Retention", events:"🔔 אירועים", search:"🔍 חיפוש", pages:"📄 דפים מובילים", health:"🩺 בריאות האתר", ranks:"📈 מעקב מיקומים", rankdist:"📊 פיזור דירוג", content:"📈 ביצועי תוכן", pageperf:"📑 ביצועי עמודים", orgpotential:"🚀 פוטנציאל אורגני", spider:"🕷️ Spider Goggles", gupdates:"🌦️ עדכוני גוגל", entity:"🏆 סמכות מותג", textanalysis:"📝 ניתוח טקסט", compare:"📊 השוואת אתרים" };
     async function loadGroup(group, force) {
       document.getElementById("loadingBar").classList.add("loading");
       setStatus("טוען נתונים...", "info");
