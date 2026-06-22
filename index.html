@@ -124,13 +124,14 @@
 
   <!-- Tabs (6 grouped screens) -->
   <div class="tab-bar card !py-0 px-3 mb-3 flex flex-wrap gap-1">
-    <button data-group="opportunities" class="tab-btn px-4 py-3 text-sm">🎯 הזדמנויות</button>
-    <button data-group="insights" class="tab-btn px-4 py-3 text-sm">💡 תובנות</button>
+    <button data-group="decisions" class="tab-btn px-4 py-3 text-sm">🎯 הזדמנויות ותובנות</button>
     <button data-group="performance" class="tab-btn px-4 py-3 text-sm">📈 ביצועים</button>
-    <button data-group="salesads" class="tab-btn px-4 py-3 text-sm">💰 מכירות ופרסום</button>
+    <button data-group="commerce" class="tab-btn px-4 py-3 text-sm">💰 מכירות וחנות</button>
+    <button data-group="keywords" class="tab-btn px-4 py-3 text-sm">🔍 מילות ומיקומים</button>
+    <button data-group="content" class="tab-btn px-4 py-3 text-sm">📄 דפים ותוכן</button>
     <button data-group="audience" class="tab-btn px-4 py-3 text-sm">🌍 קהל ותנועה</button>
-    <button data-group="seo" class="tab-btn px-4 py-3 text-sm">🔍 SEO</button>
-    <button data-group="compare" class="tab-btn px-4 py-3 text-sm">📊 השוואת אתרים</button>
+    <button data-group="tools" class="tab-btn px-4 py-3 text-sm">🧰 כלים</button>
+    <button data-group="compare" class="tab-btn px-4 py-3 text-sm">📊 השוואה</button>
   </div>
 
   <div id="subnav" class="flex flex-wrap gap-2 mb-3 hidden"></div>
@@ -2240,12 +2241,13 @@
     };
     // ---- Grouped navigation: 6 rich screens, each loads several endpoints ----
     const GROUPS = {
-      opportunities: ["opportunities"],
-      insights: ["insights"],
+      decisions: ["opportunities", "insights"],
       performance: ["summary", "monthlyusers", "overview", "periods", "trends", "realtime", "goals"],
-      salesads: ["sales", "ads", "woo", "woocust", "orderhist", "merchant"],
+      commerce: ["sales", "ads", "woo", "woocust", "orderhist", "merchant"],
+      keywords: ["search", "ranks", "rankdist", "orgpotential", "gap"],
+      content: ["pages", "pageperf", "content", "entity"],
       audience: ["traffic", "audience", "analyses", "retention", "events"],
-      seo: ["ranks", "rankdist", "content", "pageperf", "orgpotential", "gap", "spider", "search", "pages", "entity", "textanalysis", "gupdates", "health"],
+      tools: ["spider", "textanalysis", "gupdates", "health"],
       compare: ["compare"],
     };
     const DOM_ORDER = ["opportunities","insights","summary","monthlyusers","overview","trends","realtime","goals","sales","ads","woo","woocust","orderhist","merchant","traffic","audience","analyses","retention","events","ranks","rankdist","content","pageperf","orgpotential","gap","spider","search","pages","entity","textanalysis","gupdates","health","compare"];
