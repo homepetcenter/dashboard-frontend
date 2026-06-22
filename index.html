@@ -16,7 +16,24 @@
     table th { white-space:nowrap; } .srt:hover { color:#1d4ed8; }
     #loadingBar { position:fixed; top:0; left:0; height:3px; width:0; background:#1d4ed8; z-index:60; transition:width .3s; opacity:0; }
     #loadingBar.loading { width:90%; opacity:1; transition:width 8s cubic-bezier(.1,.7,.1,1); }
-    @media (max-width:640px) { .tab-bar { flex-wrap:nowrap; overflow-x:auto; } }
+    /* ---- Mobile: comfortable, compact, swipeable ---- */
+    .tab-bar::-webkit-scrollbar, #subnav::-webkit-scrollbar { height:0; }
+    @media (max-width:640px) {
+      body { padding:0.6rem; }
+      .card { padding:0.85rem 0.9rem; border-radius:0.8rem; }
+      h1 { font-size:1.3rem !important; }
+      .kpi-val { font-size:1.35rem; }
+      .kpi-label { font-size:.72rem; }
+      .tab-bar { flex-wrap:nowrap; overflow-x:auto; }
+      .tab-btn { padding:0.7rem 0.7rem; font-size:.8rem; white-space:nowrap; }
+      #subnav { flex-wrap:nowrap !important; overflow-x:auto; -webkit-overflow-scrolling:touch; }
+      #subnav .jump-btn { white-space:nowrap; }
+      #rangeButtons { overflow-x:auto; }
+      .range-btn { white-space:nowrap; }
+      table { font-size:.8rem; }
+      table th, table td { padding-top:.35rem; padding-bottom:.35rem; }
+      .overflow-x-auto { -webkit-overflow-scrolling:touch; }
+    }
     /* ---- Dark mode ---- */
     body.dark { background:#0f172a; }
     body.dark .card, body.dark .tab-bar { background:#1e293b; }
