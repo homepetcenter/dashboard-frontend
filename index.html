@@ -725,6 +725,27 @@
     </div>
   </section>
 
+  <!-- KEYWORD GAP vs COMPETITOR -->
+  <section data-screen="gap" class="hidden">
+    <div class="card">
+      <div class="flex items-center justify-between flex-wrap gap-2 mb-2">
+        <div>
+          <div class="font-bold text-slate-800">🔋 פערי מילים מול מתחרה</div>
+          <div class="text-xs text-slate-400">מילים שהמתחרה מדורג עליהן ב-Top 10 והאתר הנבחר מפספס (90 יום, מ-Search Console)</div>
+        </div>
+        <label class="text-sm text-slate-600">השווה מול:
+          <select id="gapVs" onchange="loadGap()" class="border border-slate-300 rounded-lg px-3 py-1 text-sm outline-none focus:ring-2 focus:ring-blue-400 ms-1">
+            <option value="homepetcenter">homepetcenter</option>
+            <option value="quickpet">quickpet</option>
+            <option value="tiktakpet">tiktakpet</option>
+          </select>
+        </label>
+      </div>
+      <div id="gapInfo" class="text-xs text-slate-500 mb-2"></div>
+      <div id="gapMount"></div>
+    </div>
+  </section>
+
   <!-- ORGANIC RANKING DISTRIBUTION -->
   <section data-screen="rankdist" class="hidden">
     <div class="card">
@@ -1758,6 +1779,36 @@
         trow("שיעור נטישה", (t.bounceRate || 0) + "%");
       document.getElementById("sumTrafficTitle").textContent = `📊 נתוני תנועה · ${d.period || ""}`;
     }
+    async function addToTracker(kw, btn) {
+      try { kw = decodeURIComponent(kw); await rkApi("POST", { add: [kw] }); if (btn) { btn.textContent = "✓ נוסף"; btn.disabled = true; } setStatus("✓ נוסף למעקב מיקומים", "ok"); }
+      catch (e) { setStatus("שגיאה: " + e.message, "error"); }
+    }
+    async function loadGap() {
+      const site = document.getElementById("siteSelect").value, vs = document.getElementById("gapVs").value;
+      try {
+        setStatus("טוען פערים…", "info");
+        const res = await fetch(`${BASE}/api/gap?site=${encodeURIComponent(site)}&vs=${encodeURIComponent(vs)}`, { headers: { "X-Access-Key": accessKey } });
+        if (res.status === 401) { showLogin(); return; }
+        const d = await res.json(); if (d.error) throw new Error(d.error);
+        setStatus("", ""); renderGap(d);
+      } catch (e) { setStatus("שגיאה: " + e.message, "error"); }
+    }
+    function renderGap(d) {
+      const site = document.getElementById("siteSelect").value;
+      const sel = document.getElementById("gapVs"); if (sel && d.vs) sel.value = d.vs;
+      const vs = d.vs || (sel ? sel.value : "");
+      const info = document.getElementById("gapInfo");
+      if (vs === site) { info.innerHTML = '<span class="text-amber-600">בחרי מתחרה שונה מהאתר הנוכחי (בורר "השווה מול")</span>'; document.getElementById("gapMount").innerHTML = ""; return; }
+      info.textContent = `${fmt(d.count || 0)} מילים ש-${vs} מדורג עליהן בעמוד 1 ו-${site} מפספס`;
+      mountTable("gapMount", [
+        { key: "keyword", label: "מילה", align: "right", long: true },
+        { key: "theirPosition", label: "מיקום מתחרה" },
+        { key: "theirImpressions", label: "חשיפות מתחרה", type: "num" },
+        { key: "theirClicks", label: "קליקים מתחרה", type: "num" },
+        { key: "myPosition", label: "מיקום שלך", render: (v) => v == null ? "—" : v },
+        { key: "_act", label: "", render: (v, row) => `<button onclick="addToTracker('${encodeURIComponent(row.keyword)}',this)" class="text-xs px-2 py-1 rounded bg-slate-100 hover:bg-blue-100 text-slate-600 whitespace-nowrap">➕ מעקב</button>` },
+      ], (d.gaps || []).slice(), { defaultSort: { key: "theirImpressions", dir: "desc" }, scroll: true, totals: false });
+    }
     const RD_COLORS = { r51_100:"#f97316", r41_50:"#fb923c", r31_40:"#fdba74", r21_30:"#facc15", r11_20:"#fde047", r6_10:"#d9f99d", r4_5:"#a3e635", r2_3:"#4ade80", r1:"#16a34a" };
     const RD_LABELS = { r1:"מקום 1", r2_3:"2-3", r4_5:"4-5", r6_10:"6-10", r11_20:"11-20", r21_30:"21-30", r31_40:"31-40", r41_50:"41-50", r51_100:"51-100" };
     const RD_ORDER = ["r51_100","r41_50","r31_40","r21_30","r11_20","r6_10","r4_5","r2_3","r1"]; // bottom → top
@@ -2177,6 +2228,7 @@
       opportunities:{path:"/api/opportunities",render:renderOpportunities},
       entity:{path:"/api/entity",render:renderEntity},
       rankdist:{path:"/api/rankdist",render:renderRankDist},
+      gap:{path:"/api/gap",render:renderGap},
       summary:{path:"/api/summary",render:renderSummary},
       monthlyusers:{path:"/api/monthlyusers",render:renderMonthlyUsers},
       content:{path:"/api/content",render:renderContent},
@@ -2193,10 +2245,10 @@
       performance: ["summary", "monthlyusers", "overview", "periods", "trends", "realtime", "goals"],
       salesads: ["sales", "ads", "woo", "woocust", "orderhist", "merchant"],
       audience: ["traffic", "audience", "analyses", "retention", "events"],
-      seo: ["ranks", "rankdist", "content", "pageperf", "orgpotential", "spider", "search", "pages", "entity", "textanalysis", "gupdates", "health"],
+      seo: ["ranks", "rankdist", "content", "pageperf", "orgpotential", "gap", "spider", "search", "pages", "entity", "textanalysis", "gupdates", "health"],
       compare: ["compare"],
     };
-    const DOM_ORDER = ["opportunities","insights","summary","monthlyusers","overview","trends","realtime","goals","sales","ads","woo","woocust","orderhist","merchant","traffic","audience","analyses","retention","events","ranks","rankdist","content","pageperf","orgpotential","spider","search","pages","entity","textanalysis","gupdates","health","compare"];
+    const DOM_ORDER = ["opportunities","insights","summary","monthlyusers","overview","trends","realtime","goals","sales","ads","woo","woocust","orderhist","merchant","traffic","audience","analyses","retention","events","ranks","rankdist","content","pageperf","orgpotential","gap","spider","search","pages","entity","textanalysis","gupdates","health","compare"];
 
     async function loadPart(name, force) {
       const t = PARTS[name], key = cacheKey();
@@ -2207,7 +2259,7 @@
         document.getElementById("updatedAt").textContent = "עודכן: " + new Date().toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" });
       } catch (err) { setStatus("שגיאה: " + err.message, "error"); }
     }
-    const SECTION_TITLES = { opportunities:"🎯 הזדמנויות השבוע", insights:"💡 תובנות", summary:"📋 סיכום מנהלים", monthlyusers:"👥 משתמשים חודשי", overview:"📈 סקירה", trends:"📉 מגמות", realtime:"⏱️ זמן אמת", goals:"🎯 יעדים", sales:"💰 מכירות", ads:"📣 פרסום (ROAS)", woo:"🛍️ חנות (WooCommerce)", woocust:"👤 לקוחות", orderhist:"📜 היסטוריית הזמנות", merchant:"🛒 Merchant Center", traffic:"🚦 מקורות תנועה", audience:"🌍 קהל", analyses:"🗓️ ניתוחים", retention:"🔁 Retention", events:"🔔 אירועים", search:"🔍 חיפוש", pages:"📄 דפים מובילים", health:"🩺 בריאות האתר", ranks:"📈 מעקב מיקומים", rankdist:"📊 פיזור דירוג", content:"📈 ביצועי תוכן", pageperf:"📑 ביצועי עמודים", orgpotential:"🚀 פוטנציאל אורגני", spider:"🕷️ Spider Goggles", gupdates:"🌦️ עדכוני גוגל", entity:"🏆 סמכות מותג", textanalysis:"📝 ניתוח טקסט", compare:"📊 השוואת אתרים" };
+    const SECTION_TITLES = { opportunities:"🎯 הזדמנויות השבוע", insights:"💡 תובנות", summary:"📋 סיכום מנהלים", monthlyusers:"👥 משתמשים חודשי", overview:"📈 סקירה", trends:"📉 מגמות", realtime:"⏱️ זמן אמת", goals:"🎯 יעדים", sales:"💰 מכירות", ads:"📣 פרסום (ROAS)", woo:"🛍️ חנות (WooCommerce)", woocust:"👤 לקוחות", orderhist:"📜 היסטוריית הזמנות", merchant:"🛒 Merchant Center", traffic:"🚦 מקורות תנועה", audience:"🌍 קהל", analyses:"🗓️ ניתוחים", retention:"🔁 Retention", events:"🔔 אירועים", search:"🔍 חיפוש", pages:"📄 דפים מובילים", health:"🩺 בריאות האתר", ranks:"📈 מעקב מיקומים", rankdist:"📊 פיזור דירוג", content:"📈 ביצועי תוכן", pageperf:"📑 ביצועי עמודים", orgpotential:"🚀 פוטנציאל אורגני", gap:"🔋 פערי מילים", spider:"🕷️ Spider Goggles", gupdates:"🌦️ עדכוני גוגל", entity:"🏆 סמכות מותג", textanalysis:"📝 ניתוח טקסט", compare:"📊 השוואת אתרים" };
     async function loadGroup(group, force) {
       document.getElementById("loadingBar").classList.add("loading");
       setStatus("טוען נתונים...", "info");
