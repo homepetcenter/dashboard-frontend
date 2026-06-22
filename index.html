@@ -215,7 +215,10 @@
 
   <!-- COMPARE -->
   <section data-screen="compare" class="hidden">
-    <div class="card mb-4"><div class="text-slate-600 font-medium mb-3">השוואה בין האתרים</div><div id="cmpMount"></div></div>
+    <div class="card mb-4"><div class="text-slate-600 font-medium mb-3">השוואה בין האתרים — תנועה ומכירות</div><div id="cmpMount"></div></div>
+    <div class="card mb-4"><div class="text-slate-600 font-medium mb-3">🔍 השוואת SEO (Search Console)</div><div id="cmpSeoMount"></div></div>
+    <div class="card mb-4"><div class="text-slate-600 font-medium mb-3">🚦 תמהיל מקורות תנועה והמרה</div><div id="cmpMixMount"></div></div>
+    <div class="card mb-4"><div class="text-slate-600 font-medium mb-3">🛍️ השוואת חנות (WooCommerce)</div><div class="text-xs text-slate-400 mb-2">מוצג רק לחנויות עם מפתח WooCommerce מחובר</div><div id="cmpWooMount"></div></div>
     <div class="grid md:grid-cols-2 gap-4">
       <div class="card"><div class="text-slate-600 font-medium mb-3">Sessions לפי אתר</div><canvas id="cmpSessions" height="160"></canvas></div>
       <div class="card"><div class="text-slate-600 font-medium mb-3">הכנסות לפי אתר</div><canvas id="cmpRevenue" height="160"></canvas></div>
@@ -1276,6 +1279,21 @@
       ], rows, { search:false, defaultSort:{key:"revenue",dir:"desc"} });
       makeChart("cmpSessions", { type:"bar", data:{ labels:rows.map((r)=>r.site), datasets:[{ data:rows.map((r)=>r.sessions), backgroundColor:["#1d4ed8","#0ea5e9","#10b981"] }] }, options:{responsive:true,plugins:{legend:{display:false}}} });
       makeChart("cmpRevenue", { type:"bar", data:{ labels:rows.map((r)=>r.site), datasets:[{ data:rows.map((r)=>r.revenue), backgroundColor:["#16a34a","#65a30d","#f59e0b"] }] }, options:{responsive:true,plugins:{legend:{display:false}}} });
+      const ok = (d.sites||[]).filter((s)=>!s.error);
+      // SEO comparison
+      mountTable("cmpSeoMount", [
+        {key:"site",label:"אתר",align:"right"},{key:"clicks",label:"קליקים",type:"num"},{key:"impressions",label:"חשיפות",type:"num"},
+        {key:"keywords",label:"מילים מדורגות",type:"num"},{key:"top10",label:"% ב-Top 10",type:"pct"},{key:"pos",label:"מיקום ממוצע"},
+      ], ok.map((s)=>({ site:NAMES[s.site]||s.site, clicks:s.gscClicks||0, impressions:s.gscImpressions||0, keywords:s.rankingKeywords||0, top10:s.top10pct||0, pos:s.avgPosition ?? "—" })), { search:false, defaultSort:{key:"clicks",dir:"desc"} });
+      // Traffic mix + conversion
+      mountTable("cmpMixMount", [
+        {key:"site",label:"אתר",align:"right"},{key:"organic",label:"אורגני",type:"pct"},{key:"paid",label:"ממומן",type:"pct"},{key:"direct",label:"ישיר",type:"pct"},{key:"conv",label:"המרה",type:"pct"},
+      ], ok.map((s)=>({ site:NAMES[s.site]||s.site, organic:s.organicPct||0, paid:s.paidPct||0, direct:s.directPct||0, conv:s.conversionRate||0 })), { search:false, defaultSort:{key:"organic",dir:"desc"} });
+      // WooCommerce store comparison (only sites with woo data)
+      const wooRows = ok.filter((s)=>s.woo).map((s)=>({ site:NAMES[s.site]||s.site, orders:s.woo.orders||0, revenue:s.woo.revenue||0, aov:s.woo.avgOrder||0, customers:s.woo.payingCustomers ?? "—" }));
+      mountTable("cmpWooMount", [
+        {key:"site",label:"אתר",align:"right"},{key:"orders",label:"הזמנות",type:"num"},{key:"revenue",label:"הכנסה (₪)",type:"num"},{key:"aov",label:"ערך הזמנה (₪)",type:"num"},{key:"customers",label:"לקוחות משלמים"},
+      ], wooRows, { search:false, defaultSort:{key:"revenue",dir:"desc"} });
     }
     function renderSales(d) {
       const pr = d.prev || {};
