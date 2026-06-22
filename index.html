@@ -218,6 +218,7 @@
     <div class="card mb-4"><div class="text-slate-600 font-medium mb-3">השוואה בין האתרים — תנועה ומכירות</div><div id="cmpMount"></div></div>
     <div class="card mb-4"><div class="text-slate-600 font-medium mb-3">🔍 השוואת SEO (Search Console)</div><div id="cmpSeoMount"></div></div>
     <div class="card mb-4"><div class="text-slate-600 font-medium mb-3">🚦 תמהיל מקורות תנועה והמרה</div><div id="cmpMixMount"></div></div>
+    <div class="card mb-4"><div class="text-slate-600 font-medium mb-3">📣 השוואת עלויות פרסום</div><div id="cmpAdsMount"></div></div>
     <div class="card mb-4"><div class="text-slate-600 font-medium mb-3">🛍️ השוואת חנות (WooCommerce)</div><div class="text-xs text-slate-400 mb-2">מוצג רק לחנויות עם מפתח WooCommerce מחובר</div><div id="cmpWooMount"></div></div>
     <div class="grid md:grid-cols-2 gap-4">
       <div class="card"><div class="text-slate-600 font-medium mb-3">Sessions לפי אתר</div><canvas id="cmpSessions" height="160"></canvas></div>
@@ -1289,6 +1290,10 @@
       mountTable("cmpMixMount", [
         {key:"site",label:"אתר",align:"right"},{key:"organic",label:"אורגני",type:"pct"},{key:"paid",label:"ממומן",type:"pct"},{key:"direct",label:"ישיר",type:"pct"},{key:"conv",label:"המרה",type:"pct"},
       ], ok.map((s)=>({ site:NAMES[s.site]||s.site, organic:s.organicPct||0, paid:s.paidPct||0, direct:s.directPct||0, conv:s.conversionRate||0 })), { search:false, defaultSort:{key:"organic",dir:"desc"} });
+      // Ad cost comparison
+      mountTable("cmpAdsMount", [
+        {key:"site",label:"אתר",align:"right"},{key:"cost",label:"עלות (₪)",type:"num"},{key:"adrev",label:"הכנסה מפרסום (₪)",type:"num"},{key:"roas",label:"ROAS",type:"x"},{key:"cpa",label:"עלות להמרה (₪)",type:"num"}],
+        ok.map((s)=>({ site:NAMES[s.site]||s.site, cost:s.adCost||0, adrev:s.adRevenue||0, roas:s.roas||0, cpa:s.cpa||0 })), { search:false, defaultSort:{key:"cost",dir:"desc"} });
       // WooCommerce store comparison (only sites with woo data)
       const wooRows = ok.filter((s)=>s.woo).map((s)=>({ site:NAMES[s.site]||s.site, orders:s.woo.orders||0, revenue:s.woo.revenue||0, aov:s.woo.avgOrder||0, customers:s.woo.payingCustomers ?? "—" }));
       mountTable("cmpWooMount", [
