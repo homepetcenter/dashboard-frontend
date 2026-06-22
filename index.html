@@ -232,7 +232,7 @@
 
   <!-- COMPARE -->
   <section data-screen="compare" class="hidden">
-    <div class="card mb-4"><div class="text-slate-600 font-medium mb-3">השוואה בין האתרים — תנועה ומכירות</div><div id="cmpMount"></div></div>
+    <div class="card mb-4"><div class="text-slate-600 font-medium mb-3">השוואה בין האתרים — תנועה ומכירות <span class="text-xs font-normal text-slate-400">(▲/▼ מול התקופה הקודמת)</span></div><div id="cmpMount"></div></div>
     <div class="card mb-4"><div class="text-slate-600 font-medium mb-3">🔍 השוואת SEO (Search Console)</div><div id="cmpSeoMount"></div></div>
     <div class="card mb-4"><div class="text-slate-600 font-medium mb-3">🚦 תמהיל מקורות תנועה והמרה</div><div id="cmpMixMount"></div></div>
     <div class="card mb-4"><div class="text-slate-600 font-medium mb-3">📣 השוואת עלויות פרסום</div><div id="cmpAdsMount"></div></div>
@@ -972,20 +972,20 @@
       if (st.sort) { const { key, dir } = st.sort; rows.sort((a, b) => { let x = a[key], y = b[key]; if (typeof x === "number" && typeof y === "number") return dir === "asc" ? x - y : y - x; x = String(x ?? ""); y = String(y ?? ""); return dir === "asc" ? x.localeCompare(y, "he") : y.localeCompare(x, "he"); }); }
       st._rows = rows;
       const colCount = st.columns.length + (hasExpand ? 1 : 0);
-      const head = (hasExpand ? `<th class="w-6"></th>` : "") + st.columns.map((c) => `<th data-k="${c.key}" class="srt py-2 font-medium cursor-pointer select-none ${c.align === "right" ? "text-right" : ""}">${c.label}${st.sort && st.sort.key === c.key ? (st.sort.dir === "asc" ? " ▲" : " ▼") : ""}</th>`).join("");
+      const head = (hasExpand ? `<th class="w-6"></th>` : "") + st.columns.map((c) => `<th data-k="${c.key}" class="srt py-2 font-medium cursor-pointer select-none text-right">${c.label}${st.sort && st.sort.key === c.key ? (st.sort.dir === "asc" ? " ▲" : " ▼") : ""}</th>`).join("");
       let body = "";
       if (!rows.length) body = `<tr><td class="py-3 text-slate-400" colspan="${colCount}">אין תוצאות</td></tr>`;
       else rows.forEach((r) => {
         const rid = String(r[idKey]); const open = st.expanded.has(rid);
         const toggle = hasExpand ? `<td class="py-2 text-slate-400 cursor-pointer exp-tg" data-rid="${rid.replace(/"/g, "&quot;")}">${open ? "▾" : "▸"}</td>` : "";
-        body += `<tr class="border-b ${hasExpand ? "cursor-pointer exp-row hover:bg-slate-50" : ""}" data-rid="${rid.replace(/"/g, "&quot;")}">${toggle}${st.columns.map((c) => `<td class="py-2 ${c.align === "right" ? "text-right" : ""}">${cellHtml(r[c.key], c, r)}</td>`).join("")}</tr>`;
+        body += `<tr class="border-b ${hasExpand ? "cursor-pointer exp-row hover:bg-slate-50" : ""}" data-rid="${rid.replace(/"/g, "&quot;")}">${toggle}${st.columns.map((c) => `<td class="py-2 text-right">${cellHtml(r[c.key], c, r)}</td>`).join("")}</tr>`;
         if (hasExpand && open) body += `<tr class="bg-slate-50"><td colspan="${colCount}" class="py-2 px-3">${st.opts.expand(r)}</td></tr>`;
       });
       let foot = "";
       const hasNumCol = st.columns.some((c, i) => i > 0 && (c.type === "num" || c.type === "money"));
       if (st.opts.totals !== false && rows.length && hasNumCol) {
         const cells = (hasExpand ? `<td></td>` : "") + st.columns.map((c, i) => {
-          if (i === 0) return `<td class="py-2 ${c.align === "right" ? "text-right" : ""}">סה"כ (${fmt(rows.length)})</td>`;
+          if (i === 0) return `<td class="py-2 text-right">סה"כ (${fmt(rows.length)})</td>`;
           if (c.type === "num" || c.type === "money") return `<td class="py-2">${fmt(rows.reduce((s, r) => s + (Number(r[c.key]) || 0), 0))}</td>`;
           return `<td></td>`;
         }).join("");
@@ -1290,10 +1290,14 @@
     }
     function renderCompare(d) {
       const NAMES = { homepetcenter:"homepetcenter", quickpet:"quickpet", tiktakpet:"tiktakpet" };
-      const rows = (d.sites||[]).filter((s)=>!s.error).map((s)=>({ site: NAMES[s.site]||s.site, sessions:s.sessions, users:s.users, revenue:s.revenue, transactions:s.transactions, conv:s.conversionRate, bounce:s.bounceRate }));
+      const dpct = (cur, prev) => { if (!prev) return ""; const ch = Math.round(((cur - prev) / prev) * 100); const cls = ch > 0 ? "text-emerald-600" : ch < 0 ? "text-rose-600" : "text-slate-400"; const ar = ch > 0 ? "▲" : ch < 0 ? "▼" : ""; return ` <span class="${cls}" style="font-size:.7rem">${ar}${Math.abs(ch)}%</span>`; };
+      const rows = (d.sites||[]).filter((s)=>!s.error).map((s)=>({ site: NAMES[s.site]||s.site, sessions:s.sessions, users:s.users, revenue:s.revenue, transactions:s.transactions, conv:s.conversionRate, bounce:s.bounceRate, prevSessions:s.prevSessions, prevRevenue:s.prevRevenue }));
       mountTable("cmpMount", [
-        {key:"site",label:"אתר",align:"right"},{key:"sessions",label:"Sessions",type:"num"},{key:"users",label:"Users",type:"num"},
-        {key:"revenue",label:"הכנסות (₪)",type:"num"},{key:"transactions",label:"עסקאות",type:"num"},{key:"conv",label:"המרה",type:"pct"},{key:"bounce",label:"Bounce",type:"pct"},
+        {key:"site",label:"אתר",align:"right"},
+        {key:"sessions",label:"Sessions",type:"num",render:(v,r)=>fmt(v)+dpct(v,r.prevSessions)},
+        {key:"users",label:"Users",type:"num"},
+        {key:"revenue",label:"הכנסות (₪)",type:"num",render:(v,r)=>fmt(v)+dpct(v,r.prevRevenue)},
+        {key:"transactions",label:"עסקאות",type:"num"},{key:"conv",label:"המרה",type:"pct"},{key:"bounce",label:"Bounce",type:"pct"},
       ], rows, { search:false, defaultSort:{key:"revenue",dir:"desc"} });
       makeChart("cmpSessions", { type:"bar", data:{ labels:rows.map((r)=>r.site), datasets:[{ data:rows.map((r)=>r.sessions), backgroundColor:["#1d4ed8","#0ea5e9","#10b981"] }] }, options:{responsive:true,plugins:{legend:{display:false}}} });
       makeChart("cmpRevenue", { type:"bar", data:{ labels:rows.map((r)=>r.site), datasets:[{ data:rows.map((r)=>r.revenue), backgroundColor:["#16a34a","#65a30d","#f59e0b"] }] }, options:{responsive:true,plugins:{legend:{display:false}}} });
