@@ -233,11 +233,16 @@
 
   <!-- COMPARE -->
   <section data-screen="compare" class="hidden">
+    <div class="card mb-4">
+      <div class="flex items-center justify-between mb-2"><div class="text-slate-600 font-medium">🟢 מצב חי — משתמשים פעילים עכשיו</div><span class="text-xs text-slate-400">רענון אוטומטי כל 20 שניות</span></div>
+      <div id="cmpLive" class="grid grid-cols-3 gap-3"></div>
+    </div>
     <div class="card mb-4"><div class="text-slate-600 font-medium mb-3">השוואה בין האתרים — תנועה ומכירות <span class="text-xs font-normal text-slate-400">(▲/▼ מול התקופה הקודמת)</span></div><div id="cmpMount"></div></div>
     <div class="card mb-4"><div class="text-slate-600 font-medium mb-3">🔍 השוואת SEO (Search Console)</div><div id="cmpSeoMount"></div></div>
     <div class="card mb-4"><div class="text-slate-600 font-medium mb-3">🚦 תמהיל מקורות תנועה והמרה</div><div id="cmpMixMount"></div></div>
     <div class="card mb-4"><div class="text-slate-600 font-medium mb-3">📣 השוואת עלויות פרסום</div><div id="cmpAdsMount"></div></div>
     <div class="card mb-4"><div class="text-slate-600 font-medium mb-3">🛍️ השוואת חנות (WooCommerce)</div><div class="text-xs text-slate-400 mb-2">מוצג רק לחנויות עם מפתח WooCommerce מחובר</div><div id="cmpWooMount"></div></div>
+    <div class="card mb-4"><div class="text-slate-600 font-medium mb-3">💵 פירוט פיננסי מלא (ברוטו / נטו / מע"מ / משלוח / החזרים / קופונים)</div><div id="cmpFinMount"></div></div>
     <div class="grid md:grid-cols-2 gap-4">
       <div class="card"><div class="text-slate-600 font-medium mb-3">Sessions לפי אתר</div><canvas id="cmpSessions" height="160"></canvas></div>
       <div class="card"><div class="text-slate-600 font-medium mb-3">הכנסות לפי אתר</div><canvas id="cmpRevenue" height="160"></canvas></div>
@@ -1342,6 +1347,22 @@
       mountTable("cmpWooMount", [
         {key:"site",label:"אתר",align:"right"},{key:"orders",label:"הזמנות",type:"num"},{key:"revenue",label:"הכנסה (₪)",type:"num"},{key:"aov",label:"ערך הזמנה (₪)",type:"num"},{key:"customers",label:"לקוחות משלמים"},
       ], wooRows, { search:false, defaultSort:{key:"revenue",dir:"desc"} });
+      // Detailed financial breakdown (gross/net/tax/shipping/refunds/coupons)
+      const finRows = ok.filter((s)=>s.woo).map((s)=>({ site:NAMES[s.site]||s.site, gross:s.woo.grossSales||0, net:s.woo.netRevenue||0, tax:s.woo.taxes||0, ship:s.woo.shipping||0, refunds:s.woo.refunds||0, coupons:s.woo.coupons||0, items:s.woo.items||0 }));
+      mountTable("cmpFinMount", [
+        {key:"site",label:"אתר",align:"right"},{key:"gross",label:"ברוטו (₪)",type:"num"},{key:"net",label:"נטו (₪)",type:"num"},{key:"tax",label:'מע"מ (₪)',type:"num"},{key:"ship",label:"משלוח (₪)",type:"num"},{key:"refunds",label:"החזרים (₪)",type:"num"},{key:"coupons",label:"קופונים (₪)",type:"num"},{key:"items",label:"פריטים",type:"num"},
+      ], finRows, { search:false, defaultSort:{key:"gross",dir:"desc"} });
+      loadLiveSites();
+    }
+    async function loadLiveSites() {
+      const el = document.getElementById("cmpLive"); if (!el) return;
+      try {
+        const res = await fetch(`${BASE}/api/livesites`, { headers: { "X-Access-Key": accessKey } });
+        if (!res.ok) return;
+        const d = await res.json();
+        const NM = { homepetcenter:"homepetcenter", quickpet:"quickpet", tiktakpet:"tiktakpet" };
+        el.innerHTML = (d.sites||[]).map((s)=>`<div class="text-center rounded-lg border border-slate-200 py-3"><div class="text-xs text-slate-500 mb-1">${NM[s.site]||s.site}</div><div class="text-3xl font-extrabold ${s.active>0?"text-emerald-600":"text-slate-300"}">${fmt(s.active||0)}</div><div class="text-[10px] text-slate-400">פעילים עכשיו</div></div>`).join("");
+      } catch (e) {}
     }
     function renderSales(d) {
       const pr = d.prev || {};
@@ -2412,6 +2433,7 @@
     // Load alerts in the background so the badge appears without opening the panel
     setTimeout(() => loadAlerts(false), 2000);
     setInterval(() => { if (GROUPS[currentGroup] && GROUPS[currentGroup].includes("realtime") && !document.hidden) loadPart("realtime", true); }, 20000);
+    setInterval(() => { if (currentGroup === "compare" && !document.hidden) loadLiveSites(); }, 20000);
   </script>
 </body>
 </html>
