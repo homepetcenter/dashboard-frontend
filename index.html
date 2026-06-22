@@ -1769,13 +1769,19 @@
     async function loadBackfill() {
       const site = document.getElementById("siteSelect").value, m = document.getElementById("bfMonths").value;
       const st = document.getElementById("bfStatus");
-      st.innerHTML = '<span class="text-blue-600">מייבא… זה יכול לקחת כמה שניות (תלוי בכמות ההזמנות)</span>';
+      let page = 1, total = 0, done = false, guard = 0;
+      st.innerHTML = '<span class="text-blue-600">מייבא… (נמשך במנות, אל תסגרי את העמוד)</span>';
       try {
-        const res = await fetch(`${BASE}/api/woo-backfill?site=${encodeURIComponent(site)}&months=${m}`, { headers: { "X-Access-Key": accessKey } });
-        if (res.status === 401) { showLogin(); return; }
-        const d = await res.json();
-        if (!d.ok) { st.innerHTML = `<span class="text-rose-600">שגיאה: ${d.message || "ייבוא נכשל"}</span>`; return; }
-        st.innerHTML = `<span class="text-emerald-600">✓ יובאו ${fmt(d.stored)} הזמנות. טוען…</span>`;
+        while (!done && guard < 300) {
+          const res = await fetch(`${BASE}/api/woo-backfill?site=${encodeURIComponent(site)}&months=${m}&page=${page}`, { headers: { "X-Access-Key": accessKey } });
+          if (res.status === 401) { showLogin(); return; }
+          const d = await res.json();
+          if (!d.ok) { st.innerHTML = `<span class="text-rose-600">שגיאה: ${d.message || "ייבוא נכשל"}</span>`; return; }
+          total += d.stored || 0;
+          st.innerHTML = `<span class="text-blue-600">מייבא… ${fmt(total)} הזמנות עד כה</span>`;
+          done = d.done; page = d.nextPage || page; guard++;
+        }
+        st.innerHTML = `<span class="text-emerald-600">✓ הסתיים — יובאו ${fmt(total)} הזמנות. טוען…</span>`;
         loadPart("orderhist", true);
       } catch (e) { st.innerHTML = `<span class="text-rose-600">שגיאה: ${e.message}</span>`; }
     }
