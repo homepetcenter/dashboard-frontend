@@ -1042,12 +1042,25 @@
     }
     function showLogin() { document.getElementById("loginOverlay").classList.remove("hidden"); }
     function hideLogin() { document.getElementById("loginOverlay").classList.add("hidden"); }
+    let userRole = "admin";
+    async function applyRole() {
+      try {
+        const res = await fetch(`${BASE}/api/me`, { headers: { "X-Access-Key": accessKey } });
+        if (res.status === 401) { showLogin(); return false; }
+        const d = await res.json(); userRole = d.role || "admin";
+      } catch (e) { userRole = "admin"; }
+      const viewer = userRole === "viewer";
+      document.querySelectorAll(".tab-btn").forEach((b) => b.classList.toggle("hidden", viewer && b.dataset.group !== "compare"));
+      if (viewer) currentGroup = "compare";
+      return true;
+    }
     async function tryLogin(pw) {
       const errEl = document.getElementById("pwError"); errEl.classList.add("hidden");
       try {
-        const res = await fetch(`${BASE}/api/data?site=homepetcenter&range=7d`, { headers: { "X-Access-Key": pw } });
+        const res = await fetch(`${BASE}/api/me`, { headers: { "X-Access-Key": pw } });
         if (res.status === 401) { errEl.classList.remove("hidden"); return; }
         accessKey = pw; localStorage.setItem("dashKey", pw); hideLogin();
+        await applyRole();
         Object.keys(cache).forEach((k) => delete cache[k]); loadGroup(currentGroup, true);
       } catch (e) { errEl.classList.remove("hidden"); }
     }
@@ -1317,6 +1330,10 @@
     }
     function renderCompare(d) {
       const NAMES = { homepetcenter:"homepetcenter", quickpet:"quickpet", tiktakpet:"tiktakpet" };
+      const viewer = (d.role === "viewer") || (userRole === "viewer");
+      const hideCard = (mountId, hide) => { const el = document.getElementById(mountId); if (el && el.closest(".card")) el.closest(".card").style.display = hide ? "none" : ""; };
+      hideCard("cmpLive", viewer);      // CEO: no live mode
+      hideCard("cmpAdsMount", viewer);  // CEO: no ad-cost details
       const dpct = (cur, prev) => { if (!prev) return ""; const ch = Math.round(((cur - prev) / prev) * 100); const cls = ch > 0 ? "text-emerald-600" : ch < 0 ? "text-rose-600" : "text-slate-400"; const ar = ch > 0 ? "▲" : ch < 0 ? "▼" : ""; return ` <span class="${cls}" style="font-size:.7rem">${ar}${Math.abs(ch)}%</span>`; };
       const rows = (d.sites||[]).filter((s)=>!s.error).map((s)=>({ site: NAMES[s.site]||s.site, sessions:s.sessions, users:s.users, revenue:s.revenue, transactions:s.transactions, conv:s.conversionRate, bounce:s.bounceRate, prevSessions:s.prevSessions, prevRevenue:s.prevRevenue }));
       mountTable("cmpMount", [
@@ -1344,17 +1361,20 @@
         ok.map((s)=>({ site:NAMES[s.site]||s.site, cost:s.adCost||0, adrev:s.adRevenue||0, roas:s.roas||0, cpa:s.cpa||0 })), { search:false, defaultSort:{key:"cost",dir:"desc"} });
       // WooCommerce store comparison (only sites with woo data)
       const wooRows = ok.filter((s)=>s.woo).map((s)=>({ site:NAMES[s.site]||s.site, orders:s.woo.orders||0, revenue:s.woo.revenue||0, aov:s.woo.avgOrder||0, customers:s.woo.payingCustomers ?? "—" }));
-      mountTable("cmpWooMount", [
-        {key:"site",label:"אתר",align:"right"},{key:"orders",label:"הזמנות",type:"num"},{key:"revenue",label:"הכנסה (₪)",type:"num"},{key:"aov",label:"ערך הזמנה (₪)",type:"num"},{key:"customers",label:"לקוחות משלמים"},
-      ], wooRows, { search:false, defaultSort:{key:"revenue",dir:"desc"} });
+      const wooCols = [
+        {key:"site",label:"אתר",align:"right"},{key:"orders",label:"הזמנות",type:"num"},{key:"revenue",label:"הכנסה (₪)",type:"num"},{key:"aov",label:"ערך הזמנה (₪)",type:"num"},
+      ];
+      if (!viewer) wooCols.push({key:"customers",label:"לקוחות משלמים"}); // CEO: no paying-customers
+      mountTable("cmpWooMount", wooCols, wooRows, { search:false, defaultSort:{key:"revenue",dir:"desc"} });
       // Detailed financial breakdown (gross/net/tax/shipping/refunds/coupons)
       const finRows = ok.filter((s)=>s.woo).map((s)=>({ site:NAMES[s.site]||s.site, gross:s.woo.grossSales||0, net:s.woo.netRevenue||0, tax:s.woo.taxes||0, ship:s.woo.shipping||0, refunds:s.woo.refunds||0, coupons:s.woo.coupons||0, items:s.woo.items||0 }));
       mountTable("cmpFinMount", [
         {key:"site",label:"אתר",align:"right"},{key:"gross",label:"ברוטו (₪)",type:"num"},{key:"net",label:"נטו (₪)",type:"num"},{key:"tax",label:'מע"מ (₪)',type:"num"},{key:"ship",label:"משלוח (₪)",type:"num"},{key:"refunds",label:"החזרים (₪)",type:"num"},{key:"coupons",label:"קופונים (₪)",type:"num"},{key:"items",label:"פריטים",type:"num"},
       ], finRows, { search:false, defaultSort:{key:"gross",dir:"desc"} });
-      loadLiveSites();
+      if (!viewer) loadLiveSites();
     }
     async function loadLiveSites() {
+      if (userRole === "viewer") return;
       const el = document.getElementById("cmpLive"); if (!el) return;
       try {
         const res = await fetch(`${BASE}/api/livesites`, { headers: { "X-Access-Key": accessKey } });
@@ -2429,7 +2449,7 @@
     document.getElementById("bellClose").addEventListener("click", () => document.getElementById("bellPanel").classList.add("hidden"));
     document.getElementById("bellBackdrop").addEventListener("click", () => document.getElementById("bellPanel").classList.add("hidden"));
 
-    setActiveRange(savedRange); showGroup("performance");
+    setActiveRange(savedRange); applyRole().finally(() => showGroup(currentGroup));
     // Load alerts in the background so the badge appears without opening the panel
     setTimeout(() => loadAlerts(false), 2000);
     setInterval(() => { if (GROUPS[currentGroup] && GROUPS[currentGroup].includes("realtime") && !document.hidden) loadPart("realtime", true); }, 20000);
