@@ -237,7 +237,7 @@
       <div class="flex items-center justify-between mb-2"><div class="text-slate-600 font-medium">🟢 מצב חי — משתמשים פעילים עכשיו</div><span class="text-xs text-slate-400">רענון אוטומטי כל 20 שניות</span></div>
       <div id="cmpLive" class="grid grid-cols-3 gap-3"></div>
     </div>
-    <div class="card mb-4"><div class="text-slate-600 font-medium mb-3">השוואה בין האתרים — תנועה ומכירות <span class="text-xs font-normal text-slate-400">(▲/▼ מול התקופה הקודמת)</span></div><div id="cmpMount"></div></div>
+    <div class="card mb-4"><div class="text-slate-600 font-medium mb-3">השוואה בין האתרים — תנועה ומכירות <span class="text-xs font-normal text-slate-400">(הכנסות מ-WooCommerce · ▲/▼ מול התקופה הקודמת)</span></div><div id="cmpMount"></div></div>
     <div class="card mb-4"><div class="text-slate-600 font-medium mb-3">🔍 השוואת SEO (Search Console)</div><div id="cmpSeoMount"></div></div>
     <div class="card mb-4"><div class="text-slate-600 font-medium mb-3">🚦 תמהיל מקורות תנועה והמרה</div><div id="cmpMixMount"></div></div>
     <div class="card mb-4"><div class="text-slate-600 font-medium mb-3">📣 השוואת עלויות פרסום</div><div id="cmpAdsMount"></div></div>
@@ -1337,7 +1337,7 @@
       hideCard("cmpLive", viewer);      // CEO: no live mode
       hideCard("cmpAdsMount", viewer);  // CEO: no ad-cost details
       const dpct = (cur, prev) => { if (!prev) return ""; const ch = Math.round(((cur - prev) / prev) * 100); const cls = ch > 0 ? "text-emerald-600" : ch < 0 ? "text-rose-600" : "text-slate-400"; const ar = ch > 0 ? "▲" : ch < 0 ? "▼" : ""; return ` <span class="${cls}" style="font-size:.7rem">${ar}${Math.abs(ch)}%</span>`; };
-      const rows = (d.sites||[]).filter((s)=>!s.error).map((s)=>({ site: NAMES[s.site]||s.site, sessions:s.sessions, users:s.users, revenue:s.revenue, transactions:s.transactions, conv:s.conversionRate, bounce:s.bounceRate, prevSessions:s.prevSessions, prevRevenue:s.prevRevenue }));
+      const rows = (d.sites||[]).filter((s)=>!s.error).map((s)=>({ site: NAMES[s.site]||s.site, sessions:s.sessions, users:s.users, revenue:(s.woo?s.woo.revenue:s.revenue), transactions:s.transactions, conv:s.conversionRate, bounce:s.bounceRate, prevSessions:s.prevSessions, prevRevenue:(s.woo?s.woo.prevRevenue:s.prevRevenue) }));
       mountTable("cmpMount", [
         {key:"site",label:"אתר",align:"right"},
         {key:"sessions",label:"Sessions",type:"num",render:(v,r)=>fmt(v)+dpct(v,r.prevSessions)},
