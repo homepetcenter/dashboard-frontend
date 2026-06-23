@@ -1051,6 +1051,8 @@
       } catch (e) { userRole = "admin"; }
       const viewer = userRole === "viewer";
       document.querySelectorAll(".tab-btn").forEach((b) => b.classList.toggle("hidden", viewer && b.dataset.group !== "compare"));
+      // Hide admin-only header controls (alerts bell) for the CEO role
+      const bell = document.getElementById("bellBtn"); if (bell) bell.classList.toggle("hidden", viewer);
       if (viewer) currentGroup = "compare";
       return true;
     }
@@ -2300,7 +2302,7 @@
       try {
         const data = await api(t.path); cache[name] = { key, data }; t.render(data);
         document.getElementById("updatedAt").textContent = "עודכן: " + new Date().toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" });
-      } catch (err) { setStatus("שגיאה: " + err.message, "error"); }
+      } catch (err) { if (err.message && err.message.includes("forbidden")) return; setStatus("שגיאה: " + err.message, "error"); }
     }
     const SECTION_TITLES = { opportunities:"🎯 הזדמנויות השבוע", insights:"💡 תובנות", summary:"📋 סיכום מנהלים", monthlyusers:"👥 משתמשים חודשי", overview:"📈 סקירה", trends:"📉 מגמות", realtime:"⏱️ זמן אמת", goals:"🎯 יעדים", sales:"💰 מכירות", ads:"📣 פרסום (ROAS)", woo:"🛍️ חנות (WooCommerce)", woocust:"👤 לקוחות", orderhist:"📜 היסטוריית הזמנות", merchant:"🛒 Merchant Center", traffic:"🚦 מקורות תנועה", audience:"🌍 קהל", analyses:"🗓️ ניתוחים", retention:"🔁 Retention", events:"🔔 אירועים", search:"🔍 חיפוש", pages:"📄 דפים מובילים", health:"🩺 בריאות האתר", ranks:"📈 מעקב מיקומים", rankdist:"📊 פיזור דירוג", content:"📈 ביצועי תוכן", pageperf:"📑 ביצועי עמודים", orgpotential:"🚀 פוטנציאל אורגני", gap:"🔋 פערי מילים", spider:"🕷️ Spider Goggles", gupdates:"🌦️ עדכוני גוגל", entity:"🏆 סמכות מותג", textanalysis:"📝 ניתוח טקסט", compare:"📊 השוואת אתרים" };
     async function loadGroup(group, force) {
@@ -2439,6 +2441,7 @@
     }
     let alertsKey = "";
     async function loadAlerts(force) {
+      if (userRole === "viewer") return; // CEO role has no access to alerts data
       const key = cacheKey();
       if (!force && alertsKey === key) return;
       alertsKey = key;
