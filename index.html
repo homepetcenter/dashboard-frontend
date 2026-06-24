@@ -555,6 +555,26 @@
     </div>
   </section>
 
+  <!-- TOP PRODUCTS -->
+  <section data-screen="topproducts" class="hidden">
+    <div class="card">
+      <div class="flex items-center justify-between flex-wrap gap-2 mb-2">
+        <div class="font-bold text-slate-800">🏆 מוצרים מובילים</div>
+        <div class="flex gap-2">
+          <select id="tpMonths" onchange="loadTopProducts()" class="border border-slate-300 rounded-lg px-3 py-1 text-sm outline-none focus:ring-2 focus:ring-blue-400">
+            <option value="1">חודש</option><option value="3">3 חודשים</option><option value="6">6 חודשים</option><option value="12" selected>שנה</option>
+          </select>
+          <select id="tpLimit" onchange="loadTopProducts()" class="border border-slate-300 rounded-lg px-3 py-1 text-sm outline-none focus:ring-2 focus:ring-blue-400">
+            <option value="50">50 מוצרים</option><option value="100" selected>100</option><option value="200">200</option><option value="400">400</option><option value="500">500</option>
+          </select>
+        </div>
+      </div>
+      <div class="text-xs text-slate-400 mb-2">המוצרים הנמכרים ביותר (לפי כמות) לאתר הנבחר. כפתור ⬇ CSV מייצא ל-Excel.</div>
+      <div id="tpInfo" class="text-xs text-slate-500 mb-2"></div>
+      <div id="tpMount"></div>
+    </div>
+  </section>
+
   <!-- ORDER HISTORY (Supabase-stored: backfill + webhook) -->
   <section data-screen="orderhist" class="hidden">
     <div class="card mb-4">
@@ -1936,6 +1956,27 @@
       document.getElementById("ohStatus").innerHTML = (d.byStatus || []).map((x) => `<span class="text-sm px-3 py-1 rounded-full ${STC[x.status] || "bg-slate-100 text-slate-600"}">${x.status}: <b>${fmt(x.count)}</b></span>`).join("") || '<span class="text-slate-400 text-sm">אין הזמנות שמורות עדיין — לחצי "ייבא הזמנות היסטוריות" או חכי שה-webhook ידחוף חדשות</span>';
       mountTable("ohMount", [{ key: "id", label: "מס׳", align: "right" }, { key: "date", label: "תאריך" }, { key: "status", label: "סטטוס" }, { key: "customer", label: "לקוח", align: "right", long: true }, { key: "items", label: "פריטים", type: "num" }, { key: "total", label: "סכום", type: "num" }], (d.orders || []).slice(), { defaultSort: { key: "date", dir: "desc" }, scroll: true, totals: false });
     }
+    async function loadTopProducts() {
+      const site = document.getElementById("siteSelect").value, m = document.getElementById("tpMonths").value, lim = document.getElementById("tpLimit").value;
+      try {
+        setStatus("טוען מוצרים מובילים…", "info");
+        const res = await fetch(`${BASE}/api/topproducts?site=${encodeURIComponent(site)}&months=${m}&limit=${lim}`, { headers: { "X-Access-Key": accessKey } });
+        if (res.status === 401) { showLogin(); return; }
+        const d = await res.json(); if (d.error) throw new Error(d.error);
+        setStatus("", ""); renderTopProducts(d);
+      } catch (e) { setStatus("שגיאה: " + e.message, "error"); }
+    }
+    function renderTopProducts(d) {
+      if (!d.available) { document.getElementById("tpInfo").innerHTML = `<span class="text-amber-600">WooCommerce לא מחובר לאתר זה. ${d.message || d.error || ""}</span>`; document.getElementById("tpMount").innerHTML = ""; return; }
+      document.getElementById("tpInfo").textContent = `${fmt(d.count || 0)} מוצרים · תקופה: ${d.period || ""}`;
+      mountTable("tpMount", [
+        { key: "name", label: "מוצר", align: "right", long: true },
+        { key: "sku", label: "מק״ט" },
+        { key: "sold", label: "נמכרו (יח׳)", type: "num" },
+        { key: "revenue", label: "הכנסה (₪)", type: "num" },
+        { key: "orders", label: "הזמנות", type: "num" },
+      ], (d.products || []).slice(), { defaultSort: { key: "sold", dir: "desc" }, scroll: true, totals: false });
+    }
     function renderWooCust(d) {
       const msg = document.getElementById("wcMsg");
       if (!d.available) {
@@ -2269,6 +2310,7 @@
       woo:{path:"/api/woo",render:renderWoo},
       woocust:{path:"/api/woocustomers",render:renderWooCust},
       orderhist:{path:"/api/orders",render:renderOrderHist},
+      topproducts:{path:"/api/topproducts",render:renderTopProducts},
       opportunities:{path:"/api/opportunities",render:renderOpportunities},
       entity:{path:"/api/entity",render:renderEntity},
       rankdist:{path:"/api/rankdist",render:renderRankDist},
@@ -2286,14 +2328,14 @@
     const GROUPS = {
       decisions: ["opportunities", "insights"],
       performance: ["summary", "monthlyusers", "overview", "periods", "trends", "realtime", "goals"],
-      commerce: ["sales", "ads", "woo", "woocust", "orderhist", "merchant"],
+      commerce: ["sales", "ads", "woo", "topproducts", "woocust", "orderhist", "merchant"],
       keywords: ["search", "ranks", "rankdist", "orgpotential", "gap"],
       content: ["pages", "pageperf", "content", "entity"],
       audience: ["traffic", "audience", "analyses", "retention", "events"],
       tools: ["spider", "textanalysis", "gupdates", "health"],
       compare: ["compare"],
     };
-    const DOM_ORDER = ["opportunities","insights","summary","monthlyusers","overview","trends","realtime","goals","sales","ads","woo","woocust","orderhist","merchant","traffic","audience","analyses","retention","events","ranks","rankdist","content","pageperf","orgpotential","gap","spider","search","pages","entity","textanalysis","gupdates","health","compare"];
+    const DOM_ORDER = ["opportunities","insights","summary","monthlyusers","overview","trends","realtime","goals","sales","ads","woo","topproducts","woocust","orderhist","merchant","traffic","audience","analyses","retention","events","ranks","rankdist","content","pageperf","orgpotential","gap","spider","search","pages","entity","textanalysis","gupdates","health","compare"];
 
     async function loadPart(name, force) {
       const t = PARTS[name], key = cacheKey();
@@ -2304,7 +2346,7 @@
         document.getElementById("updatedAt").textContent = "עודכן: " + new Date().toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" });
       } catch (err) { if (err.message && err.message.includes("forbidden")) return; setStatus("שגיאה: " + err.message, "error"); }
     }
-    const SECTION_TITLES = { opportunities:"🎯 הזדמנויות השבוע", insights:"💡 תובנות", summary:"📋 סיכום מנהלים", monthlyusers:"👥 משתמשים חודשי", overview:"📈 סקירה", trends:"📉 מגמות", realtime:"⏱️ זמן אמת", goals:"🎯 יעדים", sales:"💰 מכירות", ads:"📣 פרסום (ROAS)", woo:"🛍️ חנות (WooCommerce)", woocust:"👤 לקוחות", orderhist:"📜 היסטוריית הזמנות", merchant:"🛒 Merchant Center", traffic:"🚦 מקורות תנועה", audience:"🌍 קהל", analyses:"🗓️ ניתוחים", retention:"🔁 Retention", events:"🔔 אירועים", search:"🔍 חיפוש", pages:"📄 דפים מובילים", health:"🩺 בריאות האתר", ranks:"📈 מעקב מיקומים", rankdist:"📊 פיזור דירוג", content:"📈 ביצועי תוכן", pageperf:"📑 ביצועי עמודים", orgpotential:"🚀 פוטנציאל אורגני", gap:"🔋 פערי מילים", spider:"🕷️ Spider Goggles", gupdates:"🌦️ עדכוני גוגל", entity:"🏆 סמכות מותג", textanalysis:"📝 ניתוח טקסט", compare:"📊 השוואת אתרים" };
+    const SECTION_TITLES = { opportunities:"🎯 הזדמנויות השבוע", insights:"💡 תובנות", summary:"📋 סיכום מנהלים", monthlyusers:"👥 משתמשים חודשי", overview:"📈 סקירה", trends:"📉 מגמות", realtime:"⏱️ זמן אמת", goals:"🎯 יעדים", sales:"💰 מכירות", ads:"📣 פרסום (ROAS)", woo:"🛍️ חנות (WooCommerce)", topproducts:"🏆 מוצרים מובילים", woocust:"👤 לקוחות", orderhist:"📜 היסטוריית הזמנות", merchant:"🛒 Merchant Center", traffic:"🚦 מקורות תנועה", audience:"🌍 קהל", analyses:"🗓️ ניתוחים", retention:"🔁 Retention", events:"🔔 אירועים", search:"🔍 חיפוש", pages:"📄 דפים מובילים", health:"🩺 בריאות האתר", ranks:"📈 מעקב מיקומים", rankdist:"📊 פיזור דירוג", content:"📈 ביצועי תוכן", pageperf:"📑 ביצועי עמודים", orgpotential:"🚀 פוטנציאל אורגני", gap:"🔋 פערי מילים", spider:"🕷️ Spider Goggles", gupdates:"🌦️ עדכוני גוגל", entity:"🏆 סמכות מותג", textanalysis:"📝 ניתוח טקסט", compare:"📊 השוואת אתרים" };
     async function loadGroup(group, force) {
       document.getElementById("loadingBar").classList.add("loading");
       setStatus("טוען נתונים...", "info");
