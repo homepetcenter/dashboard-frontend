@@ -570,6 +570,13 @@
         </div>
       </div>
       <div class="text-xs text-slate-400 mb-2">המוצרים הנמכרים ביותר (לפי כמות) לאתר הנבחר. כפתור ⬇ CSV מייצא ל-Excel.</div>
+      <div class="flex items-end gap-2 flex-wrap mb-3">
+        <label class="text-sm text-slate-600">סינון קטגוריות <span class="text-xs text-slate-400">(Ctrl+לחיצה לכמה; ריק = הכל)</span><br>
+          <select id="tpCats" multiple size="4" class="border border-slate-300 rounded-lg px-2 py-1 text-sm min-w-[240px] mt-1"></select>
+        </label>
+        <button onclick="loadTopProducts()" class="bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-4 py-2 text-sm font-medium">החל</button>
+        <button onclick="document.getElementById('tpCats').selectedIndex=-1;loadTopProducts()" class="border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-600 hover:bg-slate-100">נקה סינון</button>
+      </div>
       <div id="tpInfo" class="text-xs text-slate-500 mb-2"></div>
       <div id="tpMount"></div>
     </div>
@@ -1956,17 +1963,31 @@
       document.getElementById("ohStatus").innerHTML = (d.byStatus || []).map((x) => `<span class="text-sm px-3 py-1 rounded-full ${STC[x.status] || "bg-slate-100 text-slate-600"}">${x.status}: <b>${fmt(x.count)}</b></span>`).join("") || '<span class="text-slate-400 text-sm">אין הזמנות שמורות עדיין — לחצי "ייבא הזמנות היסטוריות" או חכי שה-webhook ידחוף חדשות</span>';
       mountTable("ohMount", [{ key: "id", label: "מס׳", align: "right" }, { key: "date", label: "תאריך" }, { key: "status", label: "סטטוס" }, { key: "customer", label: "לקוח", align: "right", long: true }, { key: "items", label: "פריטים", type: "num" }, { key: "total", label: "סכום", type: "num" }], (d.orders || []).slice(), { defaultSort: { key: "date", dir: "desc" }, scroll: true, totals: false });
     }
+    let tpCatsSite = "";
+    async function loadTpCats(site) {
+      tpCatsSite = site;
+      try {
+        const res = await fetch(`${BASE}/api/woocats?site=${encodeURIComponent(site)}`, { headers: { "X-Access-Key": accessKey } });
+        if (!res.ok) return;
+        const d = await res.json();
+        const sel = document.getElementById("tpCats");
+        sel.innerHTML = (d.categories || []).map((c) => `<option value="${c.id}">${c.name} (${fmt(c.count)})</option>`).join("");
+      } catch (e) {}
+    }
     async function loadTopProducts() {
       const site = document.getElementById("siteSelect").value, m = document.getElementById("tpMonths").value, lim = document.getElementById("tpLimit").value;
+      const cats = Array.from(document.getElementById("tpCats").selectedOptions || []).map((o) => o.value).join(",");
       try {
         setStatus("טוען מוצרים מובילים…", "info");
-        const res = await fetch(`${BASE}/api/topproducts?site=${encodeURIComponent(site)}&months=${m}&limit=${lim}`, { headers: { "X-Access-Key": accessKey } });
+        const res = await fetch(`${BASE}/api/topproducts?site=${encodeURIComponent(site)}&months=${m}&limit=${lim}${cats ? "&categories=" + cats : ""}`, { headers: { "X-Access-Key": accessKey } });
         if (res.status === 401) { showLogin(); return; }
         const d = await res.json(); if (d.error) throw new Error(d.error);
         setStatus("", ""); renderTopProducts(d);
       } catch (e) { setStatus("שגיאה: " + e.message, "error"); }
     }
     function renderTopProducts(d) {
+      const site = document.getElementById("siteSelect").value;
+      if (tpCatsSite !== site) loadTpCats(site); // (re)populate category list when the site changes
       if (!d.available) { document.getElementById("tpInfo").innerHTML = `<span class="text-amber-600">WooCommerce לא מחובר לאתר זה. ${d.message || d.error || ""}</span>`; document.getElementById("tpMount").innerHTML = ""; return; }
       document.getElementById("tpInfo").textContent = `${fmt(d.count || 0)} מוצרים · תקופה: ${d.period || ""}`;
       mountTable("tpMount", [
