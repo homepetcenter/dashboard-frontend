@@ -280,6 +280,7 @@
 
   <!-- SALES -->
   <section data-screen="sales" class="hidden">
+    <div id="slSource" class="text-xs text-slate-400 mb-2"></div>
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
       <div class="card"><div class="kpi-label">הכנסות (₪)</div><div class="flex items-end gap-2"><div id="slRevenue" class="kpi-val !text-emerald-600">—</div><div id="slRevenue_d" class="delta"></div></div></div>
       <div class="card"><div class="kpi-label">עסקאות</div><div class="flex items-end gap-2"><div id="slTx" class="kpi-val !text-emerald-600">—</div><div id="slTx_d" class="delta"></div></div></div>
@@ -1432,6 +1433,7 @@
     }
     function renderSales(d) {
       const pr = d.prev || {};
+      const ss = document.getElementById("slSource"); if (ss) ss.textContent = "💰 מקור נתוני הכסף: " + (d.revenueSource || "GA4") + (d.netRevenue != null ? ` · נטו: ₪${fmt(d.netRevenue)} · החזרים: ₪${fmt(d.refunds || 0)}` : "");
       setKpi("slRevenue", fmt(d.revenue), d.revenue, pr.revenue); setKpi("slTx", fmt(d.transactions), d.transactions, pr.transactions);
       setKpi("slAov", fmt(d.aov), d.aov, pr.aov); setKpi("slConv", (d.conversionRate ?? 0)+"%", d.conversionRate, pr.conversionRate);
       mountTable("slProductsMount", [ {key:"name",label:"מוצר",align:"right",long:true},{key:"viewed",label:"צפיות",type:"num"},{key:"carted",label:"לסל",type:"num"},{key:"purchased",label:"נרכש",type:"num"},{key:"revenue",label:"הכנסה (₪)",type:"num"},{key:"buyRate",label:"% רכישה",type:"pct"} ], (d.products||[]).slice(), { defaultSort:{key:"revenue",dir:"desc"}, scroll:true });
