@@ -1081,7 +1081,8 @@
       if (cmpStart && cmpEnd) q += `&cmpStart=${cmpStart}&cmpEnd=${cmpEnd}`;
       const res = await fetch(`${BASE}${path}${q}`, { headers: { "X-Access-Key": accessKey } });
       if (res.status === 401) { showLogin(); throw new Error("נדרשת סיסמה"); }
-      const d = await res.json(); if (d.error) throw new Error(d.error); return d;
+      const text = await res.text(); const d = text ? JSON.parse(text) : {}; // tolerate empty body
+      if (d.error) throw new Error(d.error); return d;
     }
     function showLogin() { document.getElementById("loginOverlay").classList.remove("hidden"); }
     function hideLogin() { document.getElementById("loginOverlay").classList.add("hidden"); }
