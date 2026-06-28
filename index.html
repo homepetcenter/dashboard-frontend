@@ -617,6 +617,22 @@
     </div>
   </section>
 
+  <!-- SAVED SNAPSHOTS -->
+  <section data-screen="snapshots" class="hidden">
+    <div class="card mb-4">
+      <div class="flex items-center justify-between flex-wrap gap-2 mb-2">
+        <div>
+          <div class="font-bold text-slate-800">🗄️ נתונים שמורים (היסטוריה קבועה)</div>
+          <div class="text-xs text-slate-400">צילום-מצב יומי שנשמר ב-Supabase שלנו — לא תלוי בשינויים/הגירות באתרים. מצטבר עם הזמן.</div>
+        </div>
+        <button onclick="takeSnapshot()" class="bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-4 py-2 text-sm font-medium">📸 צלם עכשיו</button>
+      </div>
+      <div id="snapInfo" class="text-xs text-slate-500 mb-2"></div>
+      <div style="height:240px"><canvas id="snapChart"></canvas></div>
+      <div id="snapMount" class="mt-3"></div>
+    </div>
+  </section>
+
   <!-- MONTHLY USERS -->
   <section data-screen="monthlyusers" class="hidden">
     <div class="card">
@@ -1806,6 +1822,33 @@
         { key: "organicDuration", label: "משך ביקור אורגני", render: (v) => fmtDur(v || 0) },
       ], (d.monthly || []).slice().reverse(), { defaultSort: { key: "month", dir: "desc" }, totals: false });
     }
+    async function takeSnapshot() {
+      const info = document.getElementById("snapInfo");
+      info.innerHTML = '<span class="text-blue-600">מצלם… (אוסף נתונים מכל החנויות)</span>';
+      try {
+        const res = await fetch(`${BASE}/api/snapshot`, { headers: { "X-Access-Key": accessKey } });
+        if (res.status === 401) { showLogin(); return; }
+        const d = await res.json(); if (d.error) throw new Error(d.error);
+        info.innerHTML = `<span class="text-emerald-600">✓ נשמר צילום ל-${d.date} (${d.recorded} חנויות). טוען…</span>`;
+        loadPart("snapshots", true);
+      } catch (e) { info.innerHTML = `<span class="text-rose-600">שגיאה: ${e.message}</span>`; }
+    }
+    function renderSnapshots(d) {
+      const h = d.history || [];
+      if (!h.length) {
+        document.getElementById("snapInfo").innerHTML = 'אין עדיין נתונים שמורים — לחצי "📸 צלם עכשיו" כדי להתחיל לצבור (ומומלץ להגדיר צילום יומי אוטומטי).';
+        document.getElementById("snapMount").innerHTML = ""; if (charts["snapChart"]) charts["snapChart"].destroy(); return;
+      }
+      document.getElementById("snapInfo").textContent = `${fmt(h.length)} ימים שמורים · ${h[0].date} → ${h[h.length - 1].date}`;
+      makeChart("snapChart", { type: "line", data: { labels: h.map((r) => niceDate(r.date)), datasets: [
+        { label: "מכירות (₪)", data: h.map((r) => r.woo_revenue), borderColor: "#16a34a", backgroundColor: "rgba(22,163,74,0.08)", fill: true, tension: 0.3, pointRadius: 0, yAxisID: "y" },
+        { label: "Sessions", data: h.map((r) => r.ga_sessions), borderColor: "#1d4ed8", tension: 0.3, pointRadius: 0, yAxisID: "y1" },
+      ] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true } }, scales: { y: { position: "left", beginAtZero: true }, y1: { position: "right", beginAtZero: true, grid: { drawOnChartArea: false } } } } });
+      mountTable("snapMount", [
+        { key: "date", label: "תאריך" }, { key: "woo_revenue", label: "מכירות (₪)", type: "num" }, { key: "woo_orders", label: "הזמנות", type: "num" },
+        { key: "ga_sessions", label: "Sessions", type: "num" }, { key: "ga_users", label: "Users", type: "num" }, { key: "gsc_clicks", label: "קליקים אורגניים", type: "num" }, { key: "gsc_impressions", label: "חשיפות", type: "num" },
+      ], h.slice().reverse(), { search: false, defaultSort: { key: "date", dir: "desc" }, totals: false, scroll: true });
+    }
     async function loadMonthlyUsers() {
       const site = document.getElementById("siteSelect").value;
       const m = document.getElementById("muMonths").value, src = document.getElementById("muSource").value;
@@ -2338,6 +2381,7 @@
       gap:{path:"/api/gap",render:renderGap},
       summary:{path:"/api/summary",render:renderSummary},
       monthlyusers:{path:"/api/monthlyusers",render:renderMonthlyUsers},
+      snapshots:{path:"/api/snapshot-history",render:renderSnapshots},
       content:{path:"/api/content",render:renderContent},
       pageperf:{path:"/api/pageperf",render:renderPagePerf},
       orgpotential:{path:"/api/orgpotential",render:renderOrgPotential},
@@ -2348,7 +2392,7 @@
     // ---- Grouped navigation: 6 rich screens, each loads several endpoints ----
     const GROUPS = {
       decisions: ["opportunities", "insights"],
-      performance: ["summary", "monthlyusers", "overview", "periods", "trends", "realtime", "goals"],
+      performance: ["summary", "monthlyusers", "overview", "periods", "trends", "realtime", "goals", "snapshots"],
       commerce: ["sales", "ads", "woo", "topproducts", "woocust", "orderhist", "merchant"],
       keywords: ["search", "ranks", "rankdist", "orgpotential", "gap"],
       content: ["pages", "pageperf", "content", "entity"],
@@ -2356,7 +2400,7 @@
       tools: ["spider", "textanalysis", "gupdates", "health"],
       compare: ["compare"],
     };
-    const DOM_ORDER = ["opportunities","insights","summary","monthlyusers","overview","trends","realtime","goals","sales","ads","woo","topproducts","woocust","orderhist","merchant","traffic","audience","analyses","retention","events","ranks","rankdist","content","pageperf","orgpotential","gap","spider","search","pages","entity","textanalysis","gupdates","health","compare"];
+    const DOM_ORDER = ["opportunities","insights","summary","monthlyusers","snapshots","overview","trends","realtime","goals","sales","ads","woo","topproducts","woocust","orderhist","merchant","traffic","audience","analyses","retention","events","ranks","rankdist","content","pageperf","orgpotential","gap","spider","search","pages","entity","textanalysis","gupdates","health","compare"];
 
     async function loadPart(name, force) {
       const t = PARTS[name], key = cacheKey();
@@ -2367,7 +2411,7 @@
         document.getElementById("updatedAt").textContent = "עודכן: " + new Date().toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" });
       } catch (err) { if (err.message && err.message.includes("forbidden")) return; setStatus("שגיאה: " + err.message, "error"); }
     }
-    const SECTION_TITLES = { opportunities:"🎯 הזדמנויות השבוע", insights:"💡 תובנות", summary:"📋 סיכום מנהלים", monthlyusers:"👥 משתמשים חודשי", overview:"📈 סקירה", trends:"📉 מגמות", realtime:"⏱️ זמן אמת", goals:"🎯 יעדים", sales:"💰 מכירות", ads:"📣 פרסום (ROAS)", woo:"🛍️ חנות (WooCommerce)", topproducts:"🏆 מוצרים מובילים", woocust:"👤 לקוחות", orderhist:"📜 היסטוריית הזמנות", merchant:"🛒 Merchant Center", traffic:"🚦 מקורות תנועה", audience:"🌍 קהל", analyses:"🗓️ ניתוחים", retention:"🔁 Retention", events:"🔔 אירועים", search:"🔍 חיפוש", pages:"📄 דפים מובילים", health:"🩺 בריאות האתר", ranks:"📈 מעקב מיקומים", rankdist:"📊 פיזור דירוג", content:"📈 ביצועי תוכן", pageperf:"📑 ביצועי עמודים", orgpotential:"🚀 פוטנציאל אורגני", gap:"🔋 פערי מילים", spider:"🕷️ Spider Goggles", gupdates:"🌦️ עדכוני גוגל", entity:"🏆 סמכות מותג", textanalysis:"📝 ניתוח טקסט", compare:"📊 השוואת אתרים" };
+    const SECTION_TITLES = { opportunities:"🎯 הזדמנויות השבוע", insights:"💡 תובנות", summary:"📋 סיכום מנהלים", monthlyusers:"👥 משתמשים חודשי", snapshots:"🗄️ נתונים שמורים", overview:"📈 סקירה", trends:"📉 מגמות", realtime:"⏱️ זמן אמת", goals:"🎯 יעדים", sales:"💰 מכירות", ads:"📣 פרסום (ROAS)", woo:"🛍️ חנות (WooCommerce)", topproducts:"🏆 מוצרים מובילים", woocust:"👤 לקוחות", orderhist:"📜 היסטוריית הזמנות", merchant:"🛒 Merchant Center", traffic:"🚦 מקורות תנועה", audience:"🌍 קהל", analyses:"🗓️ ניתוחים", retention:"🔁 Retention", events:"🔔 אירועים", search:"🔍 חיפוש", pages:"📄 דפים מובילים", health:"🩺 בריאות האתר", ranks:"📈 מעקב מיקומים", rankdist:"📊 פיזור דירוג", content:"📈 ביצועי תוכן", pageperf:"📑 ביצועי עמודים", orgpotential:"🚀 פוטנציאל אורגני", gap:"🔋 פערי מילים", spider:"🕷️ Spider Goggles", gupdates:"🌦️ עדכוני גוגל", entity:"🏆 סמכות מותג", textanalysis:"📝 ניתוח טקסט", compare:"📊 השוואת אתרים" };
     async function loadGroup(group, force) {
       document.getElementById("loadingBar").classList.add("loading");
       setStatus("טוען נתונים...", "info");
