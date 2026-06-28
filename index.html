@@ -602,6 +602,14 @@
       </div>
       <div id="bfStatus" class="text-xs mt-2"></div>
     </div>
+    <div class="flex items-center gap-2 flex-wrap mb-3">
+      <span class="text-sm text-slate-600">הצג תקופה:</span>
+      <select id="ohMonths" onchange="loadOrderHist(this.value)" class="border border-slate-300 rounded-lg px-3 py-1 text-sm outline-none focus:ring-2 focus:ring-blue-400">
+        <option value="0" selected>כל ההיסטוריה</option>
+        <option value="1">חודש אחרון</option><option value="3">3 חודשים</option><option value="6">6 חודשים</option><option value="12">שנה</option>
+      </select>
+      <span id="ohPeriod" class="text-xs text-slate-400"></span>
+    </div>
     <div id="ohKpis" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4"></div>
     <div class="card mb-4"><div class="font-bold text-slate-800 mb-2">לפי סטטוס</div><div id="ohStatus" class="flex flex-wrap gap-2"></div></div>
     <div class="card"><div class="font-bold text-slate-800 mb-2">הזמנות</div><div id="ohMount"></div></div>
@@ -1997,14 +2005,25 @@
         loadPart("orderhist", true);
       } catch (e) { st.innerHTML = `<span class="text-rose-600">שגיאה: ${e.message}</span>`; }
     }
+    async function loadOrderHist(months) {
+      const site = document.getElementById("siteSelect").value;
+      try {
+        setStatus("טוען היסטוריית הזמנות…", "info");
+        const res = await fetch(`${BASE}/api/orders?site=${encodeURIComponent(site)}&months=${months}`, { headers: { "X-Access-Key": accessKey } });
+        if (res.status === 401) { showLogin(); return; }
+        const d = await res.json(); if (d.error) throw new Error(d.error);
+        setStatus("", ""); renderOrderHist(d);
+      } catch (e) { setStatus("שגיאה: " + e.message, "error"); }
+    }
     function renderOrderHist(d) {
+      const sel = document.getElementById("ohMonths"); if (sel && d.months != null) sel.value = String(d.months);
+      document.getElementById("ohPeriod").textContent = d.period ? `(${d.period})` : "";
       const k = (v, l, extra) => `<div class="card"><div class="kpi-label">${l}</div><div class="kpi-val ${extra || ""}">${v}</div></div>`;
-      const completed = (d.byStatus || []).find((x) => x.status === "completed");
       document.getElementById("ohKpis").innerHTML =
-        k(fmt(d.count || 0), "סה\"כ הזמנות שמורות", "") +
-        k("₪" + fmt(d.revenue || 0), "הכנסה (שולמו)", "!text-emerald-600") +
-        k(fmt(completed ? completed.count : 0), "הושלמו", "") +
-        k(fmt((d.orders || []).length), "מוצגות", "");
+        k(fmt(d.count || 0), "סה\"כ הזמנות", "") +
+        k("₪" + fmt(d.paidRevenue || 0), "הכנסה ששולמה", "!text-emerald-600") +
+        k(`${fmt(d.refundedCount || 0)} · ₪${fmt(d.refundedAmount || 0)}`, "החזרים", "!text-rose-600") +
+        k("₪" + fmt(d.netRevenue || 0), "נטו (אחרי החזרים)", "!text-blue-600");
       const STC = { completed: "bg-emerald-100 text-emerald-700", processing: "bg-blue-100 text-blue-700", "on-hold": "bg-amber-100 text-amber-700", pending: "bg-slate-100 text-slate-600", cancelled: "bg-rose-100 text-rose-700", refunded: "bg-rose-100 text-rose-700", failed: "bg-rose-100 text-rose-700" };
       document.getElementById("ohStatus").innerHTML = (d.byStatus || []).map((x) => `<span class="text-sm px-3 py-1 rounded-full ${STC[x.status] || "bg-slate-100 text-slate-600"}">${x.status}: <b>${fmt(x.count)}</b></span>`).join("") || '<span class="text-slate-400 text-sm">אין הזמנות שמורות עדיין — לחצי "ייבא הזמנות היסטוריות" או חכי שה-webhook ידחוף חדשות</span>';
       mountTable("ohMount", [{ key: "id", label: "מס׳", align: "right" }, { key: "date", label: "תאריך" }, { key: "status", label: "סטטוס" }, { key: "customer", label: "לקוח", align: "right", long: true }, { key: "items", label: "פריטים", type: "num" }, { key: "total", label: "סכום", type: "num" }], (d.orders || []).slice(), { defaultSort: { key: "date", dir: "desc" }, scroll: true, totals: false });
