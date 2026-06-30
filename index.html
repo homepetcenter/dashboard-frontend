@@ -1467,9 +1467,9 @@
       const monthlySection = `<h2>מגמת מכירות נטו לפי מותג — ${months.length} חודשים אחרונים</h2>
 <table><thead><tr><th>מותג</th>${monthHeaders}<th>שינוי</th></tr></thead><tbody>${monthRows}<tr style="background:#f1f3f4"><td class="site">סה&quot;כ קבוצה</td>${groupCells}<td>${pct(gLast, gFirst)}</td></tr></tbody></table>`;
       // Google Ads per brand
-      const adsRows = sites.filter((s) => s.ads).map((s) => { const a = s.ads; return `<tr><td class="site">${NM[s.site] || s.site}</td><td>${nf(a.clicks)}</td><td>₪${nf(a.cost)}</td><td>₪${nf(a.conversionValue)}</td><td>${a.roas}x</td><td>₪${a.cpc}</td></tr>`; }).join("");
-      const adsTotals = sites.reduce((t, s) => { if (s.ads) { t.clicks += s.ads.clicks; t.cost += s.ads.cost; t.cv += s.ads.conversionValue; } return t; }, { clicks: 0, cost: 0, cv: 0 });
-      const adsSection = adsRows ? `<h2>📣 Google Ads לפי מותג</h2><table><thead><tr><th>מותג</th><th>קליקים</th><th>עלות</th><th>שווי המרה</th><th>ROAS</th><th>CPC</th></tr></thead><tbody>${adsRows}<tr style="background:#f1f3f4"><td class="site">סה&quot;כ</td><td>${nf(adsTotals.clicks)}</td><td>₪${nf(adsTotals.cost)}</td><td>₪${nf(adsTotals.cv)}</td><td>${adsTotals.cost ? (adsTotals.cv / adsTotals.cost).toFixed(2) : 0}x</td><td>—</td></tr></tbody></table>` : "";
+      const adsRows = sites.filter((s) => s.ads).map((s) => { const a = s.ads, rv = s.now.revenue; const roas = a.cost ? (rv / a.cost).toFixed(2) : 0; return `<tr><td class="site">${NM[s.site] || s.site}</td><td>${nf(a.clicks)}</td><td>₪${nf(a.cost)}</td><td>₪${nf(rv)}</td><td>${roas}x</td><td>₪${a.cpc}</td></tr>`; }).join("");
+      const adsTotals = sites.reduce((t, s) => { if (s.ads) { t.clicks += s.ads.clicks; t.cost += s.ads.cost; t.rev += s.now.revenue; } return t; }, { clicks: 0, cost: 0, rev: 0 });
+      const adsSection = adsRows ? `<h2>📣 Google Ads לפי מותג</h2><table><thead><tr><th>מותג</th><th>קליקים</th><th>עלות פרסום</th><th>הכנסת חנות</th><th>ROAS משוקלל</th><th>CPC</th></tr></thead><tbody>${adsRows}<tr style="background:#f1f3f4"><td class="site">סה&quot;כ</td><td>${nf(adsTotals.clicks)}</td><td>₪${nf(adsTotals.cost)}</td><td>₪${nf(adsTotals.rev)}</td><td>${adsTotals.cost ? (adsTotals.rev / adsTotals.cost).toFixed(2) : 0}x</td><td>—</td></tr></tbody></table><p class="note">עלות = הוצאת Google Ads בפועל · הכנסת חנות = מכירות WooCommerce בפועל · ROAS משוקלל = הכנסת חנות ÷ עלות פרסום.</p>` : "";
       // Organic vs paid per brand
       const PAIDCH = ["Paid Search", "Paid Shopping", "Paid Social", "Display", "Cross-network", "Paid Other"];
       const groupChan = (chs) => { let paid = 0, org = 0, direct = 0, other = 0, total = 0; (chs || []).forEach((c) => { total += c.revenue; if (c.name === "Organic Search" || c.name === "Organic Shopping") org += c.revenue; else if (c.name === "Direct") direct += c.revenue; else if (PAIDCH.includes(c.name)) paid += c.revenue; else other += c.revenue; }); return { paid, org, direct, other, total: total || 1 }; };
@@ -1566,7 +1566,7 @@ ${conclSection}
       ], ok.map((s)=>({ site:NAMES[s.site]||s.site, organic:s.organicPct||0, paid:s.paidPct||0, direct:s.directPct||0, conv:s.conversionRate||0 })), { search:false, defaultSort:{key:"organic",dir:"desc"} });
       // Ad cost comparison
       mountTable("cmpAdsMount", [
-        {key:"site",label:"אתר",align:"right"},{key:"cost",label:"עלות (₪)",type:"num"},{key:"adrev",label:"הכנסה מפרסום (₪)",type:"num"},{key:"roas",label:"ROAS",type:"x"},{key:"cpa",label:"עלות להמרה (₪)",type:"num"}],
+        {key:"site",label:"אתר",align:"right"},{key:"cost",label:"עלות פרסום (₪)",type:"num"},{key:"adrev",label:"הכנסת חנות (₪)",type:"num"},{key:"roas",label:"ROAS משוקלל",type:"x"},{key:"cpa",label:"עלות פרסום להזמנה (₪)",type:"num"}],
         ok.map((s)=>({ site:NAMES[s.site]||s.site, cost:s.adCost||0, adrev:s.adRevenue||0, roas:s.roas||0, cpa:s.cpa||0 })), { search:false, defaultSort:{key:"cost",dir:"desc"} });
       // WooCommerce store comparison (only sites with woo data)
       const wooRows = ok.filter((s)=>s.woo).map((s)=>({ site:NAMES[s.site]||s.site, orders:s.woo.orders||0, revenue:s.woo.revenue||0, aov:s.woo.avgOrder||0, customers:s.woo.payingCustomers ?? "—" }));
