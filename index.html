@@ -4,6 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Analytics Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <style>
@@ -55,6 +59,48 @@
     body.dark .bg-blue-50 { background:#1e3a5f !important; }
     body.dark .bg-red-100 { background:#451a1a !important; }
     body.dark .jump-btn { background:#334155; color:#94a3b8; }
+    /* ===================== Google Material clean theme ===================== */
+    body { font-family: 'Heebo', 'Google Sans', system-ui, Arial, sans-serif; -webkit-font-smoothing: antialiased; color: #3c4043; }
+    body:not(.dark) { background: #f8f9fa !important; }
+    h1, h2 { font-family: 'Google Sans', 'Heebo', sans-serif; letter-spacing: -.3px; }
+    /* Cards: clean white, soft 1px outline, gentle radius (Material outlined) */
+    .card { border-radius: 14px; padding: 1.3rem 1.45rem; }
+    body:not(.dark) .card { background: #fff; border: 1px solid #e8eaed; box-shadow: 0 1px 2px rgba(60,64,67,.06); }
+    body.dark .card { border: 1px solid #2b3a52; box-shadow: none; }
+    /* KPIs */
+    .kpi-val { color: #1a73e8; font-weight: 500; letter-spacing: -.5px; }
+    .kpi-label { color: #5f6368; font-weight: 500; font-size: .78rem; }
+    /* Primary blue → Google blue, everywhere */
+    .bg-blue-600 { background-color: #1a73e8 !important; }
+    .hover\:bg-blue-700:hover { background-color: #1765cc !important; }
+    .bg-blue-700 { background-color: #1765cc !important; }
+    .text-blue-600 { color: #1a73e8 !important; }
+    .text-emerald-600 { color: #1e8e3e !important; }
+    .text-rose-500, .text-rose-600 { color: #d93025 !important; }
+    /* Tab bar — clean Material */
+    body:not(.dark) .tab-bar { background: #fff; border: 1px solid #e8eaed; box-shadow: 0 1px 2px rgba(60,64,67,.06); }
+    .tab-btn { color: #5f6368; font-weight: 500; border-radius: 8px 8px 0 0; }
+    .tab-btn:hover { color: #1a73e8; background: rgba(26,115,232,.06); }
+    .tab-btn.active { color: #1a73e8; border-bottom-color: #1a73e8; font-weight: 600; }
+    /* Sub-nav chips */
+    .jump-btn { background: #f1f3f4; color: #5f6368; border-radius: 999px; font-weight: 500; }
+    .jump-btn:hover { background: rgba(26,115,232,.1); color: #1a73e8; }
+    /* Range buttons */
+    .range-btn.active { background: #1a73e8; }
+    body:not(.dark) .range-btn { color: #5f6368; }
+    /* Section title — lighter, cleaner */
+    .sec-title { font-family: 'Google Sans','Heebo',sans-serif; font-weight: 600 !important; color: #202124 !important; }
+    .sec-src { font-weight: 600; opacity: .92; }
+    /* Tables — clean Google look */
+    table th { color: #5f6368 !important; font-weight: 500; }
+    body:not(.dark) table th { border-color: #e8eaed; }
+    body:not(.dark) table td { border-color: #f1f3f4; }
+    /* Inputs / selects — Material */
+    input, select { border-radius: 8px; }
+    body:not(.dark) input, body:not(.dark) select { border-color: #dadce0; }
+    /* Scrollbars: subtle */
+    *::-webkit-scrollbar { height: 8px; width: 8px; }
+    *::-webkit-scrollbar-thumb { background: #dadce0; border-radius: 8px; }
   </style>
 </head>
 <body class="bg-slate-100 min-h-screen p-4 md:p-6">
