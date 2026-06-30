@@ -1465,6 +1465,16 @@
       const gLast = sites.reduce((a, s) => a + (((bySite[s.site] || [])[months.length - 1] || {}).net || 0), 0);
       const monthlySection = `<h2>מגמת מכירות נטו לפי מותג — ${months.length} חודשים אחרונים</h2>
 <table><thead><tr><th>מותג</th>${monthHeaders}<th>שינוי</th></tr></thead><tbody>${monthRows}<tr style="background:#f1f3f4"><td class="site">סה&quot;כ קבוצה</td>${groupCells}<td>${pct(gLast, gFirst)}</td></tr></tbody></table>`;
+      // Google Ads per brand
+      const adsRows = sites.filter((s) => s.ads).map((s) => { const a = s.ads; return `<tr><td class="site">${NM[s.site] || s.site}</td><td>${nf(a.clicks)}</td><td>₪${nf(a.cost)}</td><td>₪${nf(a.conversionValue)}</td><td>${a.roas}x</td><td>₪${a.cpc}</td></tr>`; }).join("");
+      const adsTotals = sites.reduce((t, s) => { if (s.ads) { t.clicks += s.ads.clicks; t.cost += s.ads.cost; t.cv += s.ads.conversionValue; } return t; }, { clicks: 0, cost: 0, cv: 0 });
+      const adsSection = adsRows ? `<h2>📣 Google Ads לפי מותג</h2><table><thead><tr><th>מותג</th><th>קליקים</th><th>עלות</th><th>שווי המרה</th><th>ROAS</th><th>CPC</th></tr></thead><tbody>${adsRows}<tr style="background:#f1f3f4"><td class="site">סה&quot;כ</td><td>${nf(adsTotals.clicks)}</td><td>₪${nf(adsTotals.cost)}</td><td>₪${nf(adsTotals.cv)}</td><td>${adsTotals.cost ? (adsTotals.cv / adsTotals.cost).toFixed(2) : 0}x</td><td>—</td></tr></tbody></table>` : "";
+      // Organic vs paid per brand
+      const PAIDCH = ["Paid Search", "Paid Shopping", "Paid Social", "Display", "Cross-network", "Paid Other"];
+      const groupChan = (chs) => { let paid = 0, org = 0, direct = 0, other = 0, total = 0; (chs || []).forEach((c) => { total += c.revenue; if (c.name === "Organic Search" || c.name === "Organic Shopping") org += c.revenue; else if (c.name === "Direct") direct += c.revenue; else if (PAIDCH.includes(c.name)) paid += c.revenue; else other += c.revenue; }); return { paid, org, direct, other, total: total || 1 }; };
+      const ovpRows = sites.map((s) => { const g = groupChan(s.channels); const pp = (x) => Math.round((x / g.total) * 100); return `<tr><td class="site">${NM[s.site] || s.site}</td><td>₪${nf(g.total)}</td><td>${pp(g.paid)}% · ₪${nf(g.paid)}</td><td>${pp(g.org)}% · ₪${nf(g.org)}</td><td>${pp(g.direct)}% · ₪${nf(g.direct)}</td><td>${pp(g.other)}% · ₪${nf(g.other)}</td></tr>`; }).join("");
+      const ovpSection = `<h2>אורגני מול ממומן (מקור: GA4)</h2><table><thead><tr><th>מותג</th><th>סה&quot;כ הכנסה</th><th>ממומן</th><th>אורגני</th><th>ישיר</th><th>אחר</th></tr></thead><tbody>${ovpRows}</tbody></table><p class="note">ממומן = Paid + Cross-network · אורגני = Organic · ישיר = Direct · אחר = Referral/Unassigned. הכנסת GA4 כוללת מע&quot;מ/משלוח.</p>`;
+      const conclSection = `<h2>מסקנות והמלצות לפי מותג</h2>` + sites.map((s) => `<p><b>${NM[s.site] || s.site}:</b> [כתבי כאן מסקנות והמלצות — פתוח לעריכה]</p>`).join("");
       // per-store detailed section with 6mo + YoY
       const fmtMoney = (v) => "₪" + nf(v);
       const perStore = sites.map((s) => {
@@ -1514,8 +1524,11 @@ td.site,td.m{font-weight:700;color:#202124}
 <h2>השוואת חנויות — תקופה נוכחית</h2>
 <table><thead><tr><th>חנות</th><th>הכנסות</th><th>הזמנות</th><th>ערך הזמנה</th><th>Sessions</th><th>קליקים אורגניים</th></tr></thead><tbody>${cmpRows}</tbody></table>
 ${monthlySection}
+${adsSection}
+${ovpSection}
 ${perStore}
-<h2>הערות והמלצות</h2>
+${conclSection}
+<h2>הערות נוספות</h2>
 <p class="note">[הוסיפי כאן הערות, המלצות ופעולות להמשך לכל חנות — הכל ניתן לעריכה ולמחיקה.]</p>
 </div>
 </body></html>`;
