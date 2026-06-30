@@ -14,6 +14,7 @@
     .kpi-label { color:#64748b; font-size:.8rem; margin-bottom:.25rem; } .kpi-val { font-size:1.7rem; font-weight:700; color:#1d4ed8; line-height:1.1; }
     .delta { font-size:.78rem; font-weight:600; } .delta.up { color:#16a34a; } .delta.down { color:#dc2626; } .delta.flat { color:#94a3b8; }
     table th { white-space:nowrap; } .srt:hover { color:#1d4ed8; }
+    .sec-src { font-size:.62rem; font-weight:700; padding:.12rem .55rem; border-radius:999px; margin-inline-start:.55rem; vertical-align:middle; white-space:nowrap; letter-spacing:.02em; }
     #loadingBar { position:fixed; top:0; left:0; height:3px; width:0; background:#1d4ed8; z-index:60; transition:width .3s; opacity:0; }
     #loadingBar.loading { width:90%; opacity:1; transition:width 8s cubic-bezier(.1,.7,.1,1); }
     /* ---- Mobile: comfortable, compact, swipeable ---- */
@@ -2434,6 +2435,23 @@
       } catch (err) { if (err.message && err.message.includes("forbidden")) return; setStatus("שגיאה: " + err.message, "error"); }
     }
     const SECTION_TITLES = { opportunities:"🎯 הזדמנויות השבוע", insights:"💡 תובנות", summary:"📋 סיכום מנהלים", monthlyusers:"👥 משתמשים חודשי", snapshots:"🗄️ נתונים שמורים", overview:"📈 סקירה", trends:"📉 מגמות", realtime:"⏱️ זמן אמת", goals:"🎯 יעדים", sales:"💰 מכירות", ads:"📣 פרסום (ROAS)", woo:"🛍️ חנות (WooCommerce)", topproducts:"🏆 מוצרים מובילים", woocust:"👤 לקוחות", orderhist:"📜 היסטוריית הזמנות", merchant:"🛒 Merchant Center", traffic:"🚦 מקורות תנועה", audience:"🌍 קהל", analyses:"🗓️ ניתוחים", retention:"🔁 Retention", events:"🔔 אירועים", search:"🔍 חיפוש", pages:"📄 דפים מובילים", health:"🩺 בריאות האתר", ranks:"📈 מעקב מיקומים", rankdist:"📊 פיזור דירוג", content:"📈 ביצועי תוכן", pageperf:"📑 ביצועי עמודים", orgpotential:"🚀 פוטנציאל אורגני", gap:"🔋 פערי מילים", spider:"🕷️ Spider Goggles", gupdates:"🌦️ עדכוני גוגל", entity:"🏆 סמכות מותג", textanalysis:"📝 ניתוח טקסט", compare:"📊 השוואת אתרים" };
+    const SOURCES = {
+      ga4:      { label: "Google Analytics", color: "#E37400", emoji: "📈" },
+      gsc:      { label: "Search Console",   color: "#1a73e8", emoji: "🔍" },
+      woo:      { label: "WooCommerce",      color: "#7f54b3", emoji: "🛍️" },
+      merchant: { label: "Merchant Center",  color: "#4285f4", emoji: "🛒" },
+      ads:      { label: "Google Ads",       color: "#34a853", emoji: "📣" },
+      store:    { label: "מאגר ההזמנות",      color: "#10b981", emoji: "🗄️" },
+      tool:     { label: "כלי",               color: "#64748b", emoji: "🧰" },
+      mixed:    { label: "משולב",             color: "#7c3aed", emoji: "✨" },
+    };
+    const SCREEN_SRC = {
+      overview: "ga4", trends: "ga4", realtime: "ga4", periods: "ga4", goals: "ga4", monthlyusers: "ga4", traffic: "ga4", audience: "ga4", analyses: "ga4", retention: "ga4", events: "ga4",
+      summary: "mixed", insights: "mixed", opportunities: "mixed", compare: "mixed",
+      search: "gsc", ranks: "gsc", rankdist: "gsc", pages: "gsc", pageperf: "gsc", orgpotential: "gsc", gap: "gsc", content: "gsc", entity: "gsc", gupdates: "gsc", health: "gsc",
+      woo: "woo", woocust: "woo", topproducts: "woo", sales: "woo",
+      ads: "ads", merchant: "merchant", orderhist: "store", snapshots: "store", spider: "tool", textanalysis: "tool",
+    };
     async function loadGroup(group, force) {
       document.getElementById("loadingBar").classList.add("loading");
       setStatus("טוען נתונים...", "info");
@@ -2456,9 +2474,12 @@
         const show = members.includes(s.dataset.screen);
         s.classList.toggle("hidden", !show);
         if (show && !s.querySelector(".sec-title")) {
+          const brand = SOURCES[SCREEN_SRC[s.dataset.screen] || "mixed"] || SOURCES.mixed;
           const h = document.createElement("div");
-          h.className = "sec-title text-lg font-bold text-slate-700 mt-2 mb-2 pb-1 border-b border-slate-200";
-          h.textContent = SECTION_TITLES[s.dataset.screen] || "";
+          h.className = "sec-title text-lg font-bold text-slate-700 mt-2 mb-2 pb-1 border-b border-slate-200 flex items-center flex-wrap";
+          h.style.borderInlineStart = `4px solid ${brand.color}`;
+          h.style.paddingInlineStart = ".6rem";
+          h.innerHTML = `<span>${SECTION_TITLES[s.dataset.screen] || ""}</span><span class="sec-src" style="background:${brand.color}22;color:${brand.color}">${brand.emoji} ${brand.label}</span>`;
           if (members.length > 1) s.insertBefore(h, s.firstChild);
         }
       });
