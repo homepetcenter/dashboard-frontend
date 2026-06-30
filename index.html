@@ -154,6 +154,7 @@
         <option value="quickpet">quickpet.co.il</option>
         <option value="tiktakpet">tiktakpet.co.il</option>
       </select>
+      <button id="reportBtn" onclick="generateReport()" title="הפק דוח מעוצב" class="bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-3 py-2 text-sm font-medium">📄 הפק דוח</button>
       <button id="refreshBtn" title="רענון" class="border border-slate-300 rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-100">🔄</button>
       <button id="darkBtn" title="מצב כהה/בהיר" class="border border-slate-300 rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-100">🌙</button>
       <button id="bellBtn" title="התראות והזדמנויות" class="relative border border-slate-300 rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-100">🔔<span id="bellBadge" class="hidden absolute -top-2 -left-2 bg-rose-500 text-white text-xs rounded-full min-w-5 h-5 px-1 flex items-center justify-center">0</span></button>
@@ -1429,6 +1430,65 @@
       spark("spNew", "newUsers", "#8b5cf6"); spark("spViews", "pageViews", "#10b981");
       makeChart("ovChart", { type: "line", data: { labels: series.map((p)=>niceDate(p.date)), datasets: [{ label:"Sessions", data: series.map((p)=>p.sessions), borderColor:"#1d4ed8", backgroundColor:"rgba(29,78,216,0.08)", fill:true, tension:0.35, pointRadius:2 }] }, options: { responsive:true, plugins:{legend:{display:false}} } });
       applyGUpdates("ovChart", series.map((p)=>p.date));
+    }
+    async function generateReport() {
+      setStatus("בונה דוח…", "info");
+      let d;
+      try {
+        const res = await fetch(`${BASE}/api/compare?range=${currentRange}`, { headers: { "X-Access-Key": accessKey } });
+        if (res.status === 401) { showLogin(); return; }
+        d = await res.json(); if (d.error) throw new Error(d.error);
+      } catch (e) { setStatus("שגיאה: " + e.message, "error"); return; }
+      setStatus("", "");
+      const NM = { homepetcenter: "הום פט", quickpet: "קוויק פט", tiktakpet: "טיק טק פט" };
+      const sites = (d.sites || []).filter((s) => !s.error);
+      const period = d.period || periodLabel();
+      const today = new Date().toLocaleDateString("he-IL");
+      const nf = (n) => Math.round(Number(n || 0)).toLocaleString("en-US");
+      const rev = (s) => s.woo ? s.woo.revenue : s.revenue;
+      const ord = (s) => s.woo ? s.woo.orders : s.transactions;
+      const rows = sites.map((s) => `<tr><td class="site">${NM[s.site] || s.site}</td><td>₪${nf(rev(s))}</td><td>${nf(ord(s))}</td><td>${nf(s.sessions)}</td><td>${s.conversionRate || 0}%</td><td>${nf(s.gscClicks)}</td><td>${nf(s.rankingKeywords)}</td><td>${s.top10pct || 0}%</td><td>${s.roas || 0}x</td></tr>`).join("");
+      const totalRev = sites.reduce((a, s) => a + (rev(s) || 0), 0);
+      const totalSess = sites.reduce((a, s) => a + (s.sessions || 0), 0);
+      const html = `<!DOCTYPE html><html dir="rtl" lang="he"><head><meta charset="utf-8"><title>דוח ביצועים — ${period}</title>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box} body{font-family:'Heebo',Arial,sans-serif;color:#3c4043;margin:0;background:#f1f3f4}
+.toolbar{position:sticky;top:0;background:#1a73e8;color:#fff;padding:10px 18px;display:flex;gap:14px;align-items:center;font-size:14px;z-index:9}
+.toolbar button{background:#fff;color:#1a73e8;border:0;border-radius:8px;padding:8px 16px;font-weight:700;cursor:pointer;font-family:inherit}
+.report{max-width:900px;margin:24px auto;background:#fff;border:1px solid #e8eaed;border-radius:14px;padding:48px 56px;box-shadow:0 1px 3px rgba(60,64,67,.12)}
+h1{font-size:28px;margin:0 0 4px;color:#202124} h2{font-size:19px;color:#1a73e8;margin:28px 0 10px;border-bottom:2px solid #e8eaed;padding-bottom:6px}
+.meta{color:#5f6368;font-size:13px;margin:0 0 10px}
+.kpis{display:flex;gap:16px;flex-wrap:wrap;margin:14px 0}
+.kpi{flex:1;min-width:160px;background:#f8f9fa;border:1px solid #e8eaed;border-radius:12px;padding:14px 16px}
+.kpi .l{color:#5f6368;font-size:12px} .kpi .v{font-size:26px;font-weight:700;color:#1a73e8}
+table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}
+th,td{text-align:right;padding:8px 10px;border-bottom:1px solid #eee} th{color:#5f6368;font-weight:500;background:#f8f9fa}
+td.site{font-weight:700;color:#202124}
+.note{color:#5f6368;font-size:13px;margin-top:8px;border-top:1px dashed #dadce0;padding-top:12px}
+@media print{.toolbar{display:none}body{background:#fff}.report{border:0;box-shadow:none;margin:0;max-width:100%;padding:10px}}
+</style></head>
+<body>
+<div class="toolbar"><button onclick="window.print()">🖨️ הדפס / שמור כ-PDF</button><span>✏️ הדוח פתוח לעריכה — לחצי על כל טקסט כדי לשנות, ואז הדפיסי או שמרי כ-PDF</span></div>
+<div class="report" contenteditable="true">
+<h1>דוח ביצועים — קבוצת החנויות</h1>
+<p class="meta">תקופה: ${period} · הופק בתאריך: ${today}</p>
+<div class="kpis">
+<div class="kpi"><div class="l">סה&quot;כ הכנסות (כל החנויות)</div><div class="v">₪${nf(totalRev)}</div></div>
+<div class="kpi"><div class="l">מספר חנויות</div><div class="v">${sites.length}</div></div>
+<div class="kpi"><div class="l">סה&quot;כ Sessions</div><div class="v">${nf(totalSess)}</div></div>
+</div>
+<h2>תקציר מנהלים</h2>
+<p>בתקופה הנסקרת (${period}) ההכנסות הכוללות עמדו על ₪${nf(totalRev)}. [לחצי כאן כדי לכתוב את התובנות והמסקנות שלך — הטקסט פתוח לעריכה.]</p>
+<h2>השוואת חנויות</h2>
+<table><thead><tr><th>חנות</th><th>הכנסות</th><th>הזמנות</th><th>Sessions</th><th>המרה</th><th>קליקים אורגניים</th><th>מילים מדורגות</th><th>% Top 10</th><th>ROAS</th></tr></thead><tbody>${rows}</tbody></table>
+<h2>הערות והמלצות</h2>
+<p class="note">[הוסיפי כאן הערות, המלצות ופעולות להמשך — הכל ניתן לעריכה ולמחיקה.]</p>
+</div>
+</body></html>`;
+      const w = window.open("", "_blank");
+      if (!w) { setStatus("חלון הדוח נחסם — אפשרי חלונות קופצים (popups) לאתר ונסי שוב", "error"); return; }
+      w.document.write(html); w.document.close();
     }
     function renderCompare(d) {
       const NAMES = { homepetcenter:"homepetcenter", quickpet:"quickpet", tiktakpet:"tiktakpet" };
