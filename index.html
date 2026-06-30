@@ -1435,7 +1435,8 @@
       setStatus("בונה דוח… (אוסף נתונים מ-3 תקופות לכל חנות)", "info");
       let d;
       try {
-        const res = await fetch(`${BASE}/api/report?range=${currentRange}`, { headers: { "X-Access-Key": accessKey } });
+        let q = (customStart && customEnd) ? `?start=${customStart}&end=${customEnd}` : `?range=${currentRange}`;
+        const res = await fetch(`${BASE}/api/report${q}`, { headers: { "X-Access-Key": accessKey } });
         if (res.status === 401) { showLogin(); return; }
         d = await res.json(); if (d.error) throw new Error(d.error);
       } catch (e) { setStatus("שגיאה: " + e.message, "error"); return; }
