@@ -1451,6 +1451,20 @@
       const totalSess = sites.reduce((a, s) => a + (s.now.sessions || 0), 0);
       // cross-store current comparison
       const cmpRows = sites.map((s) => `<tr><td class="site">${NM[s.site] || s.site}</td><td>₪${nf(s.now.revenue)}</td><td>${nf(s.now.orders)}</td><td>₪${nf(s.now.aov)}</td><td>${nf(s.now.sessions)}</td><td>${nf(s.now.gscClicks)}</td></tr>`).join("");
+      // Monthly net-sales trend (last 6 calendar months) — brand rows + group total
+      const months = d.monthlyMonths || [];
+      const bySite = d.monthlyBySite || {};
+      const monthHeaders = months.map((m) => `<th>${m}</th>`).join("");
+      const monthRows = sites.map((s) => {
+        const arr = bySite[s.site] || [];
+        const cells = arr.map((m) => `<td>₪${nf(m.net)}</td>`).join("");
+        return `<tr><td class="site">${NM[s.site] || s.site}</td>${cells}<td>${pct(arr.length ? arr[arr.length - 1].net : 0, arr.length ? arr[0].net : 0)}</td></tr>`;
+      }).join("");
+      const groupCells = months.map((_, i) => { const tot = sites.reduce((a, s) => a + (((bySite[s.site] || [])[i] || {}).net || 0), 0); return `<td><b>₪${nf(tot)}</b></td>`; }).join("");
+      const gFirst = sites.reduce((a, s) => a + (((bySite[s.site] || [])[0] || {}).net || 0), 0);
+      const gLast = sites.reduce((a, s) => a + (((bySite[s.site] || [])[months.length - 1] || {}).net || 0), 0);
+      const monthlySection = `<h2>מגמת מכירות נטו לפי מותג — ${months.length} חודשים אחרונים</h2>
+<table><thead><tr><th>מותג</th>${monthHeaders}<th>שינוי</th></tr></thead><tbody>${monthRows}<tr style="background:#f1f3f4"><td class="site">סה&quot;כ קבוצה</td>${groupCells}<td>${pct(gLast, gFirst)}</td></tr></tbody></table>`;
       // per-store detailed section with 6mo + YoY
       const fmtMoney = (v) => "₪" + nf(v);
       const perStore = sites.map((s) => {
@@ -1499,6 +1513,7 @@ td.site,td.m{font-weight:700;color:#202124}
 <p>בתקופה הנסקרת (${period}) ההכנסות הכוללות של שלוש החנויות עמדו על ₪${nf(totalRev)} מ-${nf(totalOrders)} הזמנות. [לחצי כאן כדי לכתוב תובנות ומסקנות — פתוח לעריכה.]</p>
 <h2>השוואת חנויות — תקופה נוכחית</h2>
 <table><thead><tr><th>חנות</th><th>הכנסות</th><th>הזמנות</th><th>ערך הזמנה</th><th>Sessions</th><th>קליקים אורגניים</th></tr></thead><tbody>${cmpRows}</tbody></table>
+${monthlySection}
 ${perStore}
 <h2>הערות והמלצות</h2>
 <p class="note">[הוסיפי כאן הערות, המלצות ופעולות להמשך לכל חנות — הכל ניתן לעריכה ולמחיקה.]</p>
