@@ -1485,9 +1485,10 @@
       // per-store detailed section with 6mo + YoY
       const fmtMoney = (v) => "₪" + nf(v);
       const perStore = sites.map((s) => {
-        const row = (label, k, fmt) => `<tr><td class="m">${label}</td><td>${fmt(s.now[k])}</td><td>${fmt(s.h6[k])}</td><td>${pct(s.now[k], s.h6[k])}</td><td>${fmt(s.y1[k])}</td><td>${pct(s.now[k], s.y1[k])}</td></tr>`;
+        const pv = s.prev || {};
+        const row = (label, k, fmt) => `<tr><td class="m">${label}</td><td>${fmt(s.now[k])}</td><td>${fmt(pv[k])}</td><td>${pct(s.now[k], pv[k])}</td><td>${fmt(s.h6[k])}</td><td>${pct(s.now[k], s.h6[k])}</td><td>${fmt(s.y1[k])}</td><td>${pct(s.now[k], s.y1[k])}</td></tr>`;
         return `<h2>${NM[s.site] || s.site}</h2>
-<table><thead><tr><th>מדד</th><th>תקופה נוכחית</th><th>לפני חצי שנה</th><th>שינוי</th><th>שנה שעברה</th><th>שינוי שנתי</th></tr></thead><tbody>
+<table><thead><tr><th>מדד</th><th>תקופה נוכחית</th><th>חודש קודם</th><th>שינוי חודשי</th><th>לפני חצי שנה</th><th>שינוי</th><th>שנה שעברה</th><th>שינוי שנתי</th></tr></thead><tbody>
 ${row("מכירות ברוטו", "gross", fmtMoney)}
 ${row("מכירות נטו (כולל משלוח)", "net", fmtMoney)}
 ${row("הזמנות", "orders", nf)}
