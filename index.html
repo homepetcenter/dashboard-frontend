@@ -1515,7 +1515,7 @@ ${row("קליקים אורגניים", "gscClicks", nf)}
 </div>`;
       const html = `<!DOCTYPE html><html dir="rtl" lang="he"><head><meta charset="utf-8"><title>דוח ביצועים — ${period}</title>
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700;800&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"><\/script>
 <style>
 *{box-sizing:border-box} body{font-family:'Heebo',Arial,sans-serif;color:#3c4043;margin:0;background:#f1f3f4}
 .toolbar{position:sticky;top:0;background:#1a73e8;color:#fff;padding:10px 18px;display:flex;gap:14px;align-items:center;font-size:14px;z-index:9}
@@ -1574,7 +1574,7 @@ ${conclSection}
     new Chart(g('cOvp'),{type:'bar',data:{labels:CD.ovp.map(o=>o.name),datasets:[{label:'ממומן',data:CD.ovp.map(o=>o.paid),backgroundColor:'#ea4335'},{label:'אורגני',data:CD.ovp.map(o=>o.org),backgroundColor:'#34a853'},{label:'ישיר',data:CD.ovp.map(o=>o.direct),backgroundColor:'#1a73e8'},{label:'אחר',data:CD.ovp.map(o=>o.other),backgroundColor:'#9aa0a6'}]},options:Object.assign({},OPT,{scales:{x:{stacked:true},y:{stacked:true}}})});
   }
   drawCharts();
-</script>
+<\/script>
 </body></html>`;
       const w = window.open("", "_blank");
       if (!w) { setStatus("חלון הדוח נחסם — אפשרי חלונות קופצים (popups) לאתר ונסי שוב", "error"); return; }
