@@ -1454,9 +1454,10 @@
       const totalOrders = sites.reduce((a, s) => a + (s.now.orders || 0), 0);
       const totalSess = sites.reduce((a, s) => a + (s.now.sessions || 0), 0);
       // cross-store current comparison — gross + net side by side
-      const cmpRows = sites.map((s) => `<tr><td class="site">${NM[s.site] || s.site}</td><td>₪${nf(s.now.gross)}</td><td>₪${nf(s.now.net)}</td><td>${nf(s.now.orders)}</td><td>₪${nf(s.now.aov)}</td><td>${nf(s.now.sessions)}</td><td>${nf(s.now.gscClicks)}</td></tr>`).join("");
-      const totalClicks = sites.reduce((a, s) => a + (s.now.gscClicks || 0), 0);
-      const cmpTotalRow = `<tr style="background:#f1f3f4;font-weight:700"><td class="site">סה&quot;כ</td><td>₪${nf(totalGross)}</td><td>₪${nf(totalNet)}</td><td>${nf(totalOrders)}</td><td>₪${nf(totalOrders ? Math.round(totalGross / totalOrders) : 0)}</td><td>${nf(totalSess)}</td><td>${nf(totalClicks)}</td></tr>`;
+      const pcCell = (v) => (v == null ? "—" : nf(v));
+      const cmpRows = sites.map((s) => `<tr><td class="site">${NM[s.site] || s.site}</td><td>₪${nf(s.now.net)}</td><td>₪${nf(s.now.gross)}</td><td>${nf(s.now.orders)}</td><td>₪${nf(s.now.aov)}</td><td>${nf(s.now.items)}</td><td>${pcCell(s.now.productsCount)}</td><td>₪${nf(s.now.refunds)}</td><td>${pct(s.now.net, s.prev && s.prev.net)}</td></tr>`).join("");
+      const T = sites.reduce((a, s) => { a.net += s.now.net || 0; a.gross += s.now.gross || 0; a.orders += s.now.orders || 0; a.items += s.now.items || 0; a.pc += (s.now.productsCount || 0); a.refunds += s.now.refunds || 0; a.prevNet += (s.prev && s.prev.net) || 0; return a; }, { net: 0, gross: 0, orders: 0, items: 0, pc: 0, refunds: 0, prevNet: 0 });
+      const cmpTotalRow = `<tr style="background:#f1f3f4;font-weight:700"><td class="site">סה&quot;כ</td><td>₪${nf(T.net)}</td><td>₪${nf(T.gross)}</td><td>${nf(T.orders)}</td><td>—</td><td>${nf(T.items)}</td><td>${nf(T.pc)}</td><td>₪${nf(T.refunds)}</td><td>${pct(T.net, T.prevNet)}</td></tr>`;
       // Monthly net-sales trend (last 6 calendar months) — brand rows + group total
       const months = d.monthlyMonths || [];
       const bySite = d.monthlyBySite || {};
@@ -1550,8 +1551,9 @@ td.site,td.m{font-weight:700;color:#202124}
 </div>
 <h2>תקציר מנהלים</h2>
 <p>בתקופה הנסקרת (${period}) מכירות הברוטו הכוללות של שלוש החנויות עמדו על ₪${nf(totalGross)} (נטו כולל משלוח: ₪${nf(totalNet)}) מ-${nf(totalOrders)} הזמנות. [לחצי כאן כדי לכתוב תובנות ומסקנות — פתוח לעריכה.]</p>
-<h2>השוואת חנויות — תקופה נוכחית</h2>
-<table><thead><tr><th>חנות</th><th>ברוטו</th><th>נטו (כולל משלוח)</th><th>הזמנות</th><th>ערך הזמנה</th><th>Sessions</th><th>קליקים אורגניים</th></tr></thead><tbody>${cmpRows}${cmpTotalRow}</tbody></table>
+<h2>טבלת ביצועים מסכמת לפי מותג</h2>
+<table><thead><tr><th>מותג</th><th>מכירות נטו</th><th>מכירות ברוטו</th><th>הזמנות</th><th>AOV</th><th>מוצרים</th><th>סוגים</th><th>החזרות</th><th>לעומת חודש קודם</th></tr></thead><tbody>${cmpRows}${cmpTotalRow}</tbody></table>
+<p class="note">מכירות נטו כוללות משלוח (ללא מע&quot;מ) · מוצרים = יחידות שנמכרו · סוגים = מוצרים שונים · "לעומת חודש קודם" = שינוי במכירות נטו מול התקופה הקודמת. (לחנויות עם Analytics לא זמין, "סוגים" מוצג כ-—).</p>
 ${chartsSection}
 ${monthlySection}
 ${adsSection}
