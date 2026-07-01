@@ -1575,10 +1575,10 @@ ${conclSection}
       ];
       if (!viewer) wooCols.push({key:"customers",label:"לקוחות משלמים"}); // CEO: no paying-customers
       mountTable("cmpWooMount", wooCols, wooRows, { search:false, defaultSort:{key:"revenue",dir:"desc"} });
-      // Detailed financial breakdown (gross/net/tax/shipping/refunds/coupons)
-      const finRows = ok.filter((s)=>s.woo).map((s)=>({ site:NAMES[s.site]||s.site, gross:s.woo.grossSales||0, net:s.woo.netRevenue||0, tax:s.woo.taxes||0, ship:s.woo.shipping||0, refunds:s.woo.refunds||0, coupons:s.woo.coupons||0, items:s.woo.items||0 }));
+      // Financial breakdown — gross + net only (net includes shipping; tax/shipping shown inside net)
+      const finRows = ok.filter((s)=>s.woo).map((s)=>({ site:NAMES[s.site]||s.site, gross:s.woo.grossSales||0, net:s.woo.netRevenue||0, refunds:s.woo.refunds||0, items:s.woo.items||0 }));
       mountTable("cmpFinMount", [
-        {key:"site",label:"אתר",align:"right"},{key:"gross",label:"ברוטו (₪)",type:"num"},{key:"net",label:"נטו (₪)",type:"num"},{key:"tax",label:'מע"מ (₪)',type:"num"},{key:"ship",label:"משלוח (₪)",type:"num"},{key:"refunds",label:"החזרים (₪)",type:"num"},{key:"coupons",label:"קופונים (₪)",type:"num"},{key:"items",label:"פריטים",type:"num"},
+        {key:"site",label:"אתר",align:"right"},{key:"gross",label:"ברוטו (₪)",type:"num"},{key:"net",label:"נטו כולל משלוח (₪)",type:"num"},{key:"refunds",label:"החזרים (₪)",type:"num"},{key:"items",label:"פריטים",type:"num"},
       ], finRows, { search:false, defaultSort:{key:"gross",dir:"desc"} });
       if (!viewer) loadLiveSites();
     }
@@ -2255,10 +2255,10 @@ ${conclSection}
       const ps = d.periodSales || {};
       const k = (v, l, extra) => `<div class="card"><div class="kpi-label">${l}</div><div class="kpi-val ${extra || ""}">${v}</div></div>`;
       document.getElementById("wooKpis").innerHTML =
-        k("₪" + fmt(ps.revenue || 0), "מכירות בתקופה", "") +
+        k("₪" + fmt(ps.grossSales || 0), "מכירות ברוטו", "") +
+        k("₪" + fmt(ps.netSales || 0), "מכירות נטו (כולל משלוח)", "") +
         k(fmt(ps.orders || 0), "הזמנות", "") +
-        k("₪" + fmt(ps.avgOrder || 0), "ערך הזמנה ממוצע", "") +
-        k(fmt((d.outOfStock || []).length), "מוצרים שאזלו", (d.outOfStock || []).length ? "!text-rose-600" : "");
+        k("₪" + fmt(ps.avgOrder || 0), "ערך הזמנה ממוצע", "");
       const STC = { completed: "bg-emerald-100 text-emerald-700", processing: "bg-blue-100 text-blue-700", "on-hold": "bg-amber-100 text-amber-700", pending: "bg-slate-100 text-slate-600", cancelled: "bg-rose-100 text-rose-700", refunded: "bg-rose-100 text-rose-700", failed: "bg-rose-100 text-rose-700" };
       document.getElementById("wooStatus").innerHTML = (d.ordersByStatus || []).map((x) => `<span class="text-sm px-3 py-1 rounded-full ${STC[x.status] || "bg-slate-100 text-slate-600"}">${x.label}: <b>${fmt(x.count)}</b></span>`).join("") || '<span class="text-slate-400 text-sm">אין נתונים</span>';
       mountTable("wooOrders", [{ key: "id", label: "מס׳", align: "right" }, { key: "date", label: "תאריך" }, { key: "status", label: "סטטוס" }, { key: "items", label: "פריטים", type: "num" }, { key: "total", label: "סכום", type: "num" }], (d.recentOrders || []).slice(), { search: false, totals: false, defaultSort: { key: "date", dir: "desc" } });
