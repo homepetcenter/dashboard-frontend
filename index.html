@@ -330,7 +330,8 @@
   <section data-screen="sales" class="hidden">
     <div id="slSource" class="text-xs text-slate-400 mb-2"></div>
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-      <div class="card"><div class="kpi-label">הכנסות (₪)</div><div class="flex items-end gap-2"><div id="slRevenue" class="kpi-val !text-emerald-600">—</div><div id="slRevenue_d" class="delta"></div></div></div>
+      <div class="card"><div class="kpi-label">מכירות ברוטו (₪)</div><div class="flex items-end gap-2"><div id="slRevenue" class="kpi-val !text-emerald-600">—</div><div id="slRevenue_d" class="delta"></div></div></div>
+      <div class="card"><div class="kpi-label">מכירות נטו כולל משלוח (₪)</div><div class="flex items-end gap-2"><div id="slNet" class="kpi-val !text-blue-600">—</div></div></div>
       <div class="card"><div class="kpi-label">עסקאות</div><div class="flex items-end gap-2"><div id="slTx" class="kpi-val !text-emerald-600">—</div><div id="slTx_d" class="delta"></div></div></div>
       <div class="card"><div class="kpi-label">עסקה ממוצעת (₪)</div><div class="flex items-end gap-2"><div id="slAov" class="kpi-val !text-emerald-600">—</div><div id="slAov_d" class="delta"></div></div></div>
       <div class="card"><div class="kpi-label">אחוז המרה</div><div class="flex items-end gap-2"><div id="slConv" class="kpi-val !text-emerald-600">—</div><div id="slConv_d" class="delta"></div></div></div>
@@ -1447,11 +1448,13 @@
       const today = new Date().toLocaleDateString("he-IL");
       const nf = (n) => Math.round(Number(n || 0)).toLocaleString("en-US");
       const pct = (cur, base) => { if (!base) return "—"; const c = Math.round(((cur - base) / base) * 100); const col = c > 0 ? "#1e8e3e" : c < 0 ? "#d93025" : "#5f6368"; return `<span style="color:${col};font-weight:600">${c > 0 ? "▲" : c < 0 ? "▼" : ""}${Math.abs(c)}%</span>`; };
-      const totalRev = sites.reduce((a, s) => a + (s.now.revenue || 0), 0);
+      const totalGross = sites.reduce((a, s) => a + (s.now.gross || 0), 0);
+      const totalNet = sites.reduce((a, s) => a + (s.now.net || 0), 0);
+      const totalRev = totalNet;
       const totalOrders = sites.reduce((a, s) => a + (s.now.orders || 0), 0);
       const totalSess = sites.reduce((a, s) => a + (s.now.sessions || 0), 0);
-      // cross-store current comparison
-      const cmpRows = sites.map((s) => `<tr><td class="site">${NM[s.site] || s.site}</td><td>₪${nf(s.now.revenue)}</td><td>${nf(s.now.orders)}</td><td>₪${nf(s.now.aov)}</td><td>${nf(s.now.sessions)}</td><td>${nf(s.now.gscClicks)}</td></tr>`).join("");
+      // cross-store current comparison — gross + net side by side
+      const cmpRows = sites.map((s) => `<tr><td class="site">${NM[s.site] || s.site}</td><td>₪${nf(s.now.gross)}</td><td>₪${nf(s.now.net)}</td><td>${nf(s.now.orders)}</td><td>₪${nf(s.now.aov)}</td><td>${nf(s.now.sessions)}</td><td>${nf(s.now.gscClicks)}</td></tr>`).join("");
       // Monthly net-sales trend (last 6 calendar months) — brand rows + group total
       const months = d.monthlyMonths || [];
       const bySite = d.monthlyBySite || {};
@@ -1467,14 +1470,14 @@
       const monthlySection = `<h2>מגמת מכירות נטו לפי מותג — ${months.length} חודשים אחרונים</h2>
 <table><thead><tr><th>מותג</th>${monthHeaders}<th>שינוי</th></tr></thead><tbody>${monthRows}<tr style="background:#f1f3f4"><td class="site">סה&quot;כ קבוצה</td>${groupCells}<td>${pct(gLast, gFirst)}</td></tr></tbody></table>`;
       // Google Ads per brand
-      const adsRows = sites.filter((s) => s.ads).map((s) => { const a = s.ads, rv = s.now.revenue; const roas = a.cost ? (rv / a.cost).toFixed(2) : 0; return `<tr><td class="site">${NM[s.site] || s.site}</td><td>${nf(a.clicks)}</td><td>₪${nf(a.cost)}</td><td>₪${nf(rv)}</td><td>${roas}x</td><td>₪${a.cpc}</td></tr>`; }).join("");
-      const adsTotals = sites.reduce((t, s) => { if (s.ads) { t.clicks += s.ads.clicks; t.cost += s.ads.cost; t.rev += s.now.revenue; } return t; }, { clicks: 0, cost: 0, rev: 0 });
+      const adsRows = sites.filter((s) => s.ads).map((s) => { const a = s.ads, rv = s.now.net; const roas = a.cost ? (rv / a.cost).toFixed(2) : 0; return `<tr><td class="site">${NM[s.site] || s.site}</td><td>${nf(a.clicks)}</td><td>₪${nf(a.cost)}</td><td>₪${nf(rv)}</td><td>${roas}x</td><td>₪${a.cpc}</td></tr>`; }).join("");
+      const adsTotals = sites.reduce((t, s) => { if (s.ads) { t.clicks += s.ads.clicks; t.cost += s.ads.cost; t.rev += s.now.net; } return t; }, { clicks: 0, cost: 0, rev: 0 });
       const adsSection = adsRows ? `<h2>📣 Google Ads לפי מותג</h2><table><thead><tr><th>מותג</th><th>קליקים</th><th>עלות פרסום</th><th>הכנסת חנות</th><th>ROAS משוקלל</th><th>CPC</th></tr></thead><tbody>${adsRows}<tr style="background:#f1f3f4"><td class="site">סה&quot;כ</td><td>${nf(adsTotals.clicks)}</td><td>₪${nf(adsTotals.cost)}</td><td>₪${nf(adsTotals.rev)}</td><td>${adsTotals.cost ? (adsTotals.rev / adsTotals.cost).toFixed(2) : 0}x</td><td>—</td></tr></tbody></table><p class="note">עלות = הוצאת Google Ads בפועל · הכנסת חנות = מכירות WooCommerce בפועל · ROAS משוקלל = הכנסת חנות ÷ עלות פרסום.</p>` : "";
       // Organic vs paid per brand
       const PAIDCH = ["Paid Search", "Paid Shopping", "Paid Social", "Display", "Cross-network", "Paid Other"];
       const groupChan = (chs) => { let paid = 0, org = 0, direct = 0, other = 0, total = 0; (chs || []).forEach((c) => { total += c.revenue; if (c.name === "Organic Search" || c.name === "Organic Shopping") org += c.revenue; else if (c.name === "Direct") direct += c.revenue; else if (PAIDCH.includes(c.name)) paid += c.revenue; else other += c.revenue; }); return { paid, org, direct, other, total: total || 1 }; };
-      const ovpRows = sites.map((s) => { const g = groupChan(s.channels); const pp = (x) => Math.round((x / g.total) * 100); return `<tr><td class="site">${NM[s.site] || s.site}</td><td>₪${nf(g.total)}</td><td>${pp(g.paid)}% · ₪${nf(g.paid)}</td><td>${pp(g.org)}% · ₪${nf(g.org)}</td><td>${pp(g.direct)}% · ₪${nf(g.direct)}</td><td>${pp(g.other)}% · ₪${nf(g.other)}</td></tr>`; }).join("");
-      const ovpSection = `<h2>אורגני מול ממומן (מקור: GA4)</h2><table><thead><tr><th>מותג</th><th>סה&quot;כ הכנסה</th><th>ממומן</th><th>אורגני</th><th>ישיר</th><th>אחר</th></tr></thead><tbody>${ovpRows}</tbody></table><p class="note">ממומן = Paid + Cross-network · אורגני = Organic · ישיר = Direct · אחר = Referral/Unassigned. הכנסת GA4 כוללת מע&quot;מ/משלוח.</p>`;
+      const ovpRows = sites.map((s) => { const g = groupChan(s.channels); const wooTotal = s.now.net || 0; const pp = (x) => Math.round((x / g.total) * 100); const amt = (x) => Math.round((x / g.total) * wooTotal); return `<tr><td class="site">${NM[s.site] || s.site}</td><td>₪${nf(wooTotal)}</td><td>${pp(g.paid)}% · ₪${nf(amt(g.paid))}</td><td>${pp(g.org)}% · ₪${nf(amt(g.org))}</td><td>${pp(g.direct)}% · ₪${nf(amt(g.direct))}</td><td>${pp(g.other)}% · ₪${nf(amt(g.other))}</td></tr>`; }).join("");
+      const ovpSection = `<h2>אורגני מול ממומן</h2><table><thead><tr><th>מותג</th><th>סה&quot;כ הכנסה (WooCommerce)</th><th>ממומן</th><th>אורגני</th><th>ישיר</th><th>אחר</th></tr></thead><tbody>${ovpRows}</tbody></table><p class="note">סה&quot;כ הכנסה = מכירות WooCommerce בפועל (נטו כולל משלוח). ההתפלגות (ממומן/אורגני/ישיר/אחר) לפי אחוזי הערוצים של GA4, מוחלת על ההכנסה האמיתית. ממומן = Paid + Cross-network · אורגני = Organic · ישיר = Direct · אחר = Referral/Unassigned.</p>`;
       const conclSection = `<h2>מסקנות והמלצות לפי מותג</h2>` + sites.map((s) => `<p><b>${NM[s.site] || s.site}:</b> [כתבי כאן מסקנות והמלצות — פתוח לעריכה]</p>`).join("");
       // per-store detailed section with 6mo + YoY
       const fmtMoney = (v) => "₪" + nf(v);
@@ -1482,10 +1485,10 @@
         const row = (label, k, fmt) => `<tr><td class="m">${label}</td><td>${fmt(s.now[k])}</td><td>${fmt(s.h6[k])}</td><td>${pct(s.now[k], s.h6[k])}</td><td>${fmt(s.y1[k])}</td><td>${pct(s.now[k], s.y1[k])}</td></tr>`;
         return `<h2>${NM[s.site] || s.site}</h2>
 <table><thead><tr><th>מדד</th><th>תקופה נוכחית</th><th>לפני חצי שנה</th><th>שינוי</th><th>שנה שעברה</th><th>שינוי שנתי</th></tr></thead><tbody>
-${row("הכנסות", "revenue", fmtMoney)}
+${row("מכירות ברוטו", "gross", fmtMoney)}
+${row("מכירות נטו (כולל משלוח)", "net", fmtMoney)}
 ${row("הזמנות", "orders", nf)}
 ${row("ערך הזמנה ממוצע", "aov", fmtMoney)}
-${row("נטו (אחרי החזרים)", "net", fmtMoney)}
 ${row("Sessions", "sessions", nf)}
 ${row("משתמשים", "users", nf)}
 ${row("קליקים אורגניים", "gscClicks", nf)}
@@ -1516,14 +1519,15 @@ td.site,td.m{font-weight:700;color:#202124}
 <h1>דוח ביצועים — קבוצת החנויות</h1>
 <p class="meta">תקופה: ${period} · השוואה מול חצי שנה אחורה ומול שנה שעברה (אותו אורך תקופה) · הופק: ${today}</p>
 <div class="kpis">
-<div class="kpi"><div class="l">סה&quot;כ הכנסות</div><div class="v">₪${nf(totalRev)}</div></div>
+<div class="kpi"><div class="l">סה&quot;כ מכירות ברוטו</div><div class="v">₪${nf(totalGross)}</div></div>
+<div class="kpi"><div class="l">סה&quot;כ מכירות נטו (כולל משלוח)</div><div class="v">₪${nf(totalNet)}</div></div>
 <div class="kpi"><div class="l">סה&quot;כ הזמנות</div><div class="v">${nf(totalOrders)}</div></div>
 <div class="kpi"><div class="l">סה&quot;כ Sessions</div><div class="v">${nf(totalSess)}</div></div>
 </div>
 <h2>תקציר מנהלים</h2>
-<p>בתקופה הנסקרת (${period}) ההכנסות הכוללות של שלוש החנויות עמדו על ₪${nf(totalRev)} מ-${nf(totalOrders)} הזמנות. [לחצי כאן כדי לכתוב תובנות ומסקנות — פתוח לעריכה.]</p>
+<p>בתקופה הנסקרת (${period}) מכירות הברוטו הכוללות של שלוש החנויות עמדו על ₪${nf(totalGross)} (נטו כולל משלוח: ₪${nf(totalNet)}) מ-${nf(totalOrders)} הזמנות. [לחצי כאן כדי לכתוב תובנות ומסקנות — פתוח לעריכה.]</p>
 <h2>השוואת חנויות — תקופה נוכחית</h2>
-<table><thead><tr><th>חנות</th><th>הכנסות</th><th>הזמנות</th><th>ערך הזמנה</th><th>Sessions</th><th>קליקים אורגניים</th></tr></thead><tbody>${cmpRows}</tbody></table>
+<table><thead><tr><th>חנות</th><th>ברוטו</th><th>נטו (כולל משלוח)</th><th>הזמנות</th><th>ערך הזמנה</th><th>Sessions</th><th>קליקים אורגניים</th></tr></thead><tbody>${cmpRows}</tbody></table>
 ${monthlySection}
 ${adsSection}
 ${ovpSection}
@@ -1569,9 +1573,9 @@ ${conclSection}
         {key:"site",label:"אתר",align:"right"},{key:"cost",label:"עלות פרסום (₪)",type:"num"},{key:"adrev",label:"הכנסת חנות (₪)",type:"num"},{key:"roas",label:"ROAS משוקלל",type:"x"},{key:"cpa",label:"עלות פרסום להזמנה (₪)",type:"num"}],
         ok.map((s)=>({ site:NAMES[s.site]||s.site, cost:s.adCost||0, adrev:s.adRevenue||0, roas:s.roas||0, cpa:s.cpa||0 })), { search:false, defaultSort:{key:"cost",dir:"desc"} });
       // WooCommerce store comparison (only sites with woo data)
-      const wooRows = ok.filter((s)=>s.woo).map((s)=>({ site:NAMES[s.site]||s.site, orders:s.woo.orders||0, revenue:s.woo.revenue||0, aov:s.woo.avgOrder||0, customers:s.woo.payingCustomers ?? "—" }));
+      const wooRows = ok.filter((s)=>s.woo).map((s)=>({ site:NAMES[s.site]||s.site, orders:s.woo.orders||0, gross:s.woo.grossSales||0, net:s.woo.netRevenue||0, aov:s.woo.avgOrder||0, customers:s.woo.payingCustomers ?? "—" }));
       const wooCols = [
-        {key:"site",label:"אתר",align:"right"},{key:"orders",label:"הזמנות",type:"num"},{key:"revenue",label:"הכנסה (₪)",type:"num"},{key:"aov",label:"ערך הזמנה (₪)",type:"num"},
+        {key:"site",label:"אתר",align:"right"},{key:"orders",label:"הזמנות",type:"num"},{key:"gross",label:"ברוטו (₪)",type:"num"},{key:"net",label:"נטו כולל משלוח (₪)",type:"num"},{key:"aov",label:"ערך הזמנה (₪)",type:"num"},
       ];
       if (!viewer) wooCols.push({key:"customers",label:"לקוחות משלמים"}); // CEO: no paying-customers
       mountTable("cmpWooMount", wooCols, wooRows, { search:false, defaultSort:{key:"revenue",dir:"desc"} });
@@ -1596,7 +1600,7 @@ ${conclSection}
     function renderSales(d) {
       const pr = d.prev || {};
       const ss = document.getElementById("slSource"); if (ss) ss.textContent = "💰 מקור נתוני הכסף: " + (d.revenueSource || "GA4") + (d.netRevenue != null ? ` · נטו: ₪${fmt(d.netRevenue)} · החזרים: ₪${fmt(d.refunds || 0)}` : "");
-      setKpi("slRevenue", fmt(d.revenue), d.revenue, pr.revenue); setKpi("slTx", fmt(d.transactions), d.transactions, pr.transactions);
+      setKpi("slRevenue", fmt(d.revenue), d.revenue, pr.revenue); const slN = document.getElementById("slNet"); if (slN) slN.textContent = "₪" + fmt(d.netRevenue != null ? d.netRevenue : d.revenue); setKpi("slTx", fmt(d.transactions), d.transactions, pr.transactions);
       setKpi("slAov", fmt(d.aov), d.aov, pr.aov); setKpi("slConv", (d.conversionRate ?? 0)+"%", d.conversionRate, pr.conversionRate);
       mountTable("slProductsMount", [ {key:"name",label:"מוצר",align:"right",long:true},{key:"viewed",label:"צפיות",type:"num"},{key:"carted",label:"לסל",type:"num"},{key:"purchased",label:"נרכש",type:"num"},{key:"revenue",label:"הכנסה (₪)",type:"num"},{key:"buyRate",label:"% רכישה",type:"pct"} ], (d.products||[]).slice(), { defaultSort:{key:"revenue",dir:"desc"}, scroll:true });
       const cv = d.customerValue || {};
