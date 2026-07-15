@@ -1,0 +1,90 @@
+    body { font-family: system-ui, "Segoe UI", Arial, sans-serif; }
+    .range-btn { background:#fff; color:#475569; } .range-btn:hover { background:#f1f5f9; } .range-btn.active { background:#1d4ed8; color:#fff; }
+    .tab-btn { color:#64748b; border-bottom:3px solid transparent; } .tab-btn:hover { color:#1d4ed8; } .tab-btn.active { color:#1d4ed8; border-bottom-color:#1d4ed8; font-weight:600; }
+    .card { background:#fff; border-radius:1rem; box-shadow:0 1px 2px rgba(0,0,0,.05); padding:1.1rem 1.25rem; }
+    .kpi-label { color:#64748b; font-size:.8rem; margin-bottom:.25rem; } .kpi-val { font-size:1.7rem; font-weight:700; color:#1d4ed8; line-height:1.1; }
+    .delta { font-size:.78rem; font-weight:600; } .delta.up { color:#16a34a; } .delta.down { color:#dc2626; } .delta.flat { color:#94a3b8; }
+    table th { white-space:nowrap; } .srt:hover { color:#1d4ed8; }
+    .sec-src { font-size:.62rem; font-weight:700; padding:.12rem .55rem; border-radius:999px; margin-inline-start:.55rem; vertical-align:middle; white-space:nowrap; letter-spacing:.02em; }
+    #loadingBar { position:fixed; top:0; left:0; height:3px; width:0; background:#1d4ed8; z-index:60; transition:width .3s; opacity:0; }
+    #loadingBar.loading { width:90%; opacity:1; transition:width 8s cubic-bezier(.1,.7,.1,1); }
+    /* ---- Mobile: comfortable, compact, swipeable ---- */
+    .tab-bar::-webkit-scrollbar, #subnav::-webkit-scrollbar { height:0; }
+    @media (max-width:640px) {
+      body { padding:0.6rem; }
+      .card { padding:0.85rem 0.9rem; border-radius:0.8rem; }
+      h1 { font-size:1.3rem !important; }
+      .kpi-val { font-size:1.35rem; }
+      .kpi-label { font-size:.72rem; }
+      .tab-bar { flex-wrap:nowrap; overflow-x:auto; }
+      .tab-btn { padding:0.7rem 0.7rem; font-size:.8rem; white-space:nowrap; }
+      #subnav { flex-wrap:nowrap !important; overflow-x:auto; -webkit-overflow-scrolling:touch; }
+      #subnav .jump-btn { white-space:nowrap; }
+      #rangeButtons { overflow-x:auto; }
+      .range-btn { white-space:nowrap; }
+      table { font-size:.8rem; }
+      table th, table td { padding-top:.35rem; padding-bottom:.35rem; }
+      .overflow-x-auto { -webkit-overflow-scrolling:touch; }
+    }
+    /* ---- Dark mode ---- */
+    body.dark { background:#0f172a; }
+    body.dark .card, body.dark .tab-bar { background:#1e293b; }
+    body.dark .bg-white { background:#1e293b !important; }
+    body.dark .text-slate-800, body.dark .text-slate-700 { color:#e2e8f0 !important; }
+    body.dark .text-slate-600, body.dark .text-slate-500 { color:#94a3b8 !important; }
+    body.dark .kpi-val { color:#60a5fa; }
+    body.dark input, body.dark select { background:#0f172a; color:#cbd5e1; border-color:#334155; }
+    body.dark .range-btn, body.dark .tbl-export, body.dark #refreshBtn { background:#0f172a; color:#94a3b8; border-color:#334155; }
+    body.dark .range-btn.active { background:#1d4ed8; color:#fff; }
+    body.dark .bg-slate-100 { background:#334155 !important; }
+    body.dark .bg-slate-50 { background:#273449 !important; }
+    body.dark .hover\:bg-slate-50:hover, body.dark .hover\:bg-slate-100:hover { background:#33415588 !important; }
+    body.dark .border-b, body.dark .border-t-2, body.dark .border-slate-100, body.dark .border-slate-200, body.dark .border-slate-300 { border-color:#334155 !important; }
+    body.dark .bg-rose-50 { background:#3b1f2b !important; }
+    body.dark .bg-amber-50 { background:#3a2f17 !important; }
+    body.dark .bg-emerald-50 { background:#16322a !important; }
+    body.dark .bg-blue-50 { background:#1e3a5f !important; }
+    body.dark .bg-red-100 { background:#451a1a !important; }
+    body.dark .jump-btn { background:#334155; color:#94a3b8; }
+    /* ===================== Google Material clean theme ===================== */
+    body { font-family: 'Heebo', 'Google Sans', system-ui, Arial, sans-serif; -webkit-font-smoothing: antialiased; color: #3c4043; }
+    body:not(.dark) { background: #f8f9fa !important; }
+    h1, h2 { font-family: 'Google Sans', 'Heebo', sans-serif; letter-spacing: -.3px; }
+    /* Cards: clean white, soft 1px outline, gentle radius (Material outlined) */
+    .card { border-radius: 14px; padding: 1.3rem 1.45rem; }
+    body:not(.dark) .card { background: #fff; border: 1px solid #e8eaed; box-shadow: 0 1px 2px rgba(60,64,67,.06); }
+    body.dark .card { border: 1px solid #2b3a52; box-shadow: none; }
+    /* KPIs */
+    .kpi-val { color: #1a73e8; font-weight: 500; letter-spacing: -.5px; }
+    .kpi-label { color: #5f6368; font-weight: 500; font-size: .78rem; }
+    /* Primary blue → Google blue, everywhere */
+    .bg-blue-600 { background-color: #1a73e8 !important; }
+    .hover\:bg-blue-700:hover { background-color: #1765cc !important; }
+    .bg-blue-700 { background-color: #1765cc !important; }
+    .text-blue-600 { color: #1a73e8 !important; }
+    .text-emerald-600 { color: #1e8e3e !important; }
+    .text-rose-500, .text-rose-600 { color: #d93025 !important; }
+    /* Tab bar — clean Material */
+    body:not(.dark) .tab-bar { background: #fff; border: 1px solid #e8eaed; box-shadow: 0 1px 2px rgba(60,64,67,.06); }
+    .tab-btn { color: #5f6368; font-weight: 500; border-radius: 8px 8px 0 0; }
+    .tab-btn:hover { color: #1a73e8; background: rgba(26,115,232,.06); }
+    .tab-btn.active { color: #1a73e8; border-bottom-color: #1a73e8; font-weight: 600; }
+    /* Sub-nav chips */
+    .jump-btn { background: #f1f3f4; color: #5f6368; border-radius: 999px; font-weight: 500; }
+    .jump-btn:hover { background: rgba(26,115,232,.1); color: #1a73e8; }
+    /* Range buttons */
+    .range-btn.active { background: #1a73e8; }
+    body:not(.dark) .range-btn { color: #5f6368; }
+    /* Section title — lighter, cleaner */
+    .sec-title { font-family: 'Google Sans','Heebo',sans-serif; font-weight: 600 !important; color: #202124 !important; }
+    .sec-src { font-weight: 600; opacity: .92; }
+    /* Tables — clean Google look */
+    table th { color: #5f6368 !important; font-weight: 500; }
+    body:not(.dark) table th { border-color: #e8eaed; }
+    body:not(.dark) table td { border-color: #f1f3f4; }
+    /* Inputs / selects — Material */
+    input, select { border-radius: 8px; }
+    body:not(.dark) input, body:not(.dark) select { border-color: #dadce0; }
+    /* Scrollbars: subtle */
+    *::-webkit-scrollbar { height: 8px; width: 8px; }
+    *::-webkit-scrollbar-thumb { background: #dadce0; border-radius: 8px; }
