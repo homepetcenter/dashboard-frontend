@@ -81,6 +81,7 @@
 
   <!-- Tabs (6 grouped screens) -->
   <div class="tab-bar card !py-0 px-3 mb-3 flex flex-wrap gap-1">
+    <button data-group="home" class="tab-btn px-4 py-3 text-sm">🏠 בית</button>
     <button data-group="decisions" class="tab-btn px-4 py-3 text-sm">🎯 הזדמנויות ותובנות</button>
     <button data-group="performance" class="tab-btn px-4 py-3 text-sm">📈 ביצועים</button>
     <button data-group="commerce" class="tab-btn px-4 py-3 text-sm">💰 מכירות וחנות</button>
@@ -94,6 +95,13 @@
   <div id="subnav" class="flex flex-wrap gap-2 mb-3 hidden"></div>
   <div id="compareNote" class="text-center text-xs text-slate-400 mb-3"></div>
   <div id="status" class="hidden mb-4 text-center text-sm rounded-lg py-2"></div>
+
+  <!-- HOME: 30-second snapshot of all sites -->
+  <section data-screen="home" class="hidden">
+    <div id="homeTotals" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4"></div>
+    <div id="homeSites" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4"></div>
+    <div class="text-xs text-slate-400 text-center mb-2">נתוני היום מ-GA4 · קליקים 7 ימים מ-Search Console · לחיצה על מותג עוברת לביצועים שלו</div>
+  </section>
 
   <!-- OPPORTUNITIES -->
   <section data-screen="opportunities" class="hidden">
@@ -189,6 +197,15 @@
   </section>
 
   <!-- COMPARE -->
+  <section data-screen="crosscannibal" class="hidden">
+    <div id="xcKpis" class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4"></div>
+    <div class="card">
+      <div class="font-bold text-slate-800 mb-1">🥊 קניבליזציה בין המותגים שלך</div>
+      <div class="text-xs text-slate-400 mb-3">מילים שבהן 2+ מהאתרים שלך (הום פט / טיק טק / קוויק פט) מתחרים זה בזה בגוגל — כדאי להחליט מי "מקבל" כל מילה (מקור: Search Console)</div>
+      <div id="xcMount"></div>
+    </div>
+  </section>
+
   <section data-screen="compare" class="hidden">
     <div class="card mb-4">
       <div class="flex items-center justify-between mb-2"><div class="text-slate-600 font-medium">🟢 מצב חי — משתמשים פעילים עכשיו</div><span class="text-xs text-slate-400">רענון אוטומטי כל 20 שניות</span></div>
@@ -495,6 +512,17 @@
       <div class="text-slate-600 font-medium mb-1">🔴 מוצרים שנדחו</div>
       <div class="text-xs text-slate-400 mb-3">מוצרים שלא מופיעים ב-Shopping — כסף על הרצפה</div>
       <div id="mcProductsMount"></div>
+    </div>
+  </section>
+
+  <!-- PRICE COMPETITIVENESS -->
+  <section data-screen="pricing" class="hidden">
+    <div id="prUnavailable" class="hidden card text-amber-600 text-sm mb-4"></div>
+    <div id="prKpis" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4"></div>
+    <div class="card">
+      <div class="font-bold text-slate-800 mb-1">💸 תחרותיות מחירים מול השוק</div>
+      <div class="text-xs text-slate-400 mb-3">המחיר שלך מול מחיר benchmark של גוגל לאותו מוצר ב-Shopping. אדום = יקר מהשוק ב-5%+ (מקור: Merchant Center Market Insights)</div>
+      <div id="prMount"></div>
     </div>
   </section>
 
