@@ -893,6 +893,34 @@
     </div>
   </section>
 
+  <!-- CONTENT ENRICHMENT (Stage B) -->
+  <section data-screen="enrich" class="hidden">
+    <div id="enrUnavailable" class="hidden card text-amber-600 text-sm mb-4"></div>
+    <div class="card mb-4">
+      <div class="font-bold text-slate-800 mb-1">✍️ מחולל תוכן SEO — טיוטות לאישור</div>
+      <div class="text-xs text-slate-400 mb-3">בחרי מוצר שחסר לו תוכן, ה-AI יציע חבילה מלאה (שם, תיאור, Meta, FAQ, ALT) על סמך הנתונים האמיתיים בלבד. שום דבר לא נכתב לאתר — מאשרים, ומייצאים CSV לייבוא ידני ב-WooCommerce.</div>
+      <div class="flex items-center gap-2 flex-wrap mb-3">
+        <button id="enrLoadList" class="bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-4 py-2 text-sm">🔄 טען מוצרים לטיפול</button>
+        <span id="enrListStatus" class="text-sm text-slate-500"></span>
+        <span class="flex-1"></span>
+        <button id="enrExport" class="hidden tbl-export border border-slate-300 rounded-lg px-4 py-2 text-sm">⬇ ייצא מאושרים ל-CSV (<span id="enrApprovedCount">0</span>)</button>
+      </div>
+      <div id="enrListMount"></div>
+    </div>
+    <div id="enrEditor" class="hidden card">
+      <div class="flex items-center justify-between mb-3">
+        <div class="font-bold text-slate-800" id="enrEditorTitle">טיוטה למוצר</div>
+        <button id="enrRegen" class="text-sm text-blue-600 hover:underline">🔁 צור טיוטה מחדש</button>
+      </div>
+      <div id="enrStatus" class="text-sm text-blue-600 mb-3"></div>
+      <div id="enrFields" class="space-y-4"></div>
+      <div class="flex items-center gap-2 mt-4">
+        <button id="enrApproveAll" class="bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg px-4 py-2 text-sm">✓ אשר את כל השדות המסומנים</button>
+        <button id="enrClose" class="border border-slate-300 rounded-lg px-4 py-2 text-sm">סגור</button>
+      </div>
+    </div>
+  </section>
+
   <!-- RANKS -->
   <section data-screen="ranks" class="hidden">
     <div class="card mb-4">

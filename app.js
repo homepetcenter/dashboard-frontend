@@ -1070,6 +1070,139 @@ ${conclSection}
         { key: "ids", label: "מזהי מוצר", align: "right", long: true },
       ], dups, { defaultSort: { key: "count", dir: "desc" }, scroll: true, totals: false });
     }
+
+    // ===================== Content Enrichment (Stage B) =====================
+    // Approved drafts live in localStorage per site until exported to CSV.
+    const enrKey = () => "enrichApproved_" + document.getElementById("siteSelect").value;
+    const enrGetApproved = () => JSON.parse(localStorage.getItem(enrKey()) || "{}");
+    const enrSaveApproved = (o) => localStorage.setItem(enrKey(), JSON.stringify(o));
+    let enrCurrentDraft = null;
+    async function enrApi(path) {
+      const site = document.getElementById("siteSelect").value;
+      const res = await fetch(`${BASE}${path}${path.includes("?") ? "&" : "?"}site=${encodeURIComponent(site)}`, { headers: { "X-Access-Key": accessKey } });
+      if (res.status === 401) { showLogin(); throw new Error("נדרשת סיסמה"); }
+      const t = await res.text(); const d = t ? JSON.parse(t) : {};
+      if (d.error) throw new Error(d.error); return d;
+    }
+    function enrUpdateExportBtn() {
+      const n = Object.keys(enrGetApproved()).length;
+      document.getElementById("enrApprovedCount").textContent = n;
+      document.getElementById("enrExport").classList.toggle("hidden", n === 0);
+    }
+    async function enrLoadList() {
+      const st = document.getElementById("enrListStatus");
+      st.textContent = "טוען מוצרים לטיפול...";
+      try {
+        const d = await enrApi("/api/enrich-list?limit=100");
+        if (!d.available) { document.getElementById("enrUnavailable").classList.remove("hidden"); document.getElementById("enrUnavailable").textContent = "⚠️ " + (d.error || d.message || "לא זמין"); st.textContent = ""; return; }
+        document.getElementById("enrUnavailable").classList.add("hidden");
+        st.textContent = `${fmt(d.total)} מוצרים חסרי תוכן · מוצגים ${d.items.length}`;
+        const approved = enrGetApproved();
+        mountTable("enrListMount", [
+          { key: "name", label: "מוצר", align: "right", long: true },
+          { key: "brand", label: "מותג" },
+          { key: "missing", label: "חסר", align: "right", long: true },
+          { key: "_act", label: "פעולה", render: (v, r) => `<button class="enr-gen bg-blue-600 hover:bg-blue-700 text-white rounded px-3 py-1 text-xs" data-id="${r.id}">${approved[r.id] ? "✓ נוצר — ערוך" : "✨ צור טיוטה"}</button>` },
+        ], d.items, { defaultSort: { key: "missingCount", dir: "desc" }, scroll: true, totals: false, search: true });
+        document.querySelectorAll("#enrListMount .enr-gen").forEach((b) => b.addEventListener("click", () => enrGenerate(Number(b.dataset.id))));
+        enrUpdateExportBtn();
+      } catch (e) { st.textContent = "שגיאה: " + e.message; }
+    }
+    async function enrGenerate(id) {
+      const ed = document.getElementById("enrEditor"); ed.classList.remove("hidden");
+      document.getElementById("enrFields").innerHTML = "";
+      document.getElementById("enrStatus").textContent = "🤖 ה-AI מייצר טיוטה על סמך נתוני המוצר...";
+      ed.scrollIntoView({ behavior: "smooth", block: "start" });
+      try {
+        const d = await enrApi("/api/enrich-generate?id=" + id);
+        if (!d.available) { document.getElementById("enrStatus").textContent = "שגיאה: " + (d.error || d.message || "") + (d.raw ? " · " + d.raw : ""); return; }
+        enrCurrentDraft = d.draft;
+        enrRenderEditor(d.draft);
+        document.getElementById("enrStatus").textContent = "";
+      } catch (e) { document.getElementById("enrStatus").textContent = "שגיאה: " + e.message; }
+    }
+    const enrEsc = (s) => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    function enrField(fkey, label, cur, sug, multiline) {
+      const id = "enrf_" + fkey;
+      const input = multiline
+        ? `<textarea id="${id}" rows="4" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm">${enrEsc(sug)}</textarea>`
+        : `<input id="${id}" type="text" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" value="${enrEsc(sug)}">`;
+      return `<div class="border border-slate-200 rounded-lg p-3">
+        <div class="flex items-center justify-between mb-1">
+          <label class="text-sm font-bold text-slate-700"><input type="checkbox" class="enr-chk align-middle ms-1" data-f="${fkey}" checked> ${label}</label>
+        </div>
+        ${cur ? `<div class="text-xs text-slate-400 mb-2">נוכחי: ${enrEsc(cur).slice(0, 200) || "—"}</div>` : ""}
+        ${input}
+      </div>`;
+    }
+    function enrRenderEditor(draft) {
+      document.getElementById("enrEditorTitle").textContent = "טיוטה: " + (draft.suggested.nameSuggestion || draft.current.name || ("#" + draft.productId));
+      const s = draft.suggested, c = draft.current;
+      let html = "";
+      html += enrField("name", "שם מוצר", c.name, s.nameSuggestion, false);
+      html += enrField("shortDescription", "תיאור קצר", c.shortDescription, s.shortDescription, true);
+      html += enrField("longDescription", "תיאור מלא", c.longDescription, s.longDescription, true);
+      html += enrField("metaTitle", "Meta Title", c.metaTitle, s.metaTitle, false);
+      html += enrField("metaDescription", "Meta Description", c.metaDescription, s.metaDescription, true);
+      if (Array.isArray(s.faq) && s.faq.length) {
+        const faqText = s.faq.map((f) => `שאלה: ${f.q}\nתשובה: ${f.a}`).join("\n\n");
+        html += enrField("faq", "FAQ (שאלות ותשובות)", "", faqText, true);
+      }
+      if (Array.isArray(s.imageAlts) && s.imageAlts.length) {
+        html += `<div class="border border-slate-200 rounded-lg p-3"><div class="text-sm font-bold text-slate-700 mb-2"><input type="checkbox" class="enr-chk align-middle ms-1" data-f="imageAlts" checked> ALT לתמונות</div>` +
+          s.imageAlts.map((a, i) => `<div class="mb-2"><div class="text-xs text-slate-400">תמונה #${a.id}</div><input id="enrf_alt_${i}" data-imgid="${a.id}" type="text" class="enr-alt w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" value="${enrEsc(a.alt)}"></div>`).join("") +
+          `</div>`;
+      }
+      document.getElementById("enrFields").innerHTML = html;
+    }
+    function enrApproveCurrent() {
+      if (!enrCurrentDraft) return;
+      const checked = {}; document.querySelectorAll("#enrFields .enr-chk").forEach((c) => { checked[c.dataset.f] = c.checked; });
+      const val = (f) => { const el = document.getElementById("enrf_" + f); return el ? el.value : ""; };
+      const rec = { productId: enrCurrentDraft.productId, sku: enrCurrentDraft.sku, url: enrCurrentDraft.url, approvedAt: new Date().toISOString() };
+      if (checked.name) rec.name = val("name");
+      if (checked.shortDescription) rec.shortDescription = val("shortDescription");
+      if (checked.longDescription) rec.longDescription = val("longDescription");
+      if (checked.metaTitle) rec.metaTitle = val("metaTitle");
+      if (checked.metaDescription) rec.metaDescription = val("metaDescription");
+      if (checked.faq) rec.faq = val("faq");
+      if (checked.imageAlts) rec.imageAlts = [...document.querySelectorAll(".enr-alt")].map((el) => ({ id: el.dataset.imgid, alt: el.value }));
+      const store = enrGetApproved(); store[rec.productId] = rec; enrSaveApproved(store);
+      enrUpdateExportBtn();
+      document.getElementById("enrStatus").textContent = "✓ נשמר לרשימת המאושרים. אפשר להמשיך למוצר הבא או לייצא CSV.";
+      // refresh list button labels
+      document.querySelectorAll(`#enrListMount .enr-gen[data-id="${rec.productId}"]`).forEach((b) => b.textContent = "✓ נוצר — ערוך");
+    }
+    function enrExportCsv() {
+      const store = enrGetApproved(); const rows = Object.values(store);
+      if (!rows.length) return;
+      // WooCommerce product CSV import columns (updates existing products by ID).
+      const cols = ["ID", "SKU", "Name", "Description", "Short description", "Meta: _yoast_wpseo_title", "Meta: _yoast_wpseo_metadesc"];
+      const esc = (v) => { v = String(v == null ? "" : v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+      const lines = [cols.join(",")];
+      rows.forEach((r) => {
+        let longDesc = r.longDescription || "";
+        if (r.faq) longDesc += (longDesc ? "\n\n" : "") + "שאלות ותשובות:\n" + r.faq;
+        lines.push([r.productId, r.sku || "", r.name || "", longDesc, r.shortDescription || "", r.metaTitle || "", r.metaDescription || ""].map(esc).join(","));
+      });
+      const blob = new Blob(["﻿" + lines.join("\n")], { type: "text/csv;charset=utf-8;" });
+      const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
+      a.download = "enrichment_" + document.getElementById("siteSelect").value + ".csv"; a.click(); URL.revokeObjectURL(a.href);
+      // Also offer an ALT reference file if any (ALT can't go through the standard product CSV importer).
+      const alts = rows.flatMap((r) => (r.imageAlts || []).map((im) => ({ productId: r.productId, imageId: im.id, alt: im.alt })));
+      if (alts.length) {
+        const al = ["Product ID,Image ID,ALT"].concat(alts.map((x) => [x.productId, x.imageId, x.alt].map(esc).join(",")));
+        const b2 = new Blob(["﻿" + al.join("\n")], { type: "text/csv;charset=utf-8;" });
+        const a2 = document.createElement("a"); a2.href = URL.createObjectURL(b2);
+        a2.download = "enrichment_ALT_" + document.getElementById("siteSelect").value + ".csv"; a2.click(); URL.revokeObjectURL(a2.href);
+      }
+    }
+    document.getElementById("enrLoadList").addEventListener("click", enrLoadList);
+    document.getElementById("enrExport").addEventListener("click", enrExportCsv);
+    document.getElementById("enrApproveAll").addEventListener("click", enrApproveCurrent);
+    document.getElementById("enrClose").addEventListener("click", () => document.getElementById("enrEditor").classList.add("hidden"));
+    document.getElementById("enrRegen").addEventListener("click", () => { if (enrCurrentDraft) enrGenerate(enrCurrentDraft.productId); });
+
     function renderCannibal(d) {
       const k = (v, l) => `<div class="card"><div class="kpi-label">${l}</div><div class="kpi-val">${v}</div></div>`;
       const items = d.cannibal || [];
@@ -1788,6 +1921,7 @@ ${conclSection}
       pricing:{path:"/api/pricing",render:renderPricing},
       crosscannibal:{path:"/api/cross-cannibal",render:renderCrossCannibal},
       catalog:{path:"/api/catalog",render:renderCatalog},
+      enrich:{static:true,render:()=>{}},
       summary:{path:"/api/summary",render:renderSummary},
       monthlyusers:{path:"/api/monthlyusers",render:renderMonthlyUsers},
       snapshots:{path:"/api/snapshot-history",render:renderSnapshots},
@@ -1807,10 +1941,10 @@ ${conclSection}
       keywords: ["search", "ranks", "rankdist", "orgpotential", "gap", "cannibal", "crosscannibal"],
       content: ["pages", "pageperf", "content", "entity", "decay"],
       audience: ["traffic", "audience", "analyses", "retention", "events"],
-      tools: ["catalog", "spider", "textanalysis", "gupdates", "health"],
+      tools: ["catalog", "enrich", "spider", "textanalysis", "gupdates", "health"],
       compare: ["compare"],
     };
-    const DOM_ORDER = ["home","opportunities","insights","summary","monthlyusers","snapshots","overview","trends","realtime","goals","sales","ads","woo","topproducts","woocust","orderhist","merchant","pricing","traffic","audience","analyses","retention","events","ranks","rankdist","content","pageperf","orgpotential","gap","cannibal","decay","crosscannibal","catalog","spider","search","pages","entity","textanalysis","gupdates","health","compare"];
+    const DOM_ORDER = ["home","opportunities","insights","summary","monthlyusers","snapshots","overview","trends","realtime","goals","sales","ads","woo","topproducts","woocust","orderhist","merchant","pricing","traffic","audience","analyses","retention","events","ranks","rankdist","content","pageperf","orgpotential","gap","cannibal","decay","crosscannibal","catalog","enrich","spider","search","pages","entity","textanalysis","gupdates","health","compare"];
 
     async function loadPart(name, force) {
       const t = PARTS[name], key = cacheKey();
@@ -1821,7 +1955,7 @@ ${conclSection}
         document.getElementById("updatedAt").textContent = "עודכן: " + new Date().toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" });
       } catch (err) { if (err.message && err.message.includes("forbidden")) return; setStatus("שגיאה: " + err.message, "error"); }
     }
-    const SECTION_TITLES = { home:"🏠 בית", pricing:"💸 תחרותיות מחירים", crosscannibal:"🥊 קניבליזציה בין המותגים", catalog:"🩺 בריאות קטלוג", opportunities:"🎯 הזדמנויות השבוע", insights:"💡 תובנות", summary:"📋 סיכום מנהלים", monthlyusers:"👥 משתמשים חודשי", snapshots:"🗄️ נתונים שמורים", overview:"📈 סקירה", trends:"📉 מגמות", realtime:"⏱️ זמן אמת", goals:"🎯 יעדים", sales:"💰 מכירות", ads:"📣 פרסום (ROAS)", woo:"🛍️ חנות (WooCommerce)", topproducts:"🏆 מוצרים מובילים", woocust:"👤 לקוחות", orderhist:"📜 היסטוריית הזמנות", merchant:"🛒 Merchant Center", traffic:"🚦 מקורות תנועה", audience:"🌍 קהל", analyses:"🗓️ ניתוחים", retention:"🔁 Retention", events:"🔔 אירועים", search:"🔍 חיפוש", pages:"📄 דפים מובילים", health:"🩺 בריאות האתר", ranks:"📈 מעקב מיקומים", rankdist:"📊 פיזור דירוג", content:"📈 ביצועי תוכן", pageperf:"📑 ביצועי עמודים", orgpotential:"🚀 פוטנציאל אורגני", gap:"🔋 פערי מילים", cannibal:"⚔️ קניבליזציה", decay:"🍂 שחיקת תוכן", spider:"🕷️ Spider Goggles", gupdates:"🌦️ עדכוני גוגל", entity:"🏆 סמכות מותג", textanalysis:"📝 ניתוח טקסט", compare:"📊 השוואת אתרים" };
+    const SECTION_TITLES = { home:"🏠 בית", pricing:"💸 תחרותיות מחירים", crosscannibal:"🥊 קניבליזציה בין המותגים", catalog:"🩺 בריאות קטלוג", enrich:"✍️ מחולל תוכן", opportunities:"🎯 הזדמנויות השבוע", insights:"💡 תובנות", summary:"📋 סיכום מנהלים", monthlyusers:"👥 משתמשים חודשי", snapshots:"🗄️ נתונים שמורים", overview:"📈 סקירה", trends:"📉 מגמות", realtime:"⏱️ זמן אמת", goals:"🎯 יעדים", sales:"💰 מכירות", ads:"📣 פרסום (ROAS)", woo:"🛍️ חנות (WooCommerce)", topproducts:"🏆 מוצרים מובילים", woocust:"👤 לקוחות", orderhist:"📜 היסטוריית הזמנות", merchant:"🛒 Merchant Center", traffic:"🚦 מקורות תנועה", audience:"🌍 קהל", analyses:"🗓️ ניתוחים", retention:"🔁 Retention", events:"🔔 אירועים", search:"🔍 חיפוש", pages:"📄 דפים מובילים", health:"🩺 בריאות האתר", ranks:"📈 מעקב מיקומים", rankdist:"📊 פיזור דירוג", content:"📈 ביצועי תוכן", pageperf:"📑 ביצועי עמודים", orgpotential:"🚀 פוטנציאל אורגני", gap:"🔋 פערי מילים", cannibal:"⚔️ קניבליזציה", decay:"🍂 שחיקת תוכן", spider:"🕷️ Spider Goggles", gupdates:"🌦️ עדכוני גוגל", entity:"🏆 סמכות מותג", textanalysis:"📝 ניתוח טקסט", compare:"📊 השוואת אתרים" };
     const SOURCES = {
       ga4:      { label: "Google Analytics", color: "#E37400", emoji: "📈" },
       gsc:      { label: "Search Console",   color: "#1a73e8", emoji: "🔍" },
@@ -1835,7 +1969,7 @@ ${conclSection}
     const SCREEN_SRC = {
       overview: "ga4", trends: "ga4", realtime: "ga4", periods: "ga4", goals: "ga4", monthlyusers: "ga4", traffic: "ga4", audience: "ga4", analyses: "ga4", retention: "ga4", events: "ga4",
       summary: "mixed", insights: "mixed", opportunities: "mixed", compare: "mixed", home: "mixed",
-      pricing: "merchant", crosscannibal: "gsc", catalog: "woo",
+      pricing: "merchant", crosscannibal: "gsc", catalog: "woo", enrich: "woo",
       search: "gsc", ranks: "gsc", rankdist: "gsc", pages: "gsc", pageperf: "gsc", orgpotential: "gsc", gap: "gsc", cannibal: "gsc", decay: "gsc", content: "gsc", entity: "gsc", gupdates: "gsc", health: "gsc",
       woo: "woo", woocust: "woo", topproducts: "woo", sales: "woo",
       ads: "ads", merchant: "merchant", orderhist: "store", snapshots: "store", spider: "tool", textanalysis: "tool",
