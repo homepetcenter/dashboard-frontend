@@ -1033,6 +1033,43 @@ ${conclSection}
             `<tr><td class="text-right py-1 font-medium">${BRAND_NAMES[site] || site}${site === r.leader ? " 👑" : ""}</td><td class="text-center">${v.position ?? "—"}</td><td class="text-center">${fmt(v.clicks)}</td><td class="text-center">${fmt(v.impressions)}</td></tr>`).join("") + `</table>`,
       });
     }
+    const CAT_LABELS = { noDesc:"אין תיאור", thinDesc:"תיאור דל", noSku:'אין מק"ט', noGtin:"אין ברקוד/GTIN", noBrand:"אין מותג", noMeta:"אין Meta Description", noImage:"אין תמונה", noAlt:"תמונה בלי ALT", unitPriceOnNonFood:"מחיר ליחידה שגוי", outOfStock:"אזל מהמלאי", noCategory:"אין קטגוריה" };
+    function renderCatalog(d) {
+      const un = document.getElementById("catUnavailable");
+      if (!d.available) {
+        un.classList.remove("hidden");
+        un.textContent = "⚠️ בריאות הקטלוג לא זמינה: " + (d.error || d.message || "") + " · יש להגדיר מפתחות WooCommerce (WC_CK_/WC_CS_) ל-Railway";
+        document.getElementById("catKpis").innerHTML = ""; document.getElementById("catBreakdown").innerHTML = ""; document.getElementById("catMount").innerHTML = ""; document.getElementById("catDupMount").innerHTML = "";
+        return;
+      }
+      un.classList.add("hidden");
+      const k = (v, l, cls) => `<div class="card"><div class="kpi-label">${l}</div><div class="kpi-val ${cls || ""}">${v}</div></div>`;
+      document.getElementById("catKpis").innerHTML =
+        k(fmt(d.total), "סה\"כ מוצרים") +
+        k(d.healthPct + "%", "ציון בריאות", d.healthPct >= 80 ? "!text-emerald-600" : d.healthPct >= 50 ? "" : "!text-rose-600") +
+        k(fmt(d.flagged), "מוצרים עם פערים", "!text-rose-600") +
+        k(fmt((d.dupSkuCount || 0) + (d.dupNameCount || 0)), "כפילויות");
+      // Breakdown chips: count per issue type, sorted
+      const c = d.counts || {};
+      document.getElementById("catBreakdown").innerHTML = Object.entries(c)
+        .filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1])
+        .map(([key, n]) => `<span class="jump-btn text-xs px-3 py-1 rounded-full" style="background:#fee2e2;color:#b91c1c">${CAT_LABELS[key] || key}: ${fmt(n)}</span>`).join("") || '<span class="text-sm text-emerald-600">אין פערים 🎉</span>';
+      mountTable("catMount", [
+        { key: "name", label: "מוצר", align: "right", long: true, render: (v, r) => r.url ? `<a href="${r.url}" target="_blank" rel="noopener" class="text-blue-600 hover:underline">${String(v || "").replace(/</g, "&lt;")}</a>` : String(v || "") },
+        { key: "sku", label: "מק\"ט" },
+        { key: "brand", label: "מותג" },
+        { key: "issues", label: "פערים", align: "right", long: true },
+        { key: "issueCount", label: "מס' פערים", type: "num" },
+      ], (d.products || []), { defaultSort: { key: "issueCount", dir: "desc" }, scroll: true, totals: false });
+      const dups = [...(d.dupSku || []).map((x) => ({ type: "מק\"ט זהה", value: x.sku, count: x.count, ids: x.ids })),
+                    ...(d.dupName || []).map((x) => ({ type: "שם זהה", value: x.name, count: x.count, ids: x.ids }))];
+      mountTable("catDupMount", [
+        { key: "type", label: "סוג" },
+        { key: "value", label: "ערך", align: "right", long: true },
+        { key: "count", label: "מופעים", type: "num" },
+        { key: "ids", label: "מזהי מוצר", align: "right", long: true },
+      ], dups, { defaultSort: { key: "count", dir: "desc" }, scroll: true, totals: false });
+    }
     function renderCannibal(d) {
       const k = (v, l) => `<div class="card"><div class="kpi-label">${l}</div><div class="kpi-val">${v}</div></div>`;
       const items = d.cannibal || [];
@@ -1750,6 +1787,7 @@ ${conclSection}
       home:{path:"/api/home",render:renderHome},
       pricing:{path:"/api/pricing",render:renderPricing},
       crosscannibal:{path:"/api/cross-cannibal",render:renderCrossCannibal},
+      catalog:{path:"/api/catalog",render:renderCatalog},
       summary:{path:"/api/summary",render:renderSummary},
       monthlyusers:{path:"/api/monthlyusers",render:renderMonthlyUsers},
       snapshots:{path:"/api/snapshot-history",render:renderSnapshots},
@@ -1769,10 +1807,10 @@ ${conclSection}
       keywords: ["search", "ranks", "rankdist", "orgpotential", "gap", "cannibal", "crosscannibal"],
       content: ["pages", "pageperf", "content", "entity", "decay"],
       audience: ["traffic", "audience", "analyses", "retention", "events"],
-      tools: ["spider", "textanalysis", "gupdates", "health"],
+      tools: ["catalog", "spider", "textanalysis", "gupdates", "health"],
       compare: ["compare"],
     };
-    const DOM_ORDER = ["home","opportunities","insights","summary","monthlyusers","snapshots","overview","trends","realtime","goals","sales","ads","woo","topproducts","woocust","orderhist","merchant","pricing","traffic","audience","analyses","retention","events","ranks","rankdist","content","pageperf","orgpotential","gap","cannibal","decay","crosscannibal","spider","search","pages","entity","textanalysis","gupdates","health","compare"];
+    const DOM_ORDER = ["home","opportunities","insights","summary","monthlyusers","snapshots","overview","trends","realtime","goals","sales","ads","woo","topproducts","woocust","orderhist","merchant","pricing","traffic","audience","analyses","retention","events","ranks","rankdist","content","pageperf","orgpotential","gap","cannibal","decay","crosscannibal","catalog","spider","search","pages","entity","textanalysis","gupdates","health","compare"];
 
     async function loadPart(name, force) {
       const t = PARTS[name], key = cacheKey();
@@ -1783,7 +1821,7 @@ ${conclSection}
         document.getElementById("updatedAt").textContent = "עודכן: " + new Date().toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" });
       } catch (err) { if (err.message && err.message.includes("forbidden")) return; setStatus("שגיאה: " + err.message, "error"); }
     }
-    const SECTION_TITLES = { home:"🏠 בית", pricing:"💸 תחרותיות מחירים", crosscannibal:"🥊 קניבליזציה בין המותגים", opportunities:"🎯 הזדמנויות השבוע", insights:"💡 תובנות", summary:"📋 סיכום מנהלים", monthlyusers:"👥 משתמשים חודשי", snapshots:"🗄️ נתונים שמורים", overview:"📈 סקירה", trends:"📉 מגמות", realtime:"⏱️ זמן אמת", goals:"🎯 יעדים", sales:"💰 מכירות", ads:"📣 פרסום (ROAS)", woo:"🛍️ חנות (WooCommerce)", topproducts:"🏆 מוצרים מובילים", woocust:"👤 לקוחות", orderhist:"📜 היסטוריית הזמנות", merchant:"🛒 Merchant Center", traffic:"🚦 מקורות תנועה", audience:"🌍 קהל", analyses:"🗓️ ניתוחים", retention:"🔁 Retention", events:"🔔 אירועים", search:"🔍 חיפוש", pages:"📄 דפים מובילים", health:"🩺 בריאות האתר", ranks:"📈 מעקב מיקומים", rankdist:"📊 פיזור דירוג", content:"📈 ביצועי תוכן", pageperf:"📑 ביצועי עמודים", orgpotential:"🚀 פוטנציאל אורגני", gap:"🔋 פערי מילים", cannibal:"⚔️ קניבליזציה", decay:"🍂 שחיקת תוכן", spider:"🕷️ Spider Goggles", gupdates:"🌦️ עדכוני גוגל", entity:"🏆 סמכות מותג", textanalysis:"📝 ניתוח טקסט", compare:"📊 השוואת אתרים" };
+    const SECTION_TITLES = { home:"🏠 בית", pricing:"💸 תחרותיות מחירים", crosscannibal:"🥊 קניבליזציה בין המותגים", catalog:"🩺 בריאות קטלוג", opportunities:"🎯 הזדמנויות השבוע", insights:"💡 תובנות", summary:"📋 סיכום מנהלים", monthlyusers:"👥 משתמשים חודשי", snapshots:"🗄️ נתונים שמורים", overview:"📈 סקירה", trends:"📉 מגמות", realtime:"⏱️ זמן אמת", goals:"🎯 יעדים", sales:"💰 מכירות", ads:"📣 פרסום (ROAS)", woo:"🛍️ חנות (WooCommerce)", topproducts:"🏆 מוצרים מובילים", woocust:"👤 לקוחות", orderhist:"📜 היסטוריית הזמנות", merchant:"🛒 Merchant Center", traffic:"🚦 מקורות תנועה", audience:"🌍 קהל", analyses:"🗓️ ניתוחים", retention:"🔁 Retention", events:"🔔 אירועים", search:"🔍 חיפוש", pages:"📄 דפים מובילים", health:"🩺 בריאות האתר", ranks:"📈 מעקב מיקומים", rankdist:"📊 פיזור דירוג", content:"📈 ביצועי תוכן", pageperf:"📑 ביצועי עמודים", orgpotential:"🚀 פוטנציאל אורגני", gap:"🔋 פערי מילים", cannibal:"⚔️ קניבליזציה", decay:"🍂 שחיקת תוכן", spider:"🕷️ Spider Goggles", gupdates:"🌦️ עדכוני גוגל", entity:"🏆 סמכות מותג", textanalysis:"📝 ניתוח טקסט", compare:"📊 השוואת אתרים" };
     const SOURCES = {
       ga4:      { label: "Google Analytics", color: "#E37400", emoji: "📈" },
       gsc:      { label: "Search Console",   color: "#1a73e8", emoji: "🔍" },
@@ -1797,7 +1835,7 @@ ${conclSection}
     const SCREEN_SRC = {
       overview: "ga4", trends: "ga4", realtime: "ga4", periods: "ga4", goals: "ga4", monthlyusers: "ga4", traffic: "ga4", audience: "ga4", analyses: "ga4", retention: "ga4", events: "ga4",
       summary: "mixed", insights: "mixed", opportunities: "mixed", compare: "mixed", home: "mixed",
-      pricing: "merchant", crosscannibal: "gsc",
+      pricing: "merchant", crosscannibal: "gsc", catalog: "woo",
       search: "gsc", ranks: "gsc", rankdist: "gsc", pages: "gsc", pageperf: "gsc", orgpotential: "gsc", gap: "gsc", cannibal: "gsc", decay: "gsc", content: "gsc", entity: "gsc", gupdates: "gsc", health: "gsc",
       woo: "woo", woocust: "woo", topproducts: "woo", sales: "woo",
       ads: "ads", merchant: "merchant", orderhist: "store", snapshots: "store", spider: "tool", textanalysis: "tool",

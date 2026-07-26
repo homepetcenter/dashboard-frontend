@@ -876,6 +876,23 @@
     </div>
   </section>
 
+  <!-- CATALOG HEALTH (Stage A) -->
+  <section data-screen="catalog" class="hidden">
+    <div id="catUnavailable" class="hidden card text-amber-600 text-sm mb-4"></div>
+    <div id="catKpis" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4"></div>
+    <div class="card mb-4">
+      <div class="font-bold text-slate-800 mb-1">🩺 בריאות הקטלוג — פערי נתונים לפי מוצר</div>
+      <div class="text-xs text-slate-400 mb-3">סריקה לקריאה בלבד של כל הקטלוג (WooCommerce). לא משנה כלום באתר — רק מציג מה חסר או שגוי, כבסיס לשלב ההעשרה</div>
+      <div id="catBreakdown" class="flex flex-wrap gap-2 mb-3"></div>
+      <div id="catMount"></div>
+    </div>
+    <div class="card">
+      <div class="font-bold text-slate-800 mb-1">👯 כפילויות מוצרים</div>
+      <div class="text-xs text-slate-400 mb-3">מוצרים עם אותו מק"ט או אותו שם — מועמדים לאיחוד/וריאציות (לפי אפיון סעיף 7.3)</div>
+      <div id="catDupMount"></div>
+    </div>
+  </section>
+
   <!-- RANKS -->
   <section data-screen="ranks" class="hidden">
     <div class="card mb-4">
