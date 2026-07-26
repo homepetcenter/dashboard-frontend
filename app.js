@@ -1096,7 +1096,7 @@ ${conclSection}
         const d = await enrApi("/api/enrich-list?limit=100");
         if (!d.available) { document.getElementById("enrUnavailable").classList.remove("hidden"); document.getElementById("enrUnavailable").textContent = "⚠️ " + (d.error || d.message || "לא זמין"); st.textContent = ""; return; }
         document.getElementById("enrUnavailable").classList.add("hidden");
-        st.textContent = `${fmt(d.total)} מוצרים חסרי תוכן · מוצגים ${d.items.length}`;
+        st.textContent = `${fmt(d.total)} מוצרים חסרי תוכן · מוצגים ${d.items.length}` + (d.partial ? ` (נסרקו ${d.scannedPages} מתוך ${d.totalPages} עמודי קטלוג — יש עוד)` : "");
         const approved = enrGetApproved();
         mountTable("enrListMount", [
           { key: "name", label: "מוצר", align: "right", long: true },
@@ -1106,7 +1106,11 @@ ${conclSection}
         ], d.items, { defaultSort: { key: "missingCount", dir: "desc" }, scroll: true, totals: false, search: true });
         document.querySelectorAll("#enrListMount .enr-gen").forEach((b) => b.addEventListener("click", () => enrGenerate(Number(b.dataset.id))));
         enrUpdateExportBtn();
-      } catch (e) { st.textContent = "שגיאה: " + e.message; }
+      } catch (e) {
+        st.textContent = /failed to fetch|load failed|timeout/i.test(e.message)
+          ? "החנות לא הגיבה בזמן. נסי שוב בעוד רגע — הסריקה נשמרת בזיכרון ותהיה מהירה יותר."
+          : "שגיאה: " + e.message;
+      }
     }
     async function enrGenerate(id) {
       const ed = document.getElementById("enrEditor"); ed.classList.remove("hidden");
