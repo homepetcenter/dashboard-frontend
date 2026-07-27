@@ -1493,24 +1493,50 @@ ${conclSection}
     let brandRows = [];
     document.getElementById("brandScan").addEventListener("click", async () => {
       const st = document.getElementById("brandStatus");
-      st.textContent = "סורק את הקטלוג...";
+      brandRows = [];
+      // Walk the catalogue in slices so no single request runs long enough to be cut off.
+      let page = 1, guard = 0, totals = { missing: 0, matched: 0, unmatched: 0, known: 0, scanned: 0, source: "" };
       try {
-        const d = await enrApi("/api/brands?limit=3000");
-        if (!d.available) { st.textContent = "שגיאה: " + (d.error || d.message); return; }
-        brandRows = d.items || [];
-        st.textContent = `${fmt(d.knownBrands)} מותגים מוכרים · ${fmt(d.missingBrand)} מוצרים ללא מותג · זוהו ${fmt(d.matched)} · לא זוהו ${fmt(d.unmatched)}`;
+        while (guard++ < 40) {
+          st.textContent = `סורק... ${fmt(totals.scanned)} מוצרים נבדקו, ${fmt(brandRows.length)} מותגים זוהו`;
+          const d = await enrApi(`/api/brands?startPage=${page}&maxPages=10`);
+          if (!d.available) { st.textContent = "שגיאה: " + (d.error || d.message); return; }
+          brandRows.push(...(d.items || []));
+          totals.missing += d.missingBrand || 0;
+          totals.matched += d.matched || 0;
+          totals.unmatched += d.unmatched || 0;
+          totals.known = d.knownBrands || totals.known;
+          totals.scanned += d.scannedProducts || 0;
+          totals.source = d.brandSource || totals.source;
+          if (d.done) break;
+          page = d.lastPage + 1;
+        }
+        st.textContent = `${fmt(totals.known)} מותגים מוכרים (${totals.source}) · נסרקו ${fmt(totals.scanned)} מוצרים · ${fmt(totals.missing)} ללא מותג · זוהו ${fmt(totals.matched)} · לא זוהו ${fmt(totals.unmatched)}`;
         document.getElementById("brandExport").classList.toggle("hidden", !brandRows.length);
         mountTable("brandMount", [
           { key: "name", label: "מוצר", align: "right", long: true, render: (v, r) => r.url ? `<a href="${r.url}" target="_blank" rel="noopener" class="text-blue-600 hover:underline">${String(v || "").replace(/</g, "&lt;")}</a>` : String(v || "") },
           { key: "suggestedBrand", label: "מותג מוצע" },
-          { key: "categories", label: "קטגוריות", align: "right", long: true },
-        ], brandRows, { defaultSort: { key: "suggestedBrand", dir: "asc" }, scroll: true, totals: false });
-      } catch (e) { st.textContent = "שגיאה: " + e.message; }
+          { key: "confidence", label: "ביטחון", render: (v) => { const c = v === "גבוה" ? "#1e8e3e" : v === "בינוני" ? "#b8860b" : "#d93025"; return `<span style="color:${c};font-weight:600">${v || ""}</span>`; } },
+          { key: "matched", label: "זוהה לפי" },
+        ], brandRows, { defaultSort: { key: "confidence", dir: "asc" }, scroll: true, totals: false });
+      } catch (e) {
+        st.textContent = /failed to fetch|load failed/i.test(e.message)
+          ? `נעצר אחרי ${fmt(brandRows.length)} תוצאות — החנות איטית. התוצאות שנאספו מוצגות; אפשר ללחוץ שוב.`
+          : "שגיאה: " + e.message;
+        if (brandRows.length) {
+          document.getElementById("brandExport").classList.remove("hidden");
+          mountTable("brandMount", [
+            { key: "name", label: "מוצר", align: "right", long: true },
+            { key: "suggestedBrand", label: "מותג מוצע" },
+            { key: "matched", label: "זוהה לפי" },
+          ], brandRows, { scroll: true, totals: false });
+        }
+      }
     });
     document.getElementById("brandExport").addEventListener("click", () => {
       if (!brandRows.length) return;
       const esc = (v) => { v = String(v == null ? "" : v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
-      const lines = ["ID,Name,Brands"].concat(brandRows.map((r) => [r.id, r.name, r.suggestedBrand].map(esc).join(",")));
+      const lines = ["ID,Name,Brands,Confidence"].concat(brandRows.map((r) => [r.id, r.name, r.suggestedBrand, r.confidence || ""].map(esc).join(",")));
       const blob = new Blob(["﻿" + lines.join("\n")], { type: "text/csv;charset=utf-8;" });
       const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
       a.download = "brands_" + document.getElementById("siteSelect").value + ".csv"; a.click(); URL.revokeObjectURL(a.href);
