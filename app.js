@@ -1125,18 +1125,33 @@ ${conclSection}
       } catch (e) { document.getElementById("enrStatus").textContent = "שגיאה: " + e.message; }
     }
     const enrEsc = (s) => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    // Recommended lengths for SEO fields — shown live so you can see if a field is too short/long.
+    const ENR_LIMITS = { metaTitle: [50, 60], metaDescription: [140, 155] };
     function enrField(fkey, label, cur, sug, multiline) {
       const id = "enrf_" + fkey;
       const input = multiline
-        ? `<textarea id="${id}" rows="4" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm">${enrEsc(sug)}</textarea>`
-        : `<input id="${id}" type="text" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" value="${enrEsc(sug)}">`;
+        ? `<textarea id="${id}" rows="4" class="enr-in w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" data-f="${fkey}">${enrEsc(sug)}</textarea>`
+        : `<input id="${id}" type="text" class="enr-in w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" data-f="${fkey}" value="${enrEsc(sug)}">`;
+      const lim = ENR_LIMITS[fkey];
+      const counter = lim ? `<span class="text-xs" id="cnt_${fkey}"></span>` : "";
       return `<div class="border border-slate-200 rounded-lg p-3">
         <div class="flex items-center justify-between mb-1">
           <label class="text-sm font-bold text-slate-700"><input type="checkbox" class="enr-chk align-middle ms-1" data-f="${fkey}" checked> ${label}</label>
+          ${counter}
         </div>
         ${cur ? `<div class="text-xs text-slate-400 mb-2">נוכחי: ${enrEsc(cur).slice(0, 200) || "—"}</div>` : ""}
         ${input}
       </div>`;
+    }
+    function enrUpdateCounters() {
+      Object.entries(ENR_LIMITS).forEach(([f, [min, max]]) => {
+        const el = document.getElementById("enrf_" + f), out = document.getElementById("cnt_" + f);
+        if (!el || !out) return;
+        const n = el.value.length;
+        const ok = n >= min && n <= max;
+        out.textContent = `${n}/${max} תווים` + (n < min ? " — קצר מדי" : n > max ? " — ארוך מדי" : " ✓");
+        out.className = "text-xs " + (ok ? "text-emerald-600" : n > max ? "text-rose-600" : "text-amber-600");
+      });
     }
     function enrRenderEditor(draft) {
       document.getElementById("enrEditorTitle").textContent = "טיוטה: " + (draft.suggested.nameSuggestion || draft.current.name || ("#" + draft.productId));
@@ -1157,6 +1172,8 @@ ${conclSection}
           `</div>`;
       }
       document.getElementById("enrFields").innerHTML = html;
+      enrUpdateCounters();
+      document.querySelectorAll("#enrFields .enr-in").forEach((el) => el.addEventListener("input", enrUpdateCounters));
     }
     function enrApproveCurrent() {
       if (!enrCurrentDraft) return;
