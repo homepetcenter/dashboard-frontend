@@ -1284,20 +1284,24 @@ ${conclSection}
     document.getElementById("bcLoadSite").addEventListener("click", async () => {
       const st = document.getElementById("bcStatus");
       const items = [], seen = new Set();
-      let page = 1, guard = 0;
+      let page = 1, guard = 0, reportedPages = 0, failed = 0, emptyStreak = 0;
       try {
         // Walk the catalogue in slices so no single request runs long enough to be cut off.
         while (guard++ < 60) {
-          st.textContent = `טוען ברקודים מהאתר... ${fmt(items.length)} מוצרים`;
+          st.textContent = `טוען ברקודים מהאתר... ${fmt(items.length)} מוצרים` + (reportedPages ? ` (עמוד ${page} מתוך ${reportedPages})` : "");
           const d = await enrApi(`/api/barcodes?startPage=${page}&maxPages=8`);
           if (!d.available) { document.getElementById("bcUnavailable").classList.remove("hidden"); document.getElementById("bcUnavailable").textContent = "⚠️ " + (d.error || d.message); st.textContent = ""; return; }
           document.getElementById("bcUnavailable").classList.add("hidden");
+          reportedPages = d.totalPages || reportedPages;
+          failed += d.failedPages || 0;
           const fresh = (d.items || []).filter((it) => !seen.has(it.id));
           fresh.forEach((it) => seen.add(it.id));
           items.push(...fresh);
-          // Keep going as long as new products keep arriving. Some stores report an
-          // unreliable page count, so "no new rows" is the trustworthy stop signal.
-          if (!fresh.length || d.lastPage == null) break;
+          if (d.lastPage == null) break;                       // server without paging support
+          emptyStreak = fresh.length ? 0 : emptyStreak + 1;
+          // Tolerate one empty slice (a transient failure) before concluding we're done.
+          if (emptyStreak >= 2) break;
+          if (d.lastPage >= (d.totalPages || 0) && !fresh.length) break;
           page = d.lastPage + 1;
         }
         // Duplicate barcodes across the whole store — a real Merchant Center problem.
@@ -1318,7 +1322,10 @@ ${conclSection}
           k(fmt(bcSite.withGtin), "עם ברקוד", "!text-emerald-600") +
           k(fmt(bcSite.withoutGtin), "בלי ברקוד", "!text-rose-600") +
           k(fmt(bcSite.duplicateCount), "ברקודים כפולים", bcSite.duplicateCount ? "!text-amber-600" : "");
-        st.textContent = `נטענו ${fmt(bcSite.total)} מוצרים · ${fmt(bcSite.withoutSku)} מהם בלי מק"ט (לא ניתן להצליב אותם)`;
+        st.textContent = `נטענו ${fmt(bcSite.total)} מוצרים` +
+          (reportedPages ? ` (האתר דיווח על ${reportedPages} עמודים)` : "") +
+          ` · ${fmt(bcSite.withoutSku)} בלי מק"ט` +
+          (failed ? ` · ⚠️ ${failed} עמודים נכשלו — לחצי שוב להשלמה` : "");
       } catch (e) {
         st.textContent = /failed to fetch|load failed/i.test(e.message)
           ? `נעצר אחרי ${fmt(items.length)} מוצרים — החנות איטית. אפשר ללחוץ שוב.`
