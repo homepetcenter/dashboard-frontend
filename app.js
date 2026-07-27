@@ -1155,22 +1155,40 @@ ${conclSection}
     }
     function enrRenderEditor(draft) {
       document.getElementById("enrEditorTitle").textContent = "טיוטה: " + (draft.suggested.nameSuggestion || draft.current.name || ("#" + draft.productId));
-      const s = draft.suggested, c = draft.current;
+      const s = draft.suggested, c = draft.current, miss = draft.missing || {};
       let html = "";
+      // Amount for the store's per-100g/ml calculator, read from the product title.
+      if (draft.amount) {
+        const a = draft.amount;
+        const shown = a.grams != null ? `${fmt(a.grams)} גרם` : `${fmt(a.ml)} מ"ל`;
+        html += `<div class="border border-emerald-200 bg-emerald-50 rounded-lg p-3">
+          <div class="flex items-center justify-between mb-1">
+            <label class="text-sm font-bold text-slate-700"><input type="checkbox" class="enr-chk align-middle ms-1" data-f="amount" checked> ⚖️ כמות למחשבון (100 גרם/מ"ל)</label>
+            <span class="text-xs text-slate-500">זוהה מהשם: "${enrEsc(a.raw)}"${a.multiplier ? ` × ${a.multiplier}` : ""}</span>
+          </div>
+          ${draft.wooWeight ? `<div class="text-xs text-slate-400 mb-2">משקל קיים בווקומרס: ${enrEsc(draft.wooWeight)}</div>` : ""}
+          <input id="enrf_amount" type="text" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" value="${a.grams != null ? a.grams : a.ml}">
+          <div class="text-xs text-slate-400 mt-1">${shown} · יחידה: ${a.grams != null ? "גרם" : 'מ"ל'}</div>
+        </div>`;
+      }
       html += enrField("name", "שם מוצר", c.name, s.nameSuggestion, false);
-      html += enrField("shortDescription", "תיאור קצר", c.shortDescription, s.shortDescription, true);
-      html += enrField("longDescription", "תיאור מלא", c.longDescription, s.longDescription, true);
-      html += enrField("metaTitle", "Meta Title", c.metaTitle, s.metaTitle, false);
-      html += enrField("metaDescription", "Meta Description", c.metaDescription, s.metaDescription, true);
+      // Only fields that were actually empty are offered — nothing existing gets overwritten.
+      if (miss.shortDescription && s.shortDescription) html += enrField("shortDescription", "תיאור קצר", c.shortDescription, s.shortDescription, true);
+      if (miss.longDescription && s.longDescription) html += enrField("longDescription", "תיאור מלא", c.longDescription, s.longDescription, true);
+      if (miss.metaTitle && s.metaTitle) html += enrField("metaTitle", "Meta Title", c.metaTitle, s.metaTitle, false);
+      if (miss.metaDescription && s.metaDescription) html += enrField("metaDescription", "Meta Description", c.metaDescription, s.metaDescription, true);
       if (Array.isArray(s.faq) && s.faq.length) {
         const faqText = s.faq.map((f) => `שאלה: ${f.q}\nתשובה: ${f.a}`).join("\n\n");
         html += enrField("faq", "FAQ (שאלות ותשובות)", "", faqText, true);
       }
       if (Array.isArray(s.imageAlts) && s.imageAlts.length) {
-        html += `<div class="border border-slate-200 rounded-lg p-3"><div class="text-sm font-bold text-slate-700 mb-2"><input type="checkbox" class="enr-chk align-middle ms-1" data-f="imageAlts" checked> ALT לתמונות</div>` +
+        html += `<div class="border border-slate-200 rounded-lg p-3"><div class="text-sm font-bold text-slate-700 mb-1"><input type="checkbox" class="enr-chk align-middle ms-1" data-f="imageAlts" checked> ALT לתמונות</div>
+          <div class="text-xs text-slate-400 mb-2">לא נכלל בקובץ הייבוא — ווקומרס לא מעדכן ALT דרך ייבוא מוצרים. אפשר להעתיק ידנית או להשתמש בתוסף מדיה.</div>` +
           s.imageAlts.map((a, i) => `<div class="mb-2"><div class="text-xs text-slate-400">תמונה #${a.id}</div><input id="enrf_alt_${i}" data-imgid="${a.id}" type="text" class="enr-alt w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" value="${enrEsc(a.alt)}"></div>`).join("") +
           `</div>`;
       }
+      const filled = Object.entries(miss).filter(([, v]) => !v).map(([k]) => k);
+      if (filled.length) html += `<div class="text-xs text-slate-400">שדות שכבר מלאים במוצר ולכן לא נוצרו מחדש: ${filled.length}</div>`;
       document.getElementById("enrFields").innerHTML = html;
       enrUpdateCounters();
       document.querySelectorAll("#enrFields .enr-in").forEach((el) => el.addEventListener("input", enrUpdateCounters));
@@ -1186,6 +1204,7 @@ ${conclSection}
       if (checked.metaTitle) rec.metaTitle = val("metaTitle");
       if (checked.metaDescription) rec.metaDescription = val("metaDescription");
       if (checked.faq) rec.faq = val("faq");
+      if (checked.amount) rec.amount = val("amount");
       if (checked.imageAlts) rec.imageAlts = [...document.querySelectorAll(".enr-alt")].map((el) => ({ id: el.dataset.imgid, alt: el.value }));
       const store = enrGetApproved(); store[rec.productId] = rec; enrSaveApproved(store);
       enrUpdateExportBtn();
@@ -1196,26 +1215,25 @@ ${conclSection}
     function enrExportCsv() {
       const store = enrGetApproved(); const rows = Object.values(store);
       if (!rows.length) return;
-      // WooCommerce product CSV import columns (updates existing products by ID).
-      const cols = ["ID", "SKU", "Name", "Description", "Short description", "Meta: _yoast_wpseo_title", "Meta: _yoast_wpseo_metadesc"];
+      // ONE unified file for WooCommerce → Products → Import (matches products by ID).
+      // Empty cell = "leave this field alone", so products keep whatever they already had.
+      // ALT is deliberately NOT here: Woo's product importer cannot write image ALT.
+      const unitKey = localStorage.getItem("unitMetaKey") || "";  // set once the field name is known
+      const cols = ["ID", "SKU", "Name", "Description", "Short description",
+        "Meta: _yoast_wpseo_title", "Meta: _yoast_wpseo_metadesc", "Weight (g/ml)"];
+      if (unitKey) cols.push("Meta: " + unitKey);
       const esc = (v) => { v = String(v == null ? "" : v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
       const lines = [cols.join(",")];
       rows.forEach((r) => {
         let longDesc = r.longDescription || "";
-        if (r.faq) longDesc += (longDesc ? "\n\n" : "") + "שאלות ותשובות:\n" + r.faq;
-        lines.push([r.productId, r.sku || "", r.name || "", longDesc, r.shortDescription || "", r.metaTitle || "", r.metaDescription || ""].map(esc).join(","));
+        if (longDesc && r.faq) longDesc += "\n\nשאלות ותשובות:\n" + r.faq;
+        const cells = [r.productId, r.sku || "", r.name || "", longDesc, r.shortDescription || "", r.metaTitle || "", r.metaDescription || "", r.amount || ""];
+        if (unitKey) cells.push(r.amount || "");
+        lines.push(cells.map(esc).join(","));
       });
       const blob = new Blob(["﻿" + lines.join("\n")], { type: "text/csv;charset=utf-8;" });
       const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
       a.download = "enrichment_" + document.getElementById("siteSelect").value + ".csv"; a.click(); URL.revokeObjectURL(a.href);
-      // Also offer an ALT reference file if any (ALT can't go through the standard product CSV importer).
-      const alts = rows.flatMap((r) => (r.imageAlts || []).map((im) => ({ productId: r.productId, imageId: im.id, alt: im.alt })));
-      if (alts.length) {
-        const al = ["Product ID,Image ID,ALT"].concat(alts.map((x) => [x.productId, x.imageId, x.alt].map(esc).join(",")));
-        const b2 = new Blob(["﻿" + al.join("\n")], { type: "text/csv;charset=utf-8;" });
-        const a2 = document.createElement("a"); a2.href = URL.createObjectURL(b2);
-        a2.download = "enrichment_ALT_" + document.getElementById("siteSelect").value + ".csv"; a2.click(); URL.revokeObjectURL(a2.href);
-      }
     }
     // Event delegation: the table re-renders itself on sort/search, which would drop
     // per-button listeners. Listening on the container keeps the buttons working.
@@ -1237,14 +1255,19 @@ ${conclSection}
     }
     // Auto-approve a generated draft (bulk mode: review happens on the CSV sample).
     function bulkApprove(draft) {
-      const s = draft.suggested || {};
+      const s = draft.suggested || {}, miss = draft.missing || {};
+      // Only take fields that were actually missing — never overwrite existing content.
       const rec = {
         productId: draft.productId, sku: draft.sku, url: draft.url,
         approvedAt: new Date().toISOString(),
-        name: s.nameSuggestion || "", shortDescription: s.shortDescription || "",
-        longDescription: s.longDescription || "", metaTitle: s.metaTitle || "",
-        metaDescription: s.metaDescription || "",
+        name: s.nameSuggestion || "",
+        shortDescription: miss.shortDescription ? (s.shortDescription || "") : "",
+        longDescription: miss.longDescription ? (s.longDescription || "") : "",
+        metaTitle: miss.metaTitle ? (s.metaTitle || "") : "",
+        metaDescription: miss.metaDescription ? (s.metaDescription || "") : "",
         faq: Array.isArray(s.faq) ? s.faq.map((f) => `שאלה: ${f.q}\nתשובה: ${f.a}`).join("\n\n") : "",
+        amount: draft.amount ? (draft.amount.grams != null ? draft.amount.grams : draft.amount.ml) : "",
+        amountUnit: draft.amount ? (draft.amount.grams != null ? "g" : "ml") : "",
         imageAlts: Array.isArray(s.imageAlts) ? s.imageAlts.map((a) => ({ id: a.id, alt: a.alt })) : [],
       };
       const store = enrGetApproved(); store[rec.productId] = rec;
