@@ -1496,19 +1496,25 @@ ${conclSection}
       brandRows = [];
       // Walk the catalogue in slices so no single request runs long enough to be cut off.
       let page = 1, guard = 0, totals = { missing: 0, matched: 0, unmatched: 0, known: 0, scanned: 0, source: "" };
+      const seen = new Set();
       try {
         while (guard++ < 40) {
           st.textContent = `סורק... ${fmt(totals.scanned)} מוצרים נבדקו, ${fmt(brandRows.length)} מותגים זוהו`;
           const d = await enrApi(`/api/brands?startPage=${page}&maxPages=10`);
           if (!d.available) { st.textContent = "שגיאה: " + (d.error || d.message); return; }
-          brandRows.push(...(d.items || []));
+          // Guard against duplicates (e.g. an older backend that ignores paging).
+          const fresh = (d.items || []).filter((it) => !seen.has(it.id));
+          fresh.forEach((it) => seen.add(it.id));
+          brandRows.push(...fresh);
           totals.missing += d.missingBrand || 0;
-          totals.matched += d.matched || 0;
+          totals.matched += fresh.length;
           totals.unmatched += d.unmatched || 0;
           totals.known = d.knownBrands || totals.known;
           totals.scanned += d.scannedProducts || 0;
           totals.source = d.brandSource || totals.source;
-          if (d.done) break;
+          // Stop when finished, when the server doesn't support paging, or when a
+          // slice contributed nothing new.
+          if (d.done || d.lastPage == null || !fresh.length) break;
           page = d.lastPage + 1;
         }
         st.textContent = `${fmt(totals.known)} מותגים מוכרים (${totals.source}) · נסרקו ${fmt(totals.scanned)} מוצרים · ${fmt(totals.missing)} ללא מותג · זוהו ${fmt(totals.matched)} · לא זוהו ${fmt(totals.unmatched)}`;
