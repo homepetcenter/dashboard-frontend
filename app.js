@@ -1295,7 +1295,9 @@ ${conclSection}
           const fresh = (d.items || []).filter((it) => !seen.has(it.id));
           fresh.forEach((it) => seen.add(it.id));
           items.push(...fresh);
-          if (d.done || d.lastPage == null || !fresh.length) break;
+          // Keep going as long as new products keep arriving. Some stores report an
+          // unreliable page count, so "no new rows" is the trustworthy stop signal.
+          if (!fresh.length || d.lastPage == null) break;
           page = d.lastPage + 1;
         }
         // Duplicate barcodes across the whole store — a real Merchant Center problem.
@@ -1372,26 +1374,40 @@ ${conclSection}
       const iSku = Number(document.getElementById("bcColSku").value);
       const iGtin = Number(document.getElementById("bcColGtin").value);
 
-      // Build lookup from the user's file
-      const fileBySku = new Map();
+      // Two lookups: by SKU and by barcode. In many catalogues the site's SKU *is*
+      // the barcode, so trying both dramatically increases the number of matches —
+      // and we record which key produced each match so nothing is a black box.
+      const fileBySku = new Map(), fileByGtin = new Map();
+      const usedKeys = new Set();
       for (let r = 1; r < bcFileRows.length; r++) {
         const sku = bcNormSku(bcFileRows[r][iSku]);
         const gtin = bcNormGtin(bcFileRows[r][iGtin]);
-        if (sku) fileBySku.set(sku, gtin);
+        if (sku) fileBySku.set(sku, { gtin, sku });
+        if (gtin) fileByGtin.set(gtin, { gtin, sku });
       }
 
       const fill = [], mismatch = [], missingInFile = [], notOnSite = [];
-      const siteSkus = new Set();
       for (const p of bcSite.items) {
         const sku = bcNormSku(p.sku);
-        if (sku) siteSkus.add(sku);
-        const fileGtin = sku ? fileBySku.get(sku) : undefined;
         const siteGtin = bcNormGtin(p.gtin);
-        if (!siteGtin && fileGtin) fill.push({ id: p.id, name: p.name, sku: p.sku, siteGtin: "", fileGtin, url: p.url });
-        else if (siteGtin && fileGtin && siteGtin !== fileGtin) mismatch.push({ id: p.id, name: p.name, sku: p.sku, siteGtin, fileGtin, url: p.url });
-        else if (!siteGtin && !fileGtin) missingInFile.push({ id: p.id, name: p.name, sku: p.sku, siteGtin: "", fileGtin: "", url: p.url });
+        // Match order: SKU→SKU, then site-SKU→file-barcode, then site-barcode→file-SKU.
+        let hit = null, by = "";
+        if (sku && fileBySku.has(sku)) { hit = fileBySku.get(sku); by = 'מק"ט ↔ מק"ט'; }
+        else if (sku && fileByGtin.has(sku)) { hit = fileByGtin.get(sku); by = 'מק"ט באתר ↔ ברקוד בקובץ'; }
+        else if (siteGtin && fileBySku.has(siteGtin)) { hit = fileBySku.get(siteGtin); by = 'ברקוד באתר ↔ מק"ט בקובץ'; }
+        if (hit) usedKeys.add(hit.sku || hit.gtin);
+
+        const fileGtin = hit ? hit.gtin : "";
+        const row = { id: p.id, name: p.name, sku: p.sku, siteGtin, fileGtin, url: p.url, matchedBy: by, fileSku: hit ? hit.sku : "" };
+        if (!siteGtin && fileGtin) fill.push({ ...row, whatsMissing: "ברקוד חסר באתר" });
+        else if (siteGtin && fileGtin && siteGtin !== fileGtin) mismatch.push({ ...row, whatsMissing: "ערכים שונים" });
+        else if (!siteGtin && !fileGtin) missingInFile.push({ ...row, whatsMissing: hit ? "אין ברקוד גם בקובץ" : "לא נמצא בקובץ" });
       }
-      fileBySku.forEach((gtin, sku) => { if (!siteSkus.has(sku)) notOnSite.push({ id: "", name: "(לא נמצא באתר)", sku, siteGtin: "", fileGtin: gtin, url: "" }); });
+      // Anything in the file we never used against a site product.
+      fileBySku.forEach((v, sku) => {
+        if (usedKeys.has(sku) || (v.gtin && usedKeys.has(v.gtin))) return;
+        notOnSite.push({ id: "", name: "(לא נמצא באתר)", sku, siteGtin: "", fileGtin: v.gtin, url: "", matchedBy: "", whatsMissing: "קיים בקובץ בלבד", fileSku: sku });
+      });
 
       const dupSite = (bcSite.duplicates || []).map((d) => ({ id: "", name: d.products, sku: "", siteGtin: d.gtin, fileGtin: "", url: "" }));
       bcResult = { fill, mismatch, missingInFile, dupSite, notOnSite };
@@ -1413,7 +1429,10 @@ ${conclSection}
       const rows = bcResult[view] || [];
       mountTable("bcMount", [
         { key: "name", label: "מוצר", align: "right", long: true, render: (v, r) => r.url ? `<a href="${r.url}" target="_blank" rel="noopener" class="text-blue-600 hover:underline">${String(v || "").replace(/</g, "&lt;")}</a>` : String(v || "") },
-        { key: "sku", label: "מק\"ט" },
+        { key: "whatsMissing", label: "מה חסר" },
+        { key: "matchedBy", label: "התאמה לפי", render: (v) => v ? `<span class="text-xs" style="color:#1e8e3e">${v}</span>` : `<span class="text-xs text-slate-400">ללא התאמה</span>` },
+        { key: "sku", label: "מק\"ט באתר" },
+        { key: "fileSku", label: "מק\"ט בקובץ" },
         { key: "siteGtin", label: "ברקוד באתר" },
         { key: "fileGtin", label: "ברקוד אצלך" },
         { key: "id", label: "מזהה" },
@@ -1427,7 +1446,7 @@ ${conclSection}
       const rows = bcResult.fill;
       if (!rows.length) { document.getElementById("bcStatus").textContent = "אין שורות למילוי לייצוא."; return; }
       const esc = (v) => { v = String(v == null ? "" : v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
-      const lines = ["ID,SKU,Name,GTIN"].concat(rows.map((r) => [r.id, r.sku, r.name, r.fileGtin].map(esc).join(",")));
+      const lines = ["ID,SKU,Name,GTIN,Matched by,File SKU"].concat(rows.map((r) => [r.id, r.sku, r.name, r.fileGtin, r.matchedBy || "", r.fileSku || ""].map(esc).join(",")));
       const blob = new Blob(["﻿" + lines.join("\n")], { type: "text/csv;charset=utf-8;" });
       const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
       a.download = "barcodes_fill_" + document.getElementById("siteSelect").value + ".csv"; a.click(); URL.revokeObjectURL(a.href);
@@ -1557,9 +1576,9 @@ ${conclSection}
           totals.known = d.knownBrands || totals.known;
           totals.scanned += d.scannedProducts || 0;
           totals.source = d.brandSource || totals.source;
-          // Stop when finished, when the server doesn't support paging, or when a
-          // slice contributed nothing new.
-          if (d.done || d.lastPage == null || !fresh.length) break;
+          // Continue while the slice still returned products; page counts reported by
+          // the store aren't always reliable.
+          if (d.lastPage == null || !(d.scannedProducts > 0)) break;
           page = d.lastPage + 1;
         }
         st.textContent = `${fmt(totals.known)} מותגים מוכרים (${totals.source}) · נסרקו ${fmt(totals.scanned)} מוצרים · ${fmt(totals.missing)} ללא מותג · זוהו ${fmt(totals.matched)} · לא זוהו ${fmt(totals.unmatched)}`;
