@@ -1225,6 +1225,129 @@ ${conclSection}
       e.preventDefault();
       enrGenerate(Number(btn.dataset.id));
     });
+    // ===================== Bulk runner =====================
+    // Drives generation from the browser, one product per request, with a delay
+    // between calls. That keeps every request short (no proxy timeouts), shows real
+    // progress, respects the AI provider's rate limits, and can be stopped/resumed.
+    let bulkStop = false;
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+    function bulkLog(msg, cls) {
+      const el = document.getElementById("bulkLog");
+      el.innerHTML = `<div class="${cls || ""}">${msg}</div>` + el.innerHTML;
+    }
+    // Auto-approve a generated draft (bulk mode: review happens on the CSV sample).
+    function bulkApprove(draft) {
+      const s = draft.suggested || {};
+      const rec = {
+        productId: draft.productId, sku: draft.sku, url: draft.url,
+        approvedAt: new Date().toISOString(),
+        name: s.nameSuggestion || "", shortDescription: s.shortDescription || "",
+        longDescription: s.longDescription || "", metaTitle: s.metaTitle || "",
+        metaDescription: s.metaDescription || "",
+        faq: Array.isArray(s.faq) ? s.faq.map((f) => `שאלה: ${f.q}\nתשובה: ${f.a}`).join("\n\n") : "",
+        imageAlts: Array.isArray(s.imageAlts) ? s.imageAlts.map((a) => ({ id: a.id, alt: a.alt })) : [],
+      };
+      const store = enrGetApproved(); store[rec.productId] = rec;
+      try { enrSaveApproved(store); }
+      catch (e) { throw new Error("נגמר מקום האחסון בדפדפן — ייצאי CSV עכשיו כדי לפנות מקום, ואז המשיכי."); }
+      enrUpdateExportBtn();
+    }
+    async function bulkRun() {
+      bulkStop = false;
+      const count = Math.max(1, Number(document.getElementById("bulkCount").value) || 100);
+      let delay = Math.max(1, Number(document.getElementById("bulkDelay").value) || 5) * 1000;
+      document.getElementById("bulkBar").classList.remove("hidden");
+      document.getElementById("bulkStop").classList.remove("hidden");
+      document.getElementById("bulkStart").classList.add("hidden");
+      document.getElementById("bulkLog").innerHTML = "";
+      const st = document.getElementById("bulkStatus"), fill = document.getElementById("bulkFill");
+      const done = enrGetApproved();
+
+      st.textContent = "טוען רשימת מוצרים...";
+      let queue = [];
+      try {
+        // Pull candidates in pages until we have enough that aren't already done.
+        for (let off = 0; queue.length < count && off < 5000; off += 100) {
+          const d = await enrApi(`/api/enrich-list?limit=100&offset=${off}`);
+          if (!d.available || !d.items || !d.items.length) break;
+          d.items.forEach((it) => { if (!done[it.id] && queue.length < count) queue.push(it); });
+          if (d.items.length < 100) break;
+        }
+      } catch (e) { st.textContent = "שגיאה בטעינת הרשימה: " + e.message; }
+
+      if (!queue.length) {
+        st.textContent = "לא נמצאו מוצרים חדשים לטיפול (ייתכן שכולם כבר טופלו).";
+        document.getElementById("bulkStop").classList.add("hidden");
+        document.getElementById("bulkStart").classList.remove("hidden");
+        return;
+      }
+
+      let ok = 0, fail = 0, i = 0;
+      const t0 = Date.now();
+      for (const item of queue) {
+        if (bulkStop) { bulkLog("⏸ נעצר על ידך", "text-amber-600"); break; }
+        i++;
+        try {
+          const d = await enrApi("/api/enrich-generate?id=" + item.id);
+          if (d.available && d.draft) { bulkApprove(d.draft); ok++; bulkLog(`✓ ${item.name}`, "text-emerald-600"); }
+          else {
+            fail++;
+            const msg = d.error || d.message || "שגיאה";
+            bulkLog(`✗ ${item.name} — ${msg}`, "text-rose-600");
+            // Ran out of free quota: back off hard instead of burning through the list.
+            if (/מכסה|quota|RESOURCE_EXHAUSTED|429/i.test(msg)) {
+              const m = msg.match(/כ-(\d+) שניות/);
+              const wait = m ? Number(m[1]) * 1000 : 60000;
+              bulkLog(`⏳ ממתין ${Math.round(wait / 1000)} שניות בגלל מגבלת מכסה...`, "text-amber-600");
+              await sleep(wait);
+              delay = Math.min(delay * 1.5, 30000); // slow down from here on
+            }
+          }
+        } catch (e) {
+          fail++; bulkLog(`✗ ${item.name} — ${e.message}`, "text-rose-600");
+          if (/אחסון/.test(e.message)) { st.textContent = e.message; break; }
+        }
+        const pct = Math.round((i / queue.length) * 100);
+        fill.style.width = pct + "%";
+        const avg = (Date.now() - t0) / i;
+        const left = Math.round((avg * (queue.length - i)) / 60000);
+        st.textContent = `${i}/${queue.length} · הצליחו ${ok} · נכשלו ${fail}${left > 0 ? ` · נותרו כ-${left} דקות` : ""}`;
+        if (i < queue.length && !bulkStop) await sleep(delay);
+      }
+      document.getElementById("bulkStop").classList.add("hidden");
+      document.getElementById("bulkStart").classList.remove("hidden");
+      st.textContent += " — סיום. אפשר לייצא CSV.";
+    }
+    document.getElementById("bulkStart").addEventListener("click", bulkRun);
+    document.getElementById("bulkStop").addEventListener("click", () => { bulkStop = true; });
+
+    // ===================== Brand recovery =====================
+    let brandRows = [];
+    document.getElementById("brandScan").addEventListener("click", async () => {
+      const st = document.getElementById("brandStatus");
+      st.textContent = "סורק את הקטלוג...";
+      try {
+        const d = await enrApi("/api/brands?limit=3000");
+        if (!d.available) { st.textContent = "שגיאה: " + (d.error || d.message); return; }
+        brandRows = d.items || [];
+        st.textContent = `${fmt(d.knownBrands)} מותגים מוכרים · ${fmt(d.missingBrand)} מוצרים ללא מותג · זוהו ${fmt(d.matched)} · לא זוהו ${fmt(d.unmatched)}`;
+        document.getElementById("brandExport").classList.toggle("hidden", !brandRows.length);
+        mountTable("brandMount", [
+          { key: "name", label: "מוצר", align: "right", long: true, render: (v, r) => r.url ? `<a href="${r.url}" target="_blank" rel="noopener" class="text-blue-600 hover:underline">${String(v || "").replace(/</g, "&lt;")}</a>` : String(v || "") },
+          { key: "suggestedBrand", label: "מותג מוצע" },
+          { key: "categories", label: "קטגוריות", align: "right", long: true },
+        ], brandRows, { defaultSort: { key: "suggestedBrand", dir: "asc" }, scroll: true, totals: false });
+      } catch (e) { st.textContent = "שגיאה: " + e.message; }
+    });
+    document.getElementById("brandExport").addEventListener("click", () => {
+      if (!brandRows.length) return;
+      const esc = (v) => { v = String(v == null ? "" : v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+      const lines = ["ID,Name,Brands"].concat(brandRows.map((r) => [r.id, r.name, r.suggestedBrand].map(esc).join(",")));
+      const blob = new Blob(["﻿" + lines.join("\n")], { type: "text/csv;charset=utf-8;" });
+      const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
+      a.download = "brands_" + document.getElementById("siteSelect").value + ".csv"; a.click(); URL.revokeObjectURL(a.href);
+    });
+
     document.getElementById("enrLoadList").addEventListener("click", enrLoadList);
     document.getElementById("enrExport").addEventListener("click", enrExportCsv);
     document.getElementById("enrApproveAll").addEventListener("click", enrApproveCurrent);

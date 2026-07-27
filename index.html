@@ -905,6 +905,42 @@
         <span class="flex-1"></span>
         <button id="enrExport" class="hidden tbl-export border border-slate-300 rounded-lg px-4 py-2 text-sm">⬇ ייצא מאושרים ל-CSV (<span id="enrApprovedCount">0</span>)</button>
       </div>
+
+      <!-- BULK RUNNER -->
+      <div class="border border-blue-200 bg-blue-50 rounded-lg p-3 mb-3">
+        <div class="font-bold text-slate-800 mb-1">⚙️ הרצה אוטומטית על כמות גדולה</div>
+        <div class="text-xs text-slate-500 mb-3">מייצר טיוטות ברצף ושומר אותן אוטומטית. אפשר לעצור ולהמשיך בכל שלב — מה שנוצר נשמר. בסיום מייצאים CSV ובודקים מדגם לפני ייבוא.</div>
+        <div class="flex items-end gap-3 flex-wrap">
+          <label class="text-sm text-slate-600">כמות מוצרים
+            <input id="bulkCount" type="number" min="1" max="1500" value="100" class="block border border-slate-300 rounded-lg px-3 py-1 text-sm w-28 mt-1">
+          </label>
+          <label class="text-sm text-slate-600">השהיה בין בקשות (שניות)
+            <input id="bulkDelay" type="number" min="1" max="60" value="5" class="block border border-slate-300 rounded-lg px-3 py-1 text-sm w-28 mt-1">
+          </label>
+          <button id="bulkStart" class="bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg px-4 py-2 text-sm">▶ התחל</button>
+          <button id="bulkStop" class="hidden border border-rose-300 text-rose-600 rounded-lg px-4 py-2 text-sm">■ עצור</button>
+        </div>
+        <div id="bulkBar" class="hidden mt-3">
+          <div class="w-full bg-white rounded-full h-2 overflow-hidden border border-slate-200">
+            <div id="bulkFill" class="bg-emerald-500 h-2" style="width:0%"></div>
+          </div>
+          <div id="bulkStatus" class="text-xs text-slate-600 mt-2"></div>
+          <div id="bulkLog" class="text-xs text-slate-400 mt-1 max-h-24 overflow-y-auto"></div>
+        </div>
+      </div>
+
+      <!-- BRAND RECOVERY -->
+      <div class="border border-violet-200 bg-violet-50 rounded-lg p-3 mb-3">
+        <div class="font-bold text-slate-800 mb-1">🏷️ שחזור מותגים (ללא AI)</div>
+        <div class="text-xs text-slate-500 mb-3">לומד את רשימת המותגים מהמוצרים שכבר מתויגים, ומזהה אותם בשמות של מוצרים ללא מותג. לא ממציא — רק מזהה שם מותג שמופיע בפועל בשם המוצר.</div>
+        <div class="flex items-center gap-2 flex-wrap">
+          <button id="brandScan" class="bg-violet-600 hover:bg-violet-700 text-white rounded-lg px-4 py-2 text-sm">🔍 סרוק והצע מותגים</button>
+          <span id="brandStatus" class="text-sm text-slate-500"></span>
+          <span class="flex-1"></span>
+          <button id="brandExport" class="hidden tbl-export border border-slate-300 rounded-lg px-4 py-2 text-sm">⬇ ייצא CSV</button>
+        </div>
+        <div id="brandMount" class="mt-3"></div>
+      </div>
       <div id="enrListMount"></div>
     </div>
     <div id="enrEditor" class="hidden card">
