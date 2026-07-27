@@ -1250,7 +1250,12 @@ ${conclSection}
     const bcNorm = (s) => String(s == null ? "" : s).trim();
     const bcNormSku = (s) => bcNorm(s).toLowerCase().replace(/\s+/g, "");
     // Barcodes are digits; strip spaces/dashes and any spreadsheet quote prefix.
-    const bcNormGtin = (s) => bcNorm(s).replace(/^['`]/, "").replace(/[\s-]/g, "");
+    const bcNormGtin = (s) => {
+      let v = bcNorm(s).replace(/^['`]/, "").replace(/[\s-]/g, "");
+      // Rescue barcodes that a spreadsheet turned into scientific notation.
+      if (/^\d(?:\.\d+)?e\+?\d+$/i.test(v)) { const n = Number(v); if (Number.isFinite(n)) v = n.toFixed(0); }
+      return v;
+    };
 
     function bcParseDelimited(text) {
       const clean = text.replace(/^﻿/, "");
@@ -1298,10 +1303,24 @@ ${conclSection}
       const f = ev.target.files && ev.target.files[0];
       if (!f) return;
       const st = document.getElementById("bcStatus");
+      const isExcel = /\.(xlsx|xlsm|xls)$/i.test(f.name);
       const reader = new FileReader();
+      reader.onerror = () => { st.textContent = "לא הצלחתי לקרוא את הקובץ."; };
       reader.onload = () => {
         try {
-          const rows = bcParseDelimited(String(reader.result));
+          let rows;
+          if (isExcel) {
+            if (typeof XLSX === "undefined") { st.textContent = "קורא קבצי Excel לא נטען. רענני את הדף (Ctrl+Shift+R) ונסי שוב, או שמרי את הקובץ כ-CSV."; return; }
+            const wb = XLSX.read(new Uint8Array(reader.result), { type: "array" });
+            const sheet = wb.Sheets[wb.SheetNames[0]];
+            // raw:true keeps numbers as numbers — with raw:false Excel hands back
+            // long barcodes in scientific notation ("7.29E+12"), which would never match.
+            rows = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: true, defval: "" })
+              .map((r) => r.map((v) => (typeof v === "number" && Number.isInteger(v) ? v.toFixed(0) : String(v == null ? "" : v))))
+              .filter((r) => r.some((x) => bcNorm(x) !== ""));
+          } else {
+            rows = bcParseDelimited(String(reader.result));
+          }
           if (rows.length < 2) { st.textContent = "הקובץ ריק או ללא שורות נתונים."; return; }
           bcFileRows = rows;
           const header = rows[0].map((h) => bcNorm(h));
@@ -1317,7 +1336,8 @@ ${conclSection}
           st.textContent = `הקובץ נקרא: ${fmt(rows.length - 1)} שורות. ודאי שהעמודות נכונות ולחצי "השווה".`;
         } catch (e) { st.textContent = "לא הצלחתי לקרוא את הקובץ: " + e.message; }
       };
-      reader.readAsText(f, "utf-8");
+      // Excel needs the raw bytes; CSV is read as UTF-8 text.
+      if (isExcel) reader.readAsArrayBuffer(f); else reader.readAsText(f, "utf-8");
     });
 
     document.getElementById("bcCompare").addEventListener("click", () => {

@@ -10,6 +10,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <!-- Reads Excel files locally in the browser (barcode reconciliation) -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <link rel="stylesheet" href="style.css">
 </head>
 <body class="bg-slate-100 min-h-screen p-4 md:p-6">
@@ -905,8 +907,8 @@
       </div>
       <div class="flex items-center gap-3 flex-wrap mb-3">
         <button id="bcLoadSite" class="bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-4 py-2 text-sm">1️⃣ טען ברקודים מהאתר</button>
-        <label class="text-sm text-slate-600">2️⃣ קובץ מהמערכת:
-          <input id="bcFile" type="file" accept=".csv,.txt,.tsv" class="block mt-1 text-sm">
+        <label class="text-sm text-slate-600">2️⃣ קובץ מהמערכת (Excel או CSV):
+          <input id="bcFile" type="file" accept=".xlsx,.xls,.xlsm,.csv,.txt,.tsv" class="block mt-1 text-sm">
         </label>
         <span id="bcStatus" class="text-sm text-slate-500"></span>
       </div>
