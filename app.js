@@ -1292,7 +1292,7 @@ ${conclSection}
       try {
         // Walk the catalogue in slices so no single request runs long enough to be cut off.
         while (guard++ < 60) {
-          st.textContent = `טוען ברקודים מהאתר... נסרקו ${fmt(agg.total)} מוצרים` + (reportedPages ? ` (עמוד ${page} מתוך ${reportedPages})` : "");
+          st.textContent = `טוען ברקודים מהאתר... ${fmt(items.length)} מוצרים` + (reportedPages ? ` (עמוד ${page} מתוך ${reportedPages})` : "");
           const d = await enrApi(`/api/barcodes?startPage=${page}&maxPages=8${onlyMissing ? "&onlyMissing=1" : ""}`);
           if (!d.available) { document.getElementById("bcUnavailable").classList.remove("hidden"); document.getElementById("bcUnavailable").textContent = "⚠️ " + (d.error || d.message); st.textContent = ""; return; }
           document.getElementById("bcUnavailable").classList.add("hidden");
