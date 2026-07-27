@@ -1286,7 +1286,7 @@ ${conclSection}
       const items = [], seen = new Set();
       const onlyMissing = document.getElementById("bcOnlyMissing").checked;
       const withVars = document.getElementById("bcWithVars").checked;
-      let varCount = 0;
+      let varCount = 0, varTruncated = false;
       // All figures are derived from the de-duplicated product list, never by summing
       // per-slice counts — that way a server returning the same page twice can't
       // inflate anything.
@@ -1295,13 +1295,17 @@ ${conclSection}
         // Walk the catalogue in slices so no single request runs long enough to be cut off.
         while (guard++ < 60) {
           st.textContent = `טוען ברקודים מהאתר... ${fmt(items.length)} מוצרים` + (reportedPages ? ` (עמוד ${page} מתוך ${reportedPages})` : "");
-          const d = await enrApi(`/api/barcodes?startPage=${page}&maxPages=8${onlyMissing ? "&onlyMissing=1" : ""}${withVars ? "" : "&noVariations=1"}`);
+          // Variations mean one extra request per variable product, so take far
+          // fewer catalogue pages per round when they're included.
+          const slice = withVars ? 2 : 8;
+          const d = await enrApi(`/api/barcodes?startPage=${page}&maxPages=${slice}${onlyMissing ? "&onlyMissing=1" : ""}${withVars ? "" : "&noVariations=1"}`);
           if (!d.available) { document.getElementById("bcUnavailable").classList.remove("hidden"); document.getElementById("bcUnavailable").textContent = "⚠️ " + (d.error || d.message); st.textContent = ""; return; }
           document.getElementById("bcUnavailable").classList.add("hidden");
           reportedPages = d.totalPages || reportedPages;
           perPage = d.perPage || perPage;
           failed += d.failedPages || 0;
           varCount += d.variationCount || 0;
+          if (d.variationsTruncated) varTruncated = true;
           const fresh = (d.items || []).filter((it) => !seen.has(it.id));
           fresh.forEach((it) => seen.add(it.id));
           items.push(...fresh);
@@ -1353,7 +1357,8 @@ ${conclSection}
           (withVars ? ` + ${fmt(varCount)} וריאציות` : " · ללא וריאציות") +
           ` · נמצאו ${fmt(items.length)} לטיפול` +
           ` · ${fmt(bcSite.withoutSku)} בלי מק"ט` +
-          (failed ? ` · ⚠️ ${failed} בקשות נכשלו — לחצי שוב להשלמה` : "");
+          (failed ? ` · ⚠️ ${failed} בקשות נכשלו — לחצי שוב להשלמה` : "") +
+          (varTruncated ? " · ⏱️ חלק מהוריאציות לא נסרקו (מגבלת זמן) — לחצי שוב להשלמה" : "");
       } catch (e) {
         st.textContent = /failed to fetch|load failed/i.test(e.message)
           ? `נעצר אחרי ${fmt(items.length)} מוצרים — החנות איטית. אפשר ללחוץ שוב.`
