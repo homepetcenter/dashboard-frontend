@@ -1284,24 +1284,33 @@ ${conclSection}
     document.getElementById("bcLoadSite").addEventListener("click", async () => {
       const st = document.getElementById("bcStatus");
       const items = [], seen = new Set();
+      const onlyMissing = document.getElementById("bcOnlyMissing").checked;
+      // Totals are summed across slices so they describe the whole catalogue,
+      // even when only the products needing work are returned.
+      const agg = { total: 0, withGtin: 0, withoutGtin: 0, withoutSku: 0 };
       let page = 1, guard = 0, reportedPages = 0, failed = 0, emptyStreak = 0;
       try {
         // Walk the catalogue in slices so no single request runs long enough to be cut off.
         while (guard++ < 60) {
-          st.textContent = `טוען ברקודים מהאתר... ${fmt(items.length)} מוצרים` + (reportedPages ? ` (עמוד ${page} מתוך ${reportedPages})` : "");
-          const d = await enrApi(`/api/barcodes?startPage=${page}&maxPages=8`);
+          st.textContent = `טוען ברקודים מהאתר... נסרקו ${fmt(agg.total)} מוצרים` + (reportedPages ? ` (עמוד ${page} מתוך ${reportedPages})` : "");
+          const d = await enrApi(`/api/barcodes?startPage=${page}&maxPages=8${onlyMissing ? "&onlyMissing=1" : ""}`);
           if (!d.available) { document.getElementById("bcUnavailable").classList.remove("hidden"); document.getElementById("bcUnavailable").textContent = "⚠️ " + (d.error || d.message); st.textContent = ""; return; }
           document.getElementById("bcUnavailable").classList.add("hidden");
           reportedPages = d.totalPages || reportedPages;
           failed += d.failedPages || 0;
+          agg.total += d.total || 0;
+          agg.withGtin += d.withGtin || 0;
+          agg.withoutGtin += d.withoutGtin || 0;
+          agg.withoutSku += d.withoutSku || 0;
           const fresh = (d.items || []).filter((it) => !seen.has(it.id));
           fresh.forEach((it) => seen.add(it.id));
           items.push(...fresh);
           if (d.lastPage == null) break;                       // server without paging support
-          emptyStreak = fresh.length ? 0 : emptyStreak + 1;
-          // Tolerate one empty slice (a transient failure) before concluding we're done.
+          // With onlyMissing on, a slice can legitimately return nothing while still
+          // having scanned products — so judge "empty" by what was scanned.
+          emptyStreak = (d.total > 0) ? 0 : emptyStreak + 1;
           if (emptyStreak >= 2) break;
-          if (d.lastPage >= (d.totalPages || 0) && !fresh.length) break;
+          if (d.lastPage >= (d.totalPages || 0) && !d.total) break;
           page = d.lastPage + 1;
         }
         // Duplicate barcodes across the whole store — a real Merchant Center problem.
@@ -1309,21 +1318,16 @@ ${conclSection}
         items.forEach((it) => { if (it.gtin) { const a = byGtin.get(it.gtin) || []; a.push(it); byGtin.set(it.gtin, a); } });
         const duplicates = [...byGtin.entries()].filter(([, a]) => a.length > 1)
           .map(([gtin, a]) => ({ gtin, count: a.length, products: a.map((x) => `${x.name} (#${x.id})`).join(" | ") }));
-        bcSite = {
-          items, duplicates, duplicateCount: duplicates.length,
-          total: items.length,
-          withGtin: items.filter((i) => i.gtin).length,
-          withoutGtin: items.filter((i) => !i.gtin).length,
-          withoutSku: items.filter((i) => !i.sku).length,
-        };
+        bcSite = { items, duplicates, duplicateCount: duplicates.length, ...agg, onlyMissing };
         const k = (v, l, cls) => `<div class="card"><div class="kpi-label">${l}</div><div class="kpi-val ${cls || ""}">${v}</div></div>`;
         document.getElementById("bcKpis").innerHTML =
           k(fmt(bcSite.total), "מוצרים באתר") +
           k(fmt(bcSite.withGtin), "עם ברקוד", "!text-emerald-600") +
           k(fmt(bcSite.withoutGtin), "בלי ברקוד", "!text-rose-600") +
           k(fmt(bcSite.duplicateCount), "ברקודים כפולים", bcSite.duplicateCount ? "!text-amber-600" : "");
-        st.textContent = `נטענו ${fmt(bcSite.total)} מוצרים` +
-          (reportedPages ? ` (האתר דיווח על ${reportedPages} עמודים)` : "") +
+        st.textContent = `נסרקו ${fmt(bcSite.total)} מוצרים` +
+          (reportedPages ? ` (${reportedPages} עמודים)` : "") +
+          (onlyMissing ? ` · הובאו ${fmt(items.length)} שחסר להם ברקוד או מק"ט` : "") +
           ` · ${fmt(bcSite.withoutSku)} בלי מק"ט` +
           (failed ? ` · ⚠️ ${failed} עמודים נכשלו — לחצי שוב להשלמה` : "");
       } catch (e) {
