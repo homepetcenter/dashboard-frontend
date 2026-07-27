@@ -1283,20 +1283,45 @@ ${conclSection}
 
     document.getElementById("bcLoadSite").addEventListener("click", async () => {
       const st = document.getElementById("bcStatus");
-      st.textContent = "טוען ברקודים מהאתר...";
+      const items = [], seen = new Set();
+      let page = 1, guard = 0;
       try {
-        const d = await enrApi("/api/barcodes");
-        if (!d.available) { document.getElementById("bcUnavailable").classList.remove("hidden"); document.getElementById("bcUnavailable").textContent = "⚠️ " + (d.error || d.message); st.textContent = ""; return; }
-        document.getElementById("bcUnavailable").classList.add("hidden");
-        bcSite = d;
+        // Walk the catalogue in slices so no single request runs long enough to be cut off.
+        while (guard++ < 60) {
+          st.textContent = `טוען ברקודים מהאתר... ${fmt(items.length)} מוצרים`;
+          const d = await enrApi(`/api/barcodes?startPage=${page}&maxPages=8`);
+          if (!d.available) { document.getElementById("bcUnavailable").classList.remove("hidden"); document.getElementById("bcUnavailable").textContent = "⚠️ " + (d.error || d.message); st.textContent = ""; return; }
+          document.getElementById("bcUnavailable").classList.add("hidden");
+          const fresh = (d.items || []).filter((it) => !seen.has(it.id));
+          fresh.forEach((it) => seen.add(it.id));
+          items.push(...fresh);
+          if (d.done || d.lastPage == null || !fresh.length) break;
+          page = d.lastPage + 1;
+        }
+        // Duplicate barcodes across the whole store — a real Merchant Center problem.
+        const byGtin = new Map();
+        items.forEach((it) => { if (it.gtin) { const a = byGtin.get(it.gtin) || []; a.push(it); byGtin.set(it.gtin, a); } });
+        const duplicates = [...byGtin.entries()].filter(([, a]) => a.length > 1)
+          .map(([gtin, a]) => ({ gtin, count: a.length, products: a.map((x) => `${x.name} (#${x.id})`).join(" | ") }));
+        bcSite = {
+          items, duplicates, duplicateCount: duplicates.length,
+          total: items.length,
+          withGtin: items.filter((i) => i.gtin).length,
+          withoutGtin: items.filter((i) => !i.gtin).length,
+          withoutSku: items.filter((i) => !i.sku).length,
+        };
         const k = (v, l, cls) => `<div class="card"><div class="kpi-label">${l}</div><div class="kpi-val ${cls || ""}">${v}</div></div>`;
         document.getElementById("bcKpis").innerHTML =
-          k(fmt(d.total), "מוצרים באתר") +
-          k(fmt(d.withGtin), "עם ברקוד", "!text-emerald-600") +
-          k(fmt(d.withoutGtin), "בלי ברקוד", "!text-rose-600") +
-          k(fmt(d.duplicateCount), "ברקודים כפולים", d.duplicateCount ? "!text-amber-600" : "");
-        st.textContent = `נטענו ${fmt(d.total)} מוצרים · ${fmt(d.withoutSku)} מהם בלי מק"ט (לא ניתן להצליב אותם)`;
-      } catch (e) { st.textContent = "שגיאה: " + e.message; }
+          k(fmt(bcSite.total), "מוצרים באתר") +
+          k(fmt(bcSite.withGtin), "עם ברקוד", "!text-emerald-600") +
+          k(fmt(bcSite.withoutGtin), "בלי ברקוד", "!text-rose-600") +
+          k(fmt(bcSite.duplicateCount), "ברקודים כפולים", bcSite.duplicateCount ? "!text-amber-600" : "");
+        st.textContent = `נטענו ${fmt(bcSite.total)} מוצרים · ${fmt(bcSite.withoutSku)} מהם בלי מק"ט (לא ניתן להצליב אותם)`;
+      } catch (e) {
+        st.textContent = /failed to fetch|load failed/i.test(e.message)
+          ? `נעצר אחרי ${fmt(items.length)} מוצרים — החנות איטית. אפשר ללחוץ שוב.`
+          : "שגיאה: " + e.message;
+      }
     });
 
     document.getElementById("bcFile").addEventListener("change", (ev) => {
