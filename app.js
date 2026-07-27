@@ -1104,7 +1104,6 @@ ${conclSection}
           { key: "missing", label: "חסר", align: "right", long: true },
           { key: "_act", label: "פעולה", render: (v, r) => `<button class="enr-gen bg-blue-600 hover:bg-blue-700 text-white rounded px-3 py-1 text-xs" data-id="${r.id}">${approved[r.id] ? "✓ נוצר — ערוך" : "✨ צור טיוטה"}</button>` },
         ], d.items, { defaultSort: { key: "missingCount", dir: "desc" }, scroll: true, totals: false, search: true });
-        document.querySelectorAll("#enrListMount .enr-gen").forEach((b) => b.addEventListener("click", () => enrGenerate(Number(b.dataset.id))));
         enrUpdateExportBtn();
       } catch (e) {
         st.textContent = /failed to fetch|load failed|timeout/i.test(e.message)
@@ -1201,6 +1200,14 @@ ${conclSection}
         a2.download = "enrichment_ALT_" + document.getElementById("siteSelect").value + ".csv"; a2.click(); URL.revokeObjectURL(a2.href);
       }
     }
+    // Event delegation: the table re-renders itself on sort/search, which would drop
+    // per-button listeners. Listening on the container keeps the buttons working.
+    document.getElementById("enrListMount").addEventListener("click", (e) => {
+      const btn = e.target.closest(".enr-gen");
+      if (!btn) return;
+      e.preventDefault();
+      enrGenerate(Number(btn.dataset.id));
+    });
     document.getElementById("enrLoadList").addEventListener("click", enrLoadList);
     document.getElementById("enrExport").addEventListener("click", enrExportCsv);
     document.getElementById("enrApproveAll").addEventListener("click", enrApproveCurrent);
