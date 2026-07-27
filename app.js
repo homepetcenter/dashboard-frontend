@@ -1290,7 +1290,7 @@ ${conclSection}
       // All figures are derived from the de-duplicated product list, never by summing
       // per-slice counts — that way a server returning the same page twice can't
       // inflate anything.
-      let page = 1, guard = 0, reportedPages = 0, perPage = 50, failed = 0, emptyStreak = 0;
+      let page = 1, guard = 0, reportedPages = 0, perPage = 50, failed = 0, emptyStreak = 0, stopReason = "";
       try {
         // Walk the catalogue in slices so no single request runs long enough to be cut off.
         while (guard++ < 60) {
@@ -1309,22 +1309,23 @@ ${conclSection}
           const fresh = (d.items || []).filter((it) => !seen.has(it.id));
           fresh.forEach((it) => seen.add(it.id));
           items.push(...fresh);
-          if (d.lastPage == null) break;                       // server without paging support
+          if (d.lastPage == null) { stopReason = "השרת לא תומך בעמודים"; break; }
           // The server must honour the page we asked for. If it keeps replying with
           // the same first pages, paging isn't wired up on the server side — stop
           // immediately instead of re-counting the same products over and over.
           if (d.startPage != null && d.startPage !== page) {
             st.textContent = `⚠️ השרת מחזיר תמיד את אותם עמודים (ביקשנו ${page}, קיבלנו ${d.startPage}). צריך להעלות את index.js המעודכן לבקאנד.`;
-            break;
+            return;
           }
           // Stop at the end of the catalogue. Going past it just re-counts pages
           // that don't exist and inflates the totals.
-          if (d.totalPages && d.lastPage >= d.totalPages) break;
+          if (d.totalPages && d.lastPage >= d.totalPages) { stopReason = "הגענו לסוף הקטלוג"; break; }
           // With onlyMissing on, a slice can legitimately return nothing while still
           // having scanned products — so judge "empty" by what was scanned.
           emptyStreak = (d.total > 0) ? 0 : emptyStreak + 1;
-          if (emptyStreak >= 2) break;
+          if (emptyStreak >= 2) { stopReason = "לא הוחזרו עוד מוצרים"; break; }
           page = d.lastPage + 1;
+          if (guard >= 60) stopReason = "הגענו למגבלת הסבבים — לחצי שוב להמשך";
         }
         // Duplicate barcodes across the whole store — a real Merchant Center problem.
         const byGtin = new Map();
@@ -1358,7 +1359,8 @@ ${conclSection}
           ` · נמצאו ${fmt(items.length)} לטיפול` +
           ` · ${fmt(bcSite.withoutSku)} בלי מק"ט` +
           (failed ? ` · ⚠️ ${failed} בקשות נכשלו — לחצי שוב להשלמה` : "") +
-          (varTruncated ? " · ⏱️ חלק מהוריאציות לא נסרקו (מגבלת זמן) — לחצי שוב להשלמה" : "");
+          (varTruncated ? " · ⏱️ חלק מהוריאציות לא נסרקו (מגבלת זמן) — לחצי שוב להשלמה" : "") +
+          (stopReason ? ` · עצר: ${stopReason}` : "");
       } catch (e) {
         st.textContent = /failed to fetch|load failed/i.test(e.message)
           ? `נעצר אחרי ${fmt(items.length)} מוצרים — החנות איטית. אפשר ללחוץ שוב.`
