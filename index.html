@@ -893,6 +893,44 @@
     </div>
   </section>
 
+  <!-- BARCODE RECONCILIATION -->
+  <section data-screen="barcodes" class="hidden">
+    <div id="bcUnavailable" class="hidden card text-amber-600 text-sm mb-4"></div>
+    <div id="bcKpis" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4"></div>
+    <div class="card mb-4">
+      <div class="font-bold text-slate-800 mb-1">🔢 הצלבת ברקודים — המערכת שלך מול האתר</div>
+      <div class="text-xs text-slate-400 mb-3">
+        מעלים קובץ CSV מהמערכת (עמודת מק"ט ועמודת ברקוד), והמערכת מצליבה מול האתר לפי מק"ט:
+        מה חסר באתר וקיים אצלך, מה לא תואם, ומה כפול. הקובץ נקרא בדפדפן בלבד — לא נשלח לשום מקום.
+      </div>
+      <div class="flex items-center gap-3 flex-wrap mb-3">
+        <button id="bcLoadSite" class="bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-4 py-2 text-sm">1️⃣ טען ברקודים מהאתר</button>
+        <label class="text-sm text-slate-600">2️⃣ קובץ מהמערכת:
+          <input id="bcFile" type="file" accept=".csv,.txt,.tsv" class="block mt-1 text-sm">
+        </label>
+        <span id="bcStatus" class="text-sm text-slate-500"></span>
+      </div>
+      <div id="bcMapping" class="hidden text-sm text-slate-600 mb-3 flex items-end gap-3 flex-wrap">
+        <label>עמודת מק"ט <select id="bcColSku" class="block border border-slate-300 rounded-lg px-3 py-1 text-sm mt-1"></select></label>
+        <label>עמודת ברקוד <select id="bcColGtin" class="block border border-slate-300 rounded-lg px-3 py-1 text-sm mt-1"></select></label>
+        <button id="bcCompare" class="bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg px-4 py-2 text-sm">3️⃣ השווה</button>
+      </div>
+      <div id="bcSummary" class="flex flex-wrap gap-2 mb-3"></div>
+      <div class="flex items-center gap-2 mb-2">
+        <select id="bcView" class="border border-slate-300 rounded-lg px-3 py-1 text-sm">
+          <option value="fill">✅ למילוי — יש אצלך, חסר באתר</option>
+          <option value="mismatch">⚠️ לא תואם — ערך שונה</option>
+          <option value="missingInFile">❓ חסר בקובץ שלך</option>
+          <option value="dupSite">👯 ברקוד כפול באתר</option>
+          <option value="notOnSite">📦 בקובץ אך לא באתר</option>
+        </select>
+        <span class="flex-1"></span>
+        <button id="bcExport" class="tbl-export border border-slate-300 rounded-lg px-4 py-2 text-sm">⬇ ייצא לייבוא בווקומרס</button>
+      </div>
+      <div id="bcMount"></div>
+    </div>
+  </section>
+
   <!-- CONTENT ENRICHMENT (Stage B) -->
   <section data-screen="enrich" class="hidden">
     <div id="enrUnavailable" class="hidden card text-amber-600 text-sm mb-4"></div>

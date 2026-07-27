@@ -1243,6 +1243,151 @@ ${conclSection}
       e.preventDefault();
       enrGenerate(Number(btn.dataset.id));
     });
+    // ===================== Barcode reconciliation =====================
+    // Site data comes from the backend; the user's file is parsed in the browser
+    // (never uploaded anywhere). Matching is by SKU, which is the only reliable key.
+    let bcSite = null, bcFileRows = null, bcResult = null;
+    const bcNorm = (s) => String(s == null ? "" : s).trim();
+    const bcNormSku = (s) => bcNorm(s).toLowerCase().replace(/\s+/g, "");
+    // Barcodes are digits; strip spaces/dashes and any spreadsheet quote prefix.
+    const bcNormGtin = (s) => bcNorm(s).replace(/^['`]/, "").replace(/[\s-]/g, "");
+
+    function bcParseDelimited(text) {
+      const clean = text.replace(/^﻿/, "");
+      const firstLine = clean.slice(0, clean.indexOf("\n") === -1 ? clean.length : clean.indexOf("\n"));
+      const delim = (firstLine.match(/\t/g) || []).length > (firstLine.match(/,/g) || []).length ? "\t"
+        : (firstLine.match(/;/g) || []).length > (firstLine.match(/,/g) || []).length ? ";" : ",";
+      const rows = []; let cur = [], val = "", q = false, atFieldStart = true;
+      for (let i = 0; i < clean.length; i++) {
+        const c = clean[i];
+        if (q) {
+          if (c === '"' && clean[i + 1] === '"') { val += '"'; i++; }
+          else if (c === '"') q = false;
+          else val += c;
+        }
+        // A quote only opens a quoted field at the START of a field. Otherwise it is
+        // literal text — Hebrew headers like מק"ט would otherwise swallow the whole file.
+        else if (c === '"' && atFieldStart) { q = true; atFieldStart = false; }
+        else if (c === delim) { cur.push(val); val = ""; atFieldStart = true; }
+        else if (c === "\n") { cur.push(val); rows.push(cur); cur = []; val = ""; atFieldStart = true; }
+        else if (c !== "\r") { val += c; atFieldStart = false; }
+      }
+      if (val !== "" || cur.length) { cur.push(val); rows.push(cur); }
+      return rows.filter((r) => r.some((x) => bcNorm(x) !== ""));
+    }
+
+    document.getElementById("bcLoadSite").addEventListener("click", async () => {
+      const st = document.getElementById("bcStatus");
+      st.textContent = "טוען ברקודים מהאתר...";
+      try {
+        const d = await enrApi("/api/barcodes");
+        if (!d.available) { document.getElementById("bcUnavailable").classList.remove("hidden"); document.getElementById("bcUnavailable").textContent = "⚠️ " + (d.error || d.message); st.textContent = ""; return; }
+        document.getElementById("bcUnavailable").classList.add("hidden");
+        bcSite = d;
+        const k = (v, l, cls) => `<div class="card"><div class="kpi-label">${l}</div><div class="kpi-val ${cls || ""}">${v}</div></div>`;
+        document.getElementById("bcKpis").innerHTML =
+          k(fmt(d.total), "מוצרים באתר") +
+          k(fmt(d.withGtin), "עם ברקוד", "!text-emerald-600") +
+          k(fmt(d.withoutGtin), "בלי ברקוד", "!text-rose-600") +
+          k(fmt(d.duplicateCount), "ברקודים כפולים", d.duplicateCount ? "!text-amber-600" : "");
+        st.textContent = `נטענו ${fmt(d.total)} מוצרים · ${fmt(d.withoutSku)} מהם בלי מק"ט (לא ניתן להצליב אותם)`;
+      } catch (e) { st.textContent = "שגיאה: " + e.message; }
+    });
+
+    document.getElementById("bcFile").addEventListener("change", (ev) => {
+      const f = ev.target.files && ev.target.files[0];
+      if (!f) return;
+      const st = document.getElementById("bcStatus");
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const rows = bcParseDelimited(String(reader.result));
+          if (rows.length < 2) { st.textContent = "הקובץ ריק או ללא שורות נתונים."; return; }
+          bcFileRows = rows;
+          const header = rows[0].map((h) => bcNorm(h));
+          const mk = (sel, guess) => {
+            const el = document.getElementById(sel);
+            el.innerHTML = header.map((h, i) => `<option value="${i}">${h || "עמודה " + (i + 1)}</option>`).join("");
+            const gi = header.findIndex((h) => guess.test(h));
+            if (gi >= 0) el.value = String(gi);
+          };
+          mk("bcColSku", /sku|מק"?ט|מקט|קטלוג|catalog/i);
+          mk("bcColGtin", /barcode|gtin|ean|upc|ברקוד/i);
+          document.getElementById("bcMapping").classList.remove("hidden");
+          st.textContent = `הקובץ נקרא: ${fmt(rows.length - 1)} שורות. ודאי שהעמודות נכונות ולחצי "השווה".`;
+        } catch (e) { st.textContent = "לא הצלחתי לקרוא את הקובץ: " + e.message; }
+      };
+      reader.readAsText(f, "utf-8");
+    });
+
+    document.getElementById("bcCompare").addEventListener("click", () => {
+      const st = document.getElementById("bcStatus");
+      if (!bcSite) { st.textContent = 'קודם לחצי "טען ברקודים מהאתר".'; return; }
+      if (!bcFileRows) { st.textContent = "קודם בחרי קובץ."; return; }
+      const iSku = Number(document.getElementById("bcColSku").value);
+      const iGtin = Number(document.getElementById("bcColGtin").value);
+
+      // Build lookup from the user's file
+      const fileBySku = new Map();
+      for (let r = 1; r < bcFileRows.length; r++) {
+        const sku = bcNormSku(bcFileRows[r][iSku]);
+        const gtin = bcNormGtin(bcFileRows[r][iGtin]);
+        if (sku) fileBySku.set(sku, gtin);
+      }
+
+      const fill = [], mismatch = [], missingInFile = [], notOnSite = [];
+      const siteSkus = new Set();
+      for (const p of bcSite.items) {
+        const sku = bcNormSku(p.sku);
+        if (sku) siteSkus.add(sku);
+        const fileGtin = sku ? fileBySku.get(sku) : undefined;
+        const siteGtin = bcNormGtin(p.gtin);
+        if (!siteGtin && fileGtin) fill.push({ id: p.id, name: p.name, sku: p.sku, siteGtin: "", fileGtin, url: p.url });
+        else if (siteGtin && fileGtin && siteGtin !== fileGtin) mismatch.push({ id: p.id, name: p.name, sku: p.sku, siteGtin, fileGtin, url: p.url });
+        else if (!siteGtin && !fileGtin) missingInFile.push({ id: p.id, name: p.name, sku: p.sku, siteGtin: "", fileGtin: "", url: p.url });
+      }
+      fileBySku.forEach((gtin, sku) => { if (!siteSkus.has(sku)) notOnSite.push({ id: "", name: "(לא נמצא באתר)", sku, siteGtin: "", fileGtin: gtin, url: "" }); });
+
+      const dupSite = (bcSite.duplicates || []).map((d) => ({ id: "", name: d.products, sku: "", siteGtin: d.gtin, fileGtin: "", url: "" }));
+      bcResult = { fill, mismatch, missingInFile, dupSite, notOnSite };
+
+      const chip = (n, label, color) => `<span class="jump-btn text-xs px-3 py-1 rounded-full" style="background:${color}22;color:${color}">${label}: ${fmt(n)}</span>`;
+      document.getElementById("bcSummary").innerHTML =
+        chip(fill.length, "✅ למילוי", "#1e8e3e") +
+        chip(mismatch.length, "⚠️ לא תואם", "#d93025") +
+        chip(missingInFile.length, "❓ חסר בשניהם", "#5f6368") +
+        chip(dupSite.length, "👯 כפול באתר", "#b8860b") +
+        chip(notOnSite.length, "📦 בקובץ לא באתר", "#5f6368");
+      st.textContent = "ההשוואה הושלמה.";
+      bcRenderView();
+    });
+
+    function bcRenderView() {
+      if (!bcResult) return;
+      const view = document.getElementById("bcView").value;
+      const rows = bcResult[view] || [];
+      mountTable("bcMount", [
+        { key: "name", label: "מוצר", align: "right", long: true, render: (v, r) => r.url ? `<a href="${r.url}" target="_blank" rel="noopener" class="text-blue-600 hover:underline">${String(v || "").replace(/</g, "&lt;")}</a>` : String(v || "") },
+        { key: "sku", label: "מק\"ט" },
+        { key: "siteGtin", label: "ברקוד באתר" },
+        { key: "fileGtin", label: "ברקוד אצלך" },
+        { key: "id", label: "מזהה" },
+      ], rows, { scroll: true, totals: false });
+    }
+    document.getElementById("bcView").addEventListener("change", bcRenderView);
+
+    document.getElementById("bcExport").addEventListener("click", () => {
+      if (!bcResult) return;
+      // Export only rows that are safe to import: barcodes we can fill in.
+      const rows = bcResult.fill;
+      if (!rows.length) { document.getElementById("bcStatus").textContent = "אין שורות למילוי לייצוא."; return; }
+      const esc = (v) => { v = String(v == null ? "" : v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+      const lines = ["ID,SKU,Name,GTIN"].concat(rows.map((r) => [r.id, r.sku, r.name, r.fileGtin].map(esc).join(",")));
+      const blob = new Blob(["﻿" + lines.join("\n")], { type: "text/csv;charset=utf-8;" });
+      const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
+      a.download = "barcodes_fill_" + document.getElementById("siteSelect").value + ".csv"; a.click(); URL.revokeObjectURL(a.href);
+    });
+
     // ===================== Bulk runner =====================
     // Drives generation from the browser, one product per request, with a delay
     // between calls. That keeps every request short (no proxy timeouts), shows real
@@ -2096,6 +2241,7 @@ ${conclSection}
       crosscannibal:{path:"/api/cross-cannibal",render:renderCrossCannibal},
       catalog:{path:"/api/catalog",render:renderCatalog},
       enrich:{static:true,render:()=>{}},
+      barcodes:{static:true,render:()=>{}},
       summary:{path:"/api/summary",render:renderSummary},
       monthlyusers:{path:"/api/monthlyusers",render:renderMonthlyUsers},
       snapshots:{path:"/api/snapshot-history",render:renderSnapshots},
@@ -2115,10 +2261,10 @@ ${conclSection}
       keywords: ["search", "ranks", "rankdist", "orgpotential", "gap", "cannibal", "crosscannibal"],
       content: ["pages", "pageperf", "content", "entity", "decay"],
       audience: ["traffic", "audience", "analyses", "retention", "events"],
-      tools: ["catalog", "enrich", "spider", "textanalysis", "gupdates", "health"],
+      tools: ["catalog", "enrich", "barcodes", "spider", "textanalysis", "gupdates", "health"],
       compare: ["compare"],
     };
-    const DOM_ORDER = ["home","opportunities","insights","summary","monthlyusers","snapshots","overview","trends","realtime","goals","sales","ads","woo","topproducts","woocust","orderhist","merchant","pricing","traffic","audience","analyses","retention","events","ranks","rankdist","content","pageperf","orgpotential","gap","cannibal","decay","crosscannibal","catalog","enrich","spider","search","pages","entity","textanalysis","gupdates","health","compare"];
+    const DOM_ORDER = ["home","opportunities","insights","summary","monthlyusers","snapshots","overview","trends","realtime","goals","sales","ads","woo","topproducts","woocust","orderhist","merchant","pricing","traffic","audience","analyses","retention","events","ranks","rankdist","content","pageperf","orgpotential","gap","cannibal","decay","crosscannibal","catalog","enrich","barcodes","spider","search","pages","entity","textanalysis","gupdates","health","compare"];
 
     async function loadPart(name, force) {
       const t = PARTS[name], key = cacheKey();
@@ -2129,7 +2275,7 @@ ${conclSection}
         document.getElementById("updatedAt").textContent = "עודכן: " + new Date().toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" });
       } catch (err) { if (err.message && err.message.includes("forbidden")) return; setStatus("שגיאה: " + err.message, "error"); }
     }
-    const SECTION_TITLES = { home:"🏠 בית", pricing:"💸 תחרותיות מחירים", crosscannibal:"🥊 קניבליזציה בין המותגים", catalog:"🩺 בריאות קטלוג", enrich:"✍️ מחולל תוכן", opportunities:"🎯 הזדמנויות השבוע", insights:"💡 תובנות", summary:"📋 סיכום מנהלים", monthlyusers:"👥 משתמשים חודשי", snapshots:"🗄️ נתונים שמורים", overview:"📈 סקירה", trends:"📉 מגמות", realtime:"⏱️ זמן אמת", goals:"🎯 יעדים", sales:"💰 מכירות", ads:"📣 פרסום (ROAS)", woo:"🛍️ חנות (WooCommerce)", topproducts:"🏆 מוצרים מובילים", woocust:"👤 לקוחות", orderhist:"📜 היסטוריית הזמנות", merchant:"🛒 Merchant Center", traffic:"🚦 מקורות תנועה", audience:"🌍 קהל", analyses:"🗓️ ניתוחים", retention:"🔁 Retention", events:"🔔 אירועים", search:"🔍 חיפוש", pages:"📄 דפים מובילים", health:"🩺 בריאות האתר", ranks:"📈 מעקב מיקומים", rankdist:"📊 פיזור דירוג", content:"📈 ביצועי תוכן", pageperf:"📑 ביצועי עמודים", orgpotential:"🚀 פוטנציאל אורגני", gap:"🔋 פערי מילים", cannibal:"⚔️ קניבליזציה", decay:"🍂 שחיקת תוכן", spider:"🕷️ Spider Goggles", gupdates:"🌦️ עדכוני גוגל", entity:"🏆 סמכות מותג", textanalysis:"📝 ניתוח טקסט", compare:"📊 השוואת אתרים" };
+    const SECTION_TITLES = { home:"🏠 בית", pricing:"💸 תחרותיות מחירים", crosscannibal:"🥊 קניבליזציה בין המותגים", catalog:"🩺 בריאות קטלוג", enrich:"✍️ מחולל תוכן", barcodes:"🔢 הצלבת ברקודים", opportunities:"🎯 הזדמנויות השבוע", insights:"💡 תובנות", summary:"📋 סיכום מנהלים", monthlyusers:"👥 משתמשים חודשי", snapshots:"🗄️ נתונים שמורים", overview:"📈 סקירה", trends:"📉 מגמות", realtime:"⏱️ זמן אמת", goals:"🎯 יעדים", sales:"💰 מכירות", ads:"📣 פרסום (ROAS)", woo:"🛍️ חנות (WooCommerce)", topproducts:"🏆 מוצרים מובילים", woocust:"👤 לקוחות", orderhist:"📜 היסטוריית הזמנות", merchant:"🛒 Merchant Center", traffic:"🚦 מקורות תנועה", audience:"🌍 קהל", analyses:"🗓️ ניתוחים", retention:"🔁 Retention", events:"🔔 אירועים", search:"🔍 חיפוש", pages:"📄 דפים מובילים", health:"🩺 בריאות האתר", ranks:"📈 מעקב מיקומים", rankdist:"📊 פיזור דירוג", content:"📈 ביצועי תוכן", pageperf:"📑 ביצועי עמודים", orgpotential:"🚀 פוטנציאל אורגני", gap:"🔋 פערי מילים", cannibal:"⚔️ קניבליזציה", decay:"🍂 שחיקת תוכן", spider:"🕷️ Spider Goggles", gupdates:"🌦️ עדכוני גוגל", entity:"🏆 סמכות מותג", textanalysis:"📝 ניתוח טקסט", compare:"📊 השוואת אתרים" };
     const SOURCES = {
       ga4:      { label: "Google Analytics", color: "#E37400", emoji: "📈" },
       gsc:      { label: "Search Console",   color: "#1a73e8", emoji: "🔍" },
@@ -2143,7 +2289,7 @@ ${conclSection}
     const SCREEN_SRC = {
       overview: "ga4", trends: "ga4", realtime: "ga4", periods: "ga4", goals: "ga4", monthlyusers: "ga4", traffic: "ga4", audience: "ga4", analyses: "ga4", retention: "ga4", events: "ga4",
       summary: "mixed", insights: "mixed", opportunities: "mixed", compare: "mixed", home: "mixed",
-      pricing: "merchant", crosscannibal: "gsc", catalog: "woo", enrich: "woo",
+      pricing: "merchant", crosscannibal: "gsc", catalog: "woo", enrich: "woo", barcodes: "woo",
       search: "gsc", ranks: "gsc", rankdist: "gsc", pages: "gsc", pageperf: "gsc", orgpotential: "gsc", gap: "gsc", cannibal: "gsc", decay: "gsc", content: "gsc", entity: "gsc", gupdates: "gsc", health: "gsc",
       woo: "woo", woocust: "woo", topproducts: "woo", sales: "woo",
       ads: "ads", merchant: "merchant", orderhist: "store", snapshots: "store", spider: "tool", textanalysis: "tool",
