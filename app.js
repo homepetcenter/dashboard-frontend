@@ -1285,10 +1285,10 @@ ${conclSection}
       const st = document.getElementById("bcStatus");
       const items = [], seen = new Set();
       const onlyMissing = document.getElementById("bcOnlyMissing").checked;
-      // Totals are summed across slices so they describe the whole catalogue,
-      // even when only the products needing work are returned.
-      const agg = { total: 0, withGtin: 0, withoutGtin: 0, withoutSku: 0 };
-      let page = 1, guard = 0, reportedPages = 0, failed = 0, emptyStreak = 0;
+      // All figures are derived from the de-duplicated product list, never by summing
+      // per-slice counts — that way a server returning the same page twice can't
+      // inflate anything.
+      let page = 1, guard = 0, reportedPages = 0, perPage = 50, failed = 0, emptyStreak = 0;
       try {
         // Walk the catalogue in slices so no single request runs long enough to be cut off.
         while (guard++ < 60) {
@@ -1297,20 +1297,26 @@ ${conclSection}
           if (!d.available) { document.getElementById("bcUnavailable").classList.remove("hidden"); document.getElementById("bcUnavailable").textContent = "⚠️ " + (d.error || d.message); st.textContent = ""; return; }
           document.getElementById("bcUnavailable").classList.add("hidden");
           reportedPages = d.totalPages || reportedPages;
+          perPage = d.perPage || perPage;
           failed += d.failedPages || 0;
-          agg.total += d.total || 0;
-          agg.withGtin += d.withGtin || 0;
-          agg.withoutGtin += d.withoutGtin || 0;
-          agg.withoutSku += d.withoutSku || 0;
           const fresh = (d.items || []).filter((it) => !seen.has(it.id));
           fresh.forEach((it) => seen.add(it.id));
           items.push(...fresh);
           if (d.lastPage == null) break;                       // server without paging support
+          // The server must honour the page we asked for. If it keeps replying with
+          // the same first pages, paging isn't wired up on the server side — stop
+          // immediately instead of re-counting the same products over and over.
+          if (d.startPage != null && d.startPage !== page) {
+            st.textContent = `⚠️ השרת מחזיר תמיד את אותם עמודים (ביקשנו ${page}, קיבלנו ${d.startPage}). צריך להעלות את index.js המעודכן לבקאנד.`;
+            break;
+          }
+          // Stop at the end of the catalogue. Going past it just re-counts pages
+          // that don't exist and inflates the totals.
+          if (d.totalPages && d.lastPage >= d.totalPages) break;
           // With onlyMissing on, a slice can legitimately return nothing while still
           // having scanned products — so judge "empty" by what was scanned.
           emptyStreak = (d.total > 0) ? 0 : emptyStreak + 1;
           if (emptyStreak >= 2) break;
-          if (d.lastPage >= (d.totalPages || 0) && !d.total) break;
           page = d.lastPage + 1;
         }
         // Duplicate barcodes across the whole store — a real Merchant Center problem.
@@ -1318,16 +1324,30 @@ ${conclSection}
         items.forEach((it) => { if (it.gtin) { const a = byGtin.get(it.gtin) || []; a.push(it); byGtin.set(it.gtin, a); } });
         const duplicates = [...byGtin.entries()].filter(([, a]) => a.length > 1)
           .map(([gtin, a]) => ({ gtin, count: a.length, products: a.map((x) => `${x.name} (#${x.id})`).join(" | ") }));
-        bcSite = { items, duplicates, duplicateCount: duplicates.length, ...agg, onlyMissing };
+        // Counts from the unique items we actually hold.
+        const missingGtin = items.filter((i) => !i.gtin).length;
+        const missingSku = items.filter((i) => !i.sku).length;
+        // With "only missing" on we never receive the healthy products, so the
+        // catalogue size comes from the page count the store reports.
+        const catalogSize = onlyMissing ? (reportedPages * perPage) : items.length;
+        bcSite = {
+          items, duplicates, duplicateCount: duplicates.length, onlyMissing,
+          total: catalogSize,
+          withoutGtin: missingGtin,
+          withoutSku: missingSku,
+          withGtin: Math.max(0, catalogSize - missingGtin),
+          approx: onlyMissing,
+        };
         const k = (v, l, cls) => `<div class="card"><div class="kpi-label">${l}</div><div class="kpi-val ${cls || ""}">${v}</div></div>`;
+        const approx = bcSite.approx ? "~" : "";
         document.getElementById("bcKpis").innerHTML =
-          k(fmt(bcSite.total), "מוצרים באתר") +
-          k(fmt(bcSite.withGtin), "עם ברקוד", "!text-emerald-600") +
+          k(approx + fmt(bcSite.total), "מוצרים באתר") +
+          k(approx + fmt(bcSite.withGtin), "עם ברקוד", "!text-emerald-600") +
           k(fmt(bcSite.withoutGtin), "בלי ברקוד", "!text-rose-600") +
           k(fmt(bcSite.duplicateCount), "ברקודים כפולים", bcSite.duplicateCount ? "!text-amber-600" : "");
-        st.textContent = `נסרקו ${fmt(bcSite.total)} מוצרים` +
-          (reportedPages ? ` (${reportedPages} עמודים)` : "") +
-          (onlyMissing ? ` · הובאו ${fmt(items.length)} שחסר להם ברקוד או מק"ט` : "") +
+        st.textContent = `הקטלוג: ${approx}${fmt(bcSite.total)} מוצרים` +
+          (reportedPages ? ` (${reportedPages} עמודים × ${perPage})` : "") +
+          ` · נמצאו ${fmt(items.length)} מוצרים ייחודיים לטיפול` +
           ` · ${fmt(bcSite.withoutSku)} בלי מק"ט` +
           (failed ? ` · ⚠️ ${failed} עמודים נכשלו — לחצי שוב להשלמה` : "");
       } catch (e) {
