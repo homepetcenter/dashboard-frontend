@@ -1285,6 +1285,8 @@ ${conclSection}
       const st = document.getElementById("bcStatus");
       const items = [], seen = new Set();
       const onlyMissing = document.getElementById("bcOnlyMissing").checked;
+      const withVars = document.getElementById("bcWithVars").checked;
+      let varCount = 0;
       // All figures are derived from the de-duplicated product list, never by summing
       // per-slice counts — that way a server returning the same page twice can't
       // inflate anything.
@@ -1293,12 +1295,13 @@ ${conclSection}
         // Walk the catalogue in slices so no single request runs long enough to be cut off.
         while (guard++ < 60) {
           st.textContent = `טוען ברקודים מהאתר... ${fmt(items.length)} מוצרים` + (reportedPages ? ` (עמוד ${page} מתוך ${reportedPages})` : "");
-          const d = await enrApi(`/api/barcodes?startPage=${page}&maxPages=8${onlyMissing ? "&onlyMissing=1" : ""}`);
+          const d = await enrApi(`/api/barcodes?startPage=${page}&maxPages=8${onlyMissing ? "&onlyMissing=1" : ""}${withVars ? "" : "&noVariations=1"}`);
           if (!d.available) { document.getElementById("bcUnavailable").classList.remove("hidden"); document.getElementById("bcUnavailable").textContent = "⚠️ " + (d.error || d.message); st.textContent = ""; return; }
           document.getElementById("bcUnavailable").classList.add("hidden");
           reportedPages = d.totalPages || reportedPages;
           perPage = d.perPage || perPage;
           failed += d.failedPages || 0;
+          varCount += d.variationCount || 0;
           const fresh = (d.items || []).filter((it) => !seen.has(it.id));
           fresh.forEach((it) => seen.add(it.id));
           items.push(...fresh);
@@ -1347,9 +1350,10 @@ ${conclSection}
           k(fmt(bcSite.duplicateCount), "ברקודים כפולים", bcSite.duplicateCount ? "!text-amber-600" : "");
         st.textContent = `הקטלוג: ${approx}${fmt(bcSite.total)} מוצרים` +
           (reportedPages ? ` (${reportedPages} עמודים × ${perPage})` : "") +
-          ` · נמצאו ${fmt(items.length)} מוצרים ייחודיים לטיפול` +
+          (withVars ? ` + ${fmt(varCount)} וריאציות` : " · ללא וריאציות") +
+          ` · נמצאו ${fmt(items.length)} לטיפול` +
           ` · ${fmt(bcSite.withoutSku)} בלי מק"ט` +
-          (failed ? ` · ⚠️ ${failed} עמודים נכשלו — לחצי שוב להשלמה` : "");
+          (failed ? ` · ⚠️ ${failed} בקשות נכשלו — לחצי שוב להשלמה` : "");
       } catch (e) {
         st.textContent = /failed to fetch|load failed/i.test(e.message)
           ? `נעצר אחרי ${fmt(items.length)} מוצרים — החנות איטית. אפשר ללחוץ שוב.`
@@ -1429,7 +1433,7 @@ ${conclSection}
         if (hit) usedKeys.add(hit.sku || hit.gtin);
 
         const fileGtin = hit ? hit.gtin : "";
-        const row = { id: p.id, name: p.name, sku: p.sku, siteGtin, fileGtin, url: p.url, matchedBy: by, fileSku: hit ? hit.sku : "" };
+        const row = { id: p.id, name: p.name, sku: p.sku, siteGtin, fileGtin, url: p.url, matchedBy: by, fileSku: hit ? hit.sku : "", isVariation: !!p.isVariation, parentId: p.parentId || "" };
         if (!siteGtin && fileGtin) fill.push({ ...row, whatsMissing: "ברקוד חסר באתר" });
         else if (siteGtin && fileGtin && siteGtin !== fileGtin) mismatch.push({ ...row, whatsMissing: "ערכים שונים" });
         else if (!siteGtin && !fileGtin) missingInFile.push({ ...row, whatsMissing: hit ? "אין ברקוד גם בקובץ" : "לא נמצא בקובץ" });
@@ -1444,11 +1448,15 @@ ${conclSection}
       bcResult = { fill, mismatch, missingInFile, dupSite, notOnSite };
 
       const chip = (n, label, color) => `<span class="jump-btn text-xs px-3 py-1 rounded-full" style="background:${color}22;color:${color}">${label}: ${fmt(n)}</span>`;
+      // With "only missing" on we never loaded the products that already have a
+      // barcode — so mismatches and duplicates simply cannot be detected. Say so
+      // rather than letting a "0" look like a clean bill of health.
+      const partialAudit = bcSite.onlyMissing;
       document.getElementById("bcSummary").innerHTML =
         chip(fill.length, "✅ למילוי", "#1e8e3e") +
-        chip(mismatch.length, "⚠️ לא תואם", "#d93025") +
+        (partialAudit ? `<span class="jump-btn text-xs px-3 py-1 rounded-full" style="background:#5f636822;color:#5f6368">⚠️ לא תואם / כפול: לא נבדק — בטלי "רק חסרים" לבדיקה מלאה</span>`
+                      : chip(mismatch.length, "⚠️ לא תואם", "#d93025") + chip(dupSite.length, "👯 כפול באתר", "#b8860b")) +
         chip(missingInFile.length, "❓ חסר בשניהם", "#5f6368") +
-        chip(dupSite.length, "👯 כפול באתר", "#b8860b") +
         chip(notOnSite.length, "📦 בקובץ לא באתר", "#5f6368");
       st.textContent = "ההשוואה הושלמה.";
       bcRenderView();
@@ -1460,6 +1468,7 @@ ${conclSection}
       const rows = bcResult[view] || [];
       mountTable("bcMount", [
         { key: "name", label: "מוצר", align: "right", long: true, render: (v, r) => r.url ? `<a href="${r.url}" target="_blank" rel="noopener" class="text-blue-600 hover:underline">${String(v || "").replace(/</g, "&lt;")}</a>` : String(v || "") },
+        { key: "kind", label: "סוג", render: (v, r) => r.isVariation ? `<span class="text-xs" style="color:#7c3aed">וריאציה</span>` : `<span class="text-xs text-slate-500">מוצר</span>` },
         { key: "whatsMissing", label: "מה חסר" },
         { key: "matchedBy", label: "התאמה לפי", render: (v) => v ? `<span class="text-xs" style="color:#1e8e3e">${v}</span>` : `<span class="text-xs text-slate-400">ללא התאמה</span>` },
         { key: "sku", label: "מק\"ט באתר" },
@@ -1477,7 +1486,9 @@ ${conclSection}
       const rows = bcResult.fill;
       if (!rows.length) { document.getElementById("bcStatus").textContent = "אין שורות למילוי לייצוא."; return; }
       const esc = (v) => { v = String(v == null ? "" : v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
-      const lines = ["ID,SKU,Name,GTIN,Matched by,File SKU"].concat(rows.map((r) => [r.id, r.sku, r.name, r.fileGtin, r.matchedBy || "", r.fileSku || ""].map(esc).join(",")));
+      // "Parent" tells the Woo importer which variable product a variation belongs to.
+      const lines = ["ID,Type,Parent,SKU,Name,GTIN,Matched by,File SKU"].concat(
+        rows.map((r) => [r.id, r.isVariation ? "variation" : "simple", r.parentId || "", r.sku, r.name, r.fileGtin, r.matchedBy || "", r.fileSku || ""].map(esc).join(",")));
       const blob = new Blob(["﻿" + lines.join("\n")], { type: "text/csv;charset=utf-8;" });
       const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
       a.download = "barcodes_fill_" + document.getElementById("siteSelect").value + ".csv"; a.click(); URL.revokeObjectURL(a.href);
