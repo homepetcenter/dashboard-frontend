@@ -1243,264 +1243,6 @@ ${conclSection}
       e.preventDefault();
       enrGenerate(Number(btn.dataset.id));
     });
-    // ===================== Barcode reconciliation =====================
-    // Site data comes from the backend; the user's file is parsed in the browser
-    // (never uploaded anywhere). Matching is by SKU, which is the only reliable key.
-    let bcSite = null, bcFileRows = null, bcResult = null;
-    const bcNorm = (s) => String(s == null ? "" : s).trim();
-    const bcNormSku = (s) => bcNorm(s).toLowerCase().replace(/\s+/g, "");
-    // Barcodes are digits; strip spaces/dashes and any spreadsheet quote prefix.
-    const bcNormGtin = (s) => {
-      let v = bcNorm(s).replace(/^['`]/, "").replace(/[\s-]/g, "");
-      // Rescue barcodes that a spreadsheet turned into scientific notation.
-      if (/^\d(?:\.\d+)?e\+?\d+$/i.test(v)) { const n = Number(v); if (Number.isFinite(n)) v = n.toFixed(0); }
-      return v;
-    };
-
-    function bcParseDelimited(text) {
-      const clean = text.replace(/^﻿/, "");
-      const firstLine = clean.slice(0, clean.indexOf("\n") === -1 ? clean.length : clean.indexOf("\n"));
-      const delim = (firstLine.match(/\t/g) || []).length > (firstLine.match(/,/g) || []).length ? "\t"
-        : (firstLine.match(/;/g) || []).length > (firstLine.match(/,/g) || []).length ? ";" : ",";
-      const rows = []; let cur = [], val = "", q = false, atFieldStart = true;
-      for (let i = 0; i < clean.length; i++) {
-        const c = clean[i];
-        if (q) {
-          if (c === '"' && clean[i + 1] === '"') { val += '"'; i++; }
-          else if (c === '"') q = false;
-          else val += c;
-        }
-        // A quote only opens a quoted field at the START of a field. Otherwise it is
-        // literal text — Hebrew headers like מק"ט would otherwise swallow the whole file.
-        else if (c === '"' && atFieldStart) { q = true; atFieldStart = false; }
-        else if (c === delim) { cur.push(val); val = ""; atFieldStart = true; }
-        else if (c === "\n") { cur.push(val); rows.push(cur); cur = []; val = ""; atFieldStart = true; }
-        else if (c !== "\r") { val += c; atFieldStart = false; }
-      }
-      if (val !== "" || cur.length) { cur.push(val); rows.push(cur); }
-      return rows.filter((r) => r.some((x) => bcNorm(x) !== ""));
-    }
-
-    document.getElementById("bcLoadSite").addEventListener("click", async () => {
-      const st = document.getElementById("bcStatus");
-      const items = [], seen = new Set();
-      const onlyMissing = document.getElementById("bcOnlyMissing").checked;
-      const withVars = document.getElementById("bcWithVars").checked;
-      let varCount = 0, varTruncated = false;
-      // All figures are derived from the de-duplicated product list, never by summing
-      // per-slice counts — that way a server returning the same page twice can't
-      // inflate anything.
-      let page = 1, guard = 0, reportedPages = 0, perPage = 50, failed = 0, emptyStreak = 0, stopReason = "";
-      try {
-        // Walk the catalogue in slices so no single request runs long enough to be cut off.
-        while (guard++ < 60) {
-          st.textContent = `טוען ברקודים מהאתר... ${fmt(items.length)} מוצרים` + (reportedPages ? ` (עמוד ${page} מתוך ${reportedPages})` : "");
-          // Variations mean one extra request per variable product, so take far
-          // fewer catalogue pages per round when they're included.
-          const slice = withVars ? 2 : 8;
-          const d = await enrApi(`/api/barcodes?startPage=${page}&maxPages=${slice}${onlyMissing ? "&onlyMissing=1" : ""}${withVars ? "" : "&noVariations=1"}`);
-          if (!d.available) { document.getElementById("bcUnavailable").classList.remove("hidden"); document.getElementById("bcUnavailable").textContent = "⚠️ " + (d.error || d.message); st.textContent = ""; return; }
-          document.getElementById("bcUnavailable").classList.add("hidden");
-          reportedPages = d.totalPages || reportedPages;
-          perPage = d.perPage || perPage;
-          failed += d.failedPages || 0;
-          varCount += d.variationCount || 0;
-          if (d.variationsTruncated) varTruncated = true;
-          const fresh = (d.items || []).filter((it) => !seen.has(it.id));
-          fresh.forEach((it) => seen.add(it.id));
-          items.push(...fresh);
-          if (d.lastPage == null) { stopReason = "השרת לא תומך בעמודים"; break; }
-          // The server must honour the page we asked for. If it keeps replying with
-          // the same first pages, paging isn't wired up on the server side — stop
-          // immediately instead of re-counting the same products over and over.
-          if (d.startPage != null && d.startPage !== page) {
-            st.textContent = `⚠️ השרת מחזיר תמיד את אותם עמודים (ביקשנו ${page}, קיבלנו ${d.startPage}). צריך להעלות את index.js המעודכן לבקאנד.`;
-            return;
-          }
-          // Stop at the end of the catalogue. Going past it just re-counts pages
-          // that don't exist and inflates the totals.
-          if (d.totalPages && d.lastPage >= d.totalPages) { stopReason = "הגענו לסוף הקטלוג"; break; }
-          // With onlyMissing on, a slice can legitimately return nothing while still
-          // having scanned products — so judge "empty" by what was scanned.
-          emptyStreak = (d.total > 0) ? 0 : emptyStreak + 1;
-          if (emptyStreak >= 2) { stopReason = "לא הוחזרו עוד מוצרים"; break; }
-          page = d.lastPage + 1;
-          if (guard >= 60) stopReason = "הגענו למגבלת הסבבים — לחצי שוב להמשך";
-        }
-        // Duplicate barcodes across the whole store — a real Merchant Center problem.
-        const byGtin = new Map();
-        items.forEach((it) => { if (it.gtin) { const a = byGtin.get(it.gtin) || []; a.push(it); byGtin.set(it.gtin, a); } });
-        const duplicates = [...byGtin.entries()].filter(([, a]) => a.length > 1)
-          .map(([gtin, a]) => ({ gtin, count: a.length, products: a.map((x) => `${x.name} (#${x.id})`).join(" | ") }));
-        // Counts from the unique items we actually hold.
-        const missingGtin = items.filter((i) => !i.gtin).length;
-        const missingSku = items.filter((i) => !i.sku).length;
-        // With "only missing" on we never receive the healthy products, so the
-        // catalogue size comes from the page count the store reports.
-        const catalogSize = onlyMissing ? (reportedPages * perPage) : items.length;
-        bcSite = {
-          items, duplicates, duplicateCount: duplicates.length, onlyMissing,
-          total: catalogSize,
-          withoutGtin: missingGtin,
-          withoutSku: missingSku,
-          withGtin: Math.max(0, catalogSize - missingGtin),
-          approx: onlyMissing,
-        };
-        const k = (v, l, cls) => `<div class="card"><div class="kpi-label">${l}</div><div class="kpi-val ${cls || ""}">${v}</div></div>`;
-        const approx = bcSite.approx ? "~" : "";
-        document.getElementById("bcKpis").innerHTML =
-          k(approx + fmt(bcSite.total), "מוצרים באתר") +
-          k(approx + fmt(bcSite.withGtin), "עם ברקוד", "!text-emerald-600") +
-          k(fmt(bcSite.withoutGtin), "בלי ברקוד", "!text-rose-600") +
-          k(fmt(bcSite.duplicateCount), "ברקודים כפולים", bcSite.duplicateCount ? "!text-amber-600" : "");
-        st.textContent = `הקטלוג: ${approx}${fmt(bcSite.total)} מוצרים` +
-          (reportedPages ? ` (${reportedPages} עמודים × ${perPage})` : "") +
-          (withVars ? ` + ${fmt(varCount)} וריאציות` : " · ללא וריאציות") +
-          ` · נמצאו ${fmt(items.length)} לטיפול` +
-          ` · ${fmt(bcSite.withoutSku)} בלי מק"ט` +
-          (failed ? ` · ⚠️ ${failed} בקשות נכשלו — לחצי שוב להשלמה` : "") +
-          (varTruncated ? " · ⏱️ חלק מהוריאציות לא נסרקו (מגבלת זמן) — לחצי שוב להשלמה" : "") +
-          (stopReason ? ` · עצר: ${stopReason}` : "");
-      } catch (e) {
-        st.textContent = /failed to fetch|load failed/i.test(e.message)
-          ? `נעצר אחרי ${fmt(items.length)} מוצרים — החנות איטית. אפשר ללחוץ שוב.`
-          : "שגיאה: " + e.message;
-      }
-    });
-
-    document.getElementById("bcFile").addEventListener("change", (ev) => {
-      const f = ev.target.files && ev.target.files[0];
-      if (!f) return;
-      const st = document.getElementById("bcStatus");
-      const isExcel = /\.(xlsx|xlsm|xls)$/i.test(f.name);
-      const reader = new FileReader();
-      reader.onerror = () => { st.textContent = "לא הצלחתי לקרוא את הקובץ."; };
-      reader.onload = () => {
-        try {
-          let rows;
-          if (isExcel) {
-            if (typeof XLSX === "undefined") { st.textContent = "קורא קבצי Excel לא נטען. רענני את הדף (Ctrl+Shift+R) ונסי שוב, או שמרי את הקובץ כ-CSV."; return; }
-            const wb = XLSX.read(new Uint8Array(reader.result), { type: "array" });
-            const sheet = wb.Sheets[wb.SheetNames[0]];
-            // raw:true keeps numbers as numbers — with raw:false Excel hands back
-            // long barcodes in scientific notation ("7.29E+12"), which would never match.
-            rows = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: true, defval: "" })
-              .map((r) => r.map((v) => (typeof v === "number" && Number.isInteger(v) ? v.toFixed(0) : String(v == null ? "" : v))))
-              .filter((r) => r.some((x) => bcNorm(x) !== ""));
-          } else {
-            rows = bcParseDelimited(String(reader.result));
-          }
-          if (rows.length < 2) { st.textContent = "הקובץ ריק או ללא שורות נתונים."; return; }
-          bcFileRows = rows;
-          const header = rows[0].map((h) => bcNorm(h));
-          const mk = (sel, guess) => {
-            const el = document.getElementById(sel);
-            el.innerHTML = header.map((h, i) => `<option value="${i}">${h || "עמודה " + (i + 1)}</option>`).join("");
-            const gi = header.findIndex((h) => guess.test(h));
-            if (gi >= 0) el.value = String(gi);
-          };
-          mk("bcColSku", /sku|מק"?ט|מקט|קטלוג|catalog/i);
-          mk("bcColGtin", /barcode|gtin|ean|upc|ברקוד/i);
-          document.getElementById("bcMapping").classList.remove("hidden");
-          st.textContent = `הקובץ נקרא: ${fmt(rows.length - 1)} שורות. ודאי שהעמודות נכונות ולחצי "השווה".`;
-        } catch (e) { st.textContent = "לא הצלחתי לקרוא את הקובץ: " + e.message; }
-      };
-      // Excel needs the raw bytes; CSV is read as UTF-8 text.
-      if (isExcel) reader.readAsArrayBuffer(f); else reader.readAsText(f, "utf-8");
-    });
-
-    document.getElementById("bcCompare").addEventListener("click", () => {
-      const st = document.getElementById("bcStatus");
-      if (!bcSite) { st.textContent = 'קודם לחצי "טען ברקודים מהאתר".'; return; }
-      if (!bcFileRows) { st.textContent = "קודם בחרי קובץ."; return; }
-      const iSku = Number(document.getElementById("bcColSku").value);
-      const iGtin = Number(document.getElementById("bcColGtin").value);
-
-      // Two lookups: by SKU and by barcode. In many catalogues the site's SKU *is*
-      // the barcode, so trying both dramatically increases the number of matches —
-      // and we record which key produced each match so nothing is a black box.
-      const fileBySku = new Map(), fileByGtin = new Map();
-      const usedKeys = new Set();
-      for (let r = 1; r < bcFileRows.length; r++) {
-        const sku = bcNormSku(bcFileRows[r][iSku]);
-        const gtin = bcNormGtin(bcFileRows[r][iGtin]);
-        if (sku) fileBySku.set(sku, { gtin, sku });
-        if (gtin) fileByGtin.set(gtin, { gtin, sku });
-      }
-
-      const fill = [], mismatch = [], missingInFile = [], notOnSite = [];
-      for (const p of bcSite.items) {
-        const sku = bcNormSku(p.sku);
-        const siteGtin = bcNormGtin(p.gtin);
-        // Match order: SKU→SKU, then site-SKU→file-barcode, then site-barcode→file-SKU.
-        let hit = null, by = "";
-        if (sku && fileBySku.has(sku)) { hit = fileBySku.get(sku); by = 'מק"ט ↔ מק"ט'; }
-        else if (sku && fileByGtin.has(sku)) { hit = fileByGtin.get(sku); by = 'מק"ט באתר ↔ ברקוד בקובץ'; }
-        else if (siteGtin && fileBySku.has(siteGtin)) { hit = fileBySku.get(siteGtin); by = 'ברקוד באתר ↔ מק"ט בקובץ'; }
-        if (hit) usedKeys.add(hit.sku || hit.gtin);
-
-        const fileGtin = hit ? hit.gtin : "";
-        const row = { id: p.id, name: p.name, sku: p.sku, siteGtin, fileGtin, url: p.url, matchedBy: by, fileSku: hit ? hit.sku : "", isVariation: !!p.isVariation, parentId: p.parentId || "" };
-        if (!siteGtin && fileGtin) fill.push({ ...row, whatsMissing: "ברקוד חסר באתר" });
-        else if (siteGtin && fileGtin && siteGtin !== fileGtin) mismatch.push({ ...row, whatsMissing: "ערכים שונים" });
-        else if (!siteGtin && !fileGtin) missingInFile.push({ ...row, whatsMissing: hit ? "אין ברקוד גם בקובץ" : "לא נמצא בקובץ" });
-      }
-      // Anything in the file we never used against a site product.
-      fileBySku.forEach((v, sku) => {
-        if (usedKeys.has(sku) || (v.gtin && usedKeys.has(v.gtin))) return;
-        notOnSite.push({ id: "", name: "(לא נמצא באתר)", sku, siteGtin: "", fileGtin: v.gtin, url: "", matchedBy: "", whatsMissing: "קיים בקובץ בלבד", fileSku: sku });
-      });
-
-      const dupSite = (bcSite.duplicates || []).map((d) => ({ id: "", name: d.products, sku: "", siteGtin: d.gtin, fileGtin: "", url: "" }));
-      bcResult = { fill, mismatch, missingInFile, dupSite, notOnSite };
-
-      const chip = (n, label, color) => `<span class="jump-btn text-xs px-3 py-1 rounded-full" style="background:${color}22;color:${color}">${label}: ${fmt(n)}</span>`;
-      // With "only missing" on we never loaded the products that already have a
-      // barcode — so mismatches and duplicates simply cannot be detected. Say so
-      // rather than letting a "0" look like a clean bill of health.
-      const partialAudit = bcSite.onlyMissing;
-      document.getElementById("bcSummary").innerHTML =
-        chip(fill.length, "✅ למילוי", "#1e8e3e") +
-        (partialAudit ? `<span class="jump-btn text-xs px-3 py-1 rounded-full" style="background:#5f636822;color:#5f6368">⚠️ לא תואם / כפול: לא נבדק — בטלי "רק חסרים" לבדיקה מלאה</span>`
-                      : chip(mismatch.length, "⚠️ לא תואם", "#d93025") + chip(dupSite.length, "👯 כפול באתר", "#b8860b")) +
-        chip(missingInFile.length, "❓ חסר בשניהם", "#5f6368") +
-        chip(notOnSite.length, "📦 בקובץ לא באתר", "#5f6368");
-      st.textContent = "ההשוואה הושלמה.";
-      bcRenderView();
-    });
-
-    function bcRenderView() {
-      if (!bcResult) return;
-      const view = document.getElementById("bcView").value;
-      const rows = bcResult[view] || [];
-      mountTable("bcMount", [
-        { key: "name", label: "מוצר", align: "right", long: true, render: (v, r) => r.url ? `<a href="${r.url}" target="_blank" rel="noopener" class="text-blue-600 hover:underline">${String(v || "").replace(/</g, "&lt;")}</a>` : String(v || "") },
-        { key: "kind", label: "סוג", render: (v, r) => r.isVariation ? `<span class="text-xs" style="color:#7c3aed">וריאציה</span>` : `<span class="text-xs text-slate-500">מוצר</span>` },
-        { key: "whatsMissing", label: "מה חסר" },
-        { key: "matchedBy", label: "התאמה לפי", render: (v) => v ? `<span class="text-xs" style="color:#1e8e3e">${v}</span>` : `<span class="text-xs text-slate-400">ללא התאמה</span>` },
-        { key: "sku", label: "מק\"ט באתר" },
-        { key: "fileSku", label: "מק\"ט בקובץ" },
-        { key: "siteGtin", label: "ברקוד באתר" },
-        { key: "fileGtin", label: "ברקוד אצלך" },
-        { key: "id", label: "מזהה" },
-      ], rows, { scroll: true, totals: false });
-    }
-    document.getElementById("bcView").addEventListener("change", bcRenderView);
-
-    document.getElementById("bcExport").addEventListener("click", () => {
-      if (!bcResult) return;
-      // Export only rows that are safe to import: barcodes we can fill in.
-      const rows = bcResult.fill;
-      if (!rows.length) { document.getElementById("bcStatus").textContent = "אין שורות למילוי לייצוא."; return; }
-      const esc = (v) => { v = String(v == null ? "" : v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
-      // "Parent" tells the Woo importer which variable product a variation belongs to.
-      const lines = ["ID,Type,Parent,SKU,Name,GTIN,Matched by,File SKU"].concat(
-        rows.map((r) => [r.id, r.isVariation ? "variation" : "simple", r.parentId || "", r.sku, r.name, r.fileGtin, r.matchedBy || "", r.fileSku || ""].map(esc).join(",")));
-      const blob = new Blob(["﻿" + lines.join("\n")], { type: "text/csv;charset=utf-8;" });
-      const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
-      a.download = "barcodes_fill_" + document.getElementById("siteSelect").value + ".csv"; a.click(); URL.revokeObjectURL(a.href);
-    });
-
     // ===================== Bulk runner =====================
     // Drives generation from the browser, one product per request, with a delay
     // between calls. That keeps every request short (no proxy timeouts), shows real
@@ -2386,7 +2128,6 @@ ${conclSection}
       crosscannibal:{path:"/api/cross-cannibal",render:renderCrossCannibal},
       catalog:{path:"/api/catalog",render:renderCatalog},
       enrich:{static:true,render:()=>{}},
-      barcodes:{static:true,render:()=>{}},
       summary:{path:"/api/summary",render:renderSummary},
       monthlyusers:{path:"/api/monthlyusers",render:renderMonthlyUsers},
       snapshots:{path:"/api/snapshot-history",render:renderSnapshots},
@@ -2406,10 +2147,10 @@ ${conclSection}
       keywords: ["search", "ranks", "rankdist", "orgpotential", "gap", "cannibal", "crosscannibal"],
       content: ["pages", "pageperf", "content", "entity", "decay"],
       audience: ["traffic", "audience", "analyses", "retention", "events"],
-      tools: ["catalog", "enrich", "barcodes", "spider", "textanalysis", "gupdates", "health"],
+      tools: ["catalog", "enrich", "spider", "textanalysis", "gupdates", "health"],
       compare: ["compare"],
     };
-    const DOM_ORDER = ["home","opportunities","insights","summary","monthlyusers","snapshots","overview","trends","realtime","goals","sales","ads","woo","topproducts","woocust","orderhist","merchant","pricing","traffic","audience","analyses","retention","events","ranks","rankdist","content","pageperf","orgpotential","gap","cannibal","decay","crosscannibal","catalog","enrich","barcodes","spider","search","pages","entity","textanalysis","gupdates","health","compare"];
+    const DOM_ORDER = ["home","opportunities","insights","summary","monthlyusers","snapshots","overview","trends","realtime","goals","sales","ads","woo","topproducts","woocust","orderhist","merchant","pricing","traffic","audience","analyses","retention","events","ranks","rankdist","content","pageperf","orgpotential","gap","cannibal","decay","crosscannibal","catalog","enrich","spider","search","pages","entity","textanalysis","gupdates","health","compare"];
 
     async function loadPart(name, force) {
       const t = PARTS[name], key = cacheKey();
@@ -2420,7 +2161,7 @@ ${conclSection}
         document.getElementById("updatedAt").textContent = "עודכן: " + new Date().toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" });
       } catch (err) { if (err.message && err.message.includes("forbidden")) return; setStatus("שגיאה: " + err.message, "error"); }
     }
-    const SECTION_TITLES = { home:"🏠 בית", pricing:"💸 תחרותיות מחירים", crosscannibal:"🥊 קניבליזציה בין המותגים", catalog:"🩺 בריאות קטלוג", enrich:"✍️ מחולל תוכן", barcodes:"🔢 הצלבת ברקודים", opportunities:"🎯 הזדמנויות השבוע", insights:"💡 תובנות", summary:"📋 סיכום מנהלים", monthlyusers:"👥 משתמשים חודשי", snapshots:"🗄️ נתונים שמורים", overview:"📈 סקירה", trends:"📉 מגמות", realtime:"⏱️ זמן אמת", goals:"🎯 יעדים", sales:"💰 מכירות", ads:"📣 פרסום (ROAS)", woo:"🛍️ חנות (WooCommerce)", topproducts:"🏆 מוצרים מובילים", woocust:"👤 לקוחות", orderhist:"📜 היסטוריית הזמנות", merchant:"🛒 Merchant Center", traffic:"🚦 מקורות תנועה", audience:"🌍 קהל", analyses:"🗓️ ניתוחים", retention:"🔁 Retention", events:"🔔 אירועים", search:"🔍 חיפוש", pages:"📄 דפים מובילים", health:"🩺 בריאות האתר", ranks:"📈 מעקב מיקומים", rankdist:"📊 פיזור דירוג", content:"📈 ביצועי תוכן", pageperf:"📑 ביצועי עמודים", orgpotential:"🚀 פוטנציאל אורגני", gap:"🔋 פערי מילים", cannibal:"⚔️ קניבליזציה", decay:"🍂 שחיקת תוכן", spider:"🕷️ Spider Goggles", gupdates:"🌦️ עדכוני גוגל", entity:"🏆 סמכות מותג", textanalysis:"📝 ניתוח טקסט", compare:"📊 השוואת אתרים" };
+    const SECTION_TITLES = { home:"🏠 בית", pricing:"💸 תחרותיות מחירים", crosscannibal:"🥊 קניבליזציה בין המותגים", catalog:"🩺 בריאות קטלוג", enrich:"✍️ מחולל תוכן", opportunities:"🎯 הזדמנויות השבוע", insights:"💡 תובנות", summary:"📋 סיכום מנהלים", monthlyusers:"👥 משתמשים חודשי", snapshots:"🗄️ נתונים שמורים", overview:"📈 סקירה", trends:"📉 מגמות", realtime:"⏱️ זמן אמת", goals:"🎯 יעדים", sales:"💰 מכירות", ads:"📣 פרסום (ROAS)", woo:"🛍️ חנות (WooCommerce)", topproducts:"🏆 מוצרים מובילים", woocust:"👤 לקוחות", orderhist:"📜 היסטוריית הזמנות", merchant:"🛒 Merchant Center", traffic:"🚦 מקורות תנועה", audience:"🌍 קהל", analyses:"🗓️ ניתוחים", retention:"🔁 Retention", events:"🔔 אירועים", search:"🔍 חיפוש", pages:"📄 דפים מובילים", health:"🩺 בריאות האתר", ranks:"📈 מעקב מיקומים", rankdist:"📊 פיזור דירוג", content:"📈 ביצועי תוכן", pageperf:"📑 ביצועי עמודים", orgpotential:"🚀 פוטנציאל אורגני", gap:"🔋 פערי מילים", cannibal:"⚔️ קניבליזציה", decay:"🍂 שחיקת תוכן", spider:"🕷️ Spider Goggles", gupdates:"🌦️ עדכוני גוגל", entity:"🏆 סמכות מותג", textanalysis:"📝 ניתוח טקסט", compare:"📊 השוואת אתרים" };
     const SOURCES = {
       ga4:      { label: "Google Analytics", color: "#E37400", emoji: "📈" },
       gsc:      { label: "Search Console",   color: "#1a73e8", emoji: "🔍" },
@@ -2434,7 +2175,7 @@ ${conclSection}
     const SCREEN_SRC = {
       overview: "ga4", trends: "ga4", realtime: "ga4", periods: "ga4", goals: "ga4", monthlyusers: "ga4", traffic: "ga4", audience: "ga4", analyses: "ga4", retention: "ga4", events: "ga4",
       summary: "mixed", insights: "mixed", opportunities: "mixed", compare: "mixed", home: "mixed",
-      pricing: "merchant", crosscannibal: "gsc", catalog: "woo", enrich: "woo", barcodes: "woo",
+      pricing: "merchant", crosscannibal: "gsc", catalog: "woo", enrich: "woo",
       search: "gsc", ranks: "gsc", rankdist: "gsc", pages: "gsc", pageperf: "gsc", orgpotential: "gsc", gap: "gsc", cannibal: "gsc", decay: "gsc", content: "gsc", entity: "gsc", gupdates: "gsc", health: "gsc",
       woo: "woo", woocust: "woo", topproducts: "woo", sales: "woo",
       ads: "ads", merchant: "merchant", orderhist: "store", snapshots: "store", spider: "tool", textanalysis: "tool",

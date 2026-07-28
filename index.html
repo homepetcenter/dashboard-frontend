@@ -10,8 +10,6 @@
   <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-  <!-- Reads Excel files locally in the browser (barcode reconciliation) -->
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <link rel="stylesheet" href="style.css">
 </head>
 <body class="bg-slate-100 min-h-screen p-4 md:p-6">
@@ -892,55 +890,6 @@
       <div class="font-bold text-slate-800 mb-1">👯 כפילויות מוצרים</div>
       <div class="text-xs text-slate-400 mb-3">מוצרים עם אותו מק"ט או אותו שם — מועמדים לאיחוד/וריאציות (לפי אפיון סעיף 7.3)</div>
       <div id="catDupMount"></div>
-    </div>
-  </section>
-
-  <!-- BARCODE RECONCILIATION -->
-  <section data-screen="barcodes" class="hidden">
-    <div id="bcUnavailable" class="hidden card text-amber-600 text-sm mb-4"></div>
-    <div id="bcKpis" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4"></div>
-    <div class="card mb-4">
-      <div class="font-bold text-slate-800 mb-1">🔢 הצלבת ברקודים — המערכת שלך מול האתר</div>
-      <div class="text-xs text-slate-400 mb-3">
-        מעלים קובץ CSV מהמערכת (עמודת מק"ט ועמודת ברקוד), והמערכת מצליבה מול האתר לפי מק"ט:
-        מה חסר באתר וקיים אצלך, מה לא תואם, ומה כפול. הקובץ נקרא בדפדפן בלבד — לא נשלח לשום מקום.
-      </div>
-      <div class="text-xs bg-amber-50 border border-amber-200 rounded-lg p-2 mb-3 text-slate-600">
-        💡 <b>לקטלוג מלא כולל וריאציות</b> — עדיף לייצא מוורדפרס: <b>מוצרים ← ייצוא</b>, לסמן "וריאציות",
-        ולהצליב את שני הקבצים באקסל. זה מהיר, לא מעמיס על האתר, וכולל את כל הוריאציות בבת אחת.
-        הסריקה כאן מתאימה לבדיקה שוטפת של מוצרים ראשיים.
-      </div>
-      <div class="flex items-center gap-3 flex-wrap mb-3">
-        <button id="bcLoadSite" class="bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-4 py-2 text-sm">1️⃣ טען ברקודים מהאתר</button>
-        <label class="text-sm text-slate-600 flex items-center gap-1" title="מושך רק מוצרים שחסר להם ברקוד או מק״ט — מהיר יותר">
-          <input id="bcOnlyMissing" type="checkbox" checked> רק חסרים
-        </label>
-        <label class="text-sm text-slate-600 flex items-center gap-1" title="כל וריאציה דורשת פנייה נפרדת לחנות — איטי מאוד בקטלוג גדול. לקטלוג מלא עדיף ייצוא מוורדפרס">
-          <input id="bcWithVars" type="checkbox"> כולל וריאציות (איטי)
-        </label>
-        <label class="text-sm text-slate-600">2️⃣ קובץ מהמערכת (Excel או CSV):
-          <input id="bcFile" type="file" accept=".xlsx,.xls,.xlsm,.csv,.txt,.tsv" class="block mt-1 text-sm">
-        </label>
-        <span id="bcStatus" class="text-sm text-slate-500"></span>
-      </div>
-      <div id="bcMapping" class="hidden text-sm text-slate-600 mb-3 flex items-end gap-3 flex-wrap">
-        <label>עמודת מק"ט <select id="bcColSku" class="block border border-slate-300 rounded-lg px-3 py-1 text-sm mt-1"></select></label>
-        <label>עמודת ברקוד <select id="bcColGtin" class="block border border-slate-300 rounded-lg px-3 py-1 text-sm mt-1"></select></label>
-        <button id="bcCompare" class="bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg px-4 py-2 text-sm">3️⃣ השווה</button>
-      </div>
-      <div id="bcSummary" class="flex flex-wrap gap-2 mb-3"></div>
-      <div class="flex items-center gap-2 mb-2">
-        <select id="bcView" class="border border-slate-300 rounded-lg px-3 py-1 text-sm">
-          <option value="fill">✅ למילוי — יש אצלך, חסר באתר</option>
-          <option value="mismatch">⚠️ לא תואם — ערך שונה</option>
-          <option value="missingInFile">❓ חסר בקובץ שלך</option>
-          <option value="dupSite">👯 ברקוד כפול באתר</option>
-          <option value="notOnSite">📦 בקובץ אך לא באתר</option>
-        </select>
-        <span class="flex-1"></span>
-        <button id="bcExport" class="tbl-export border border-slate-300 rounded-lg px-4 py-2 text-sm">⬇ ייצא לייבוא בווקומרס</button>
-      </div>
-      <div id="bcMount"></div>
     </div>
   </section>
 
