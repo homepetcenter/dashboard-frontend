@@ -14,6 +14,14 @@
     const cacheKey = () => document.getElementById("siteSelect").value + "|" + (customStart && customEnd ? customStart + ":" + customEnd : currentRange) + "|" + (cmpStart && cmpEnd ? cmpStart + ":" + cmpEnd : "");
     const periodLabel = () => (customStart && customEnd) ? `${customStart} – ${customEnd}` : (RANGE_LABEL[currentRange] || "");
 
+    // Attach a listener only if the element exists. A single missing element used to
+    // throw and abort the whole script, leaving the dashboard stuck on "loading" —
+    // e.g. when index.html and app.js were deployed out of sync.
+    function on(id, evt, fn) {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener(evt, fn);
+      return !!el;
+    }
     function setStatus(msg, type) {
       const el = document.getElementById("status");
       if (!msg) { el.classList.add("hidden"); return; }
@@ -197,8 +205,8 @@
         Object.keys(cache).forEach((k) => delete cache[k]); loadGroup(currentGroup, true);
       } catch (e) { errEl.classList.remove("hidden"); }
     }
-    document.getElementById("pwBtn").addEventListener("click", () => tryLogin(document.getElementById("pwInput").value));
-    document.getElementById("pwInput").addEventListener("keydown", (e) => { if (e.key === "Enter") tryLogin(document.getElementById("pwInput").value); });
+    on("pwBtn", "click", () => tryLogin(document.getElementById("pwInput").value));
+    on("pwInput", "keydown", (e) => { if (e.key === "Enter") tryLogin(document.getElementById("pwInput").value); });
 
     function setKpi(id, valueText, cur, prev, lowerBetter) {
       document.getElementById(id).textContent = valueText;
@@ -379,7 +387,7 @@
       const el1 = document.getElementById("wiDeltaRev"); el1.textContent = sign(dRev); el1.className = "kpi-val " + (dRev >= 0 ? "!text-emerald-600" : "!text-rose-600");
       const el2 = document.getElementById("wiDeltaProfit"); el2.textContent = sign(dProfit); el2.className = "kpi-val " + (dProfit >= 0 ? "!text-emerald-600" : "!text-rose-600");
     }
-    document.getElementById("whatIfSlider").addEventListener("input", updateWhatIf);
+    on("whatIfSlider", "input", updateWhatIf);
 
     // ---- Task board (localStorage) ----
     let lastInsights = [];
@@ -402,10 +410,10 @@
       document.querySelectorAll(".task-done").forEach((c) => c.addEventListener("change", () => { const t2 = getTasks(); const it = t2.find((x) => x.id == c.dataset.id); if (it) { it.done = c.checked; saveTasks(t2); renderTaskBoard(); } }));
       document.querySelectorAll(".task-del").forEach((b) => b.addEventListener("click", () => { saveTasks(getTasks().filter((x) => x.id != b.dataset.id)); renderTaskBoard(); }));
     }
-    document.getElementById("taskAdd").addEventListener("click", () => { const v = document.getElementById("taskInput").value.trim(); if (v) { addTask(v); document.getElementById("taskInput").value = ""; } });
-    document.getElementById("taskInput").addEventListener("keydown", (e) => { if (e.key === "Enter") document.getElementById("taskAdd").click(); });
+    on("taskAdd", "click", () => { const v = document.getElementById("taskInput").value.trim(); if (v) { addTask(v); document.getElementById("taskInput").value = ""; } });
+    on("taskInput", "keydown", (e) => { if (e.key === "Enter") document.getElementById("taskAdd").click(); });
     renderTaskBoard();
-    document.getElementById("annotAdd").addEventListener("click", () => {
+    on("annotAdd", "click", () => {
       const dt = document.getElementById("annotDate").value, tx = document.getElementById("annotText").value.trim();
       if (!dt || !tx) { setStatus("יש למלא תאריך וטקסט להערה", "error"); return; }
       const a = getAnnots(); a.push({ date: dt, text: tx });
@@ -828,7 +836,7 @@ ${conclSection}
       };
       document.getElementById("goalProgress").innerHTML = bar("הכנסות", d.revenue||0, saved.revenue, "₪") + bar("עסקאות", d.transactions||0, saved.tx, "");
     }
-    document.getElementById("goalSave").addEventListener("click", () => {
+    on("goalSave", "click", () => {
       localStorage.setItem(goalKey(), JSON.stringify({ revenue: Number(document.getElementById("goalRevenue").value)||0, tx: Number(document.getElementById("goalTx").value)||0, budget: Number(document.getElementById("goalBudget").value)||0 }));
       loadPart("goals", true);
     });
@@ -1237,7 +1245,7 @@ ${conclSection}
     }
     // Event delegation: the table re-renders itself on sort/search, which would drop
     // per-button listeners. Listening on the container keeps the buttons working.
-    document.getElementById("enrListMount").addEventListener("click", (e) => {
+    on("enrListMount", "click", (e) => {
       const btn = e.target.closest(".enr-gen");
       if (!btn) return;
       e.preventDefault();
@@ -1341,12 +1349,12 @@ ${conclSection}
       document.getElementById("bulkStart").classList.remove("hidden");
       st.textContent += " — סיום. אפשר לייצא CSV.";
     }
-    document.getElementById("bulkStart").addEventListener("click", bulkRun);
-    document.getElementById("bulkStop").addEventListener("click", () => { bulkStop = true; });
+    on("bulkStart", "click", bulkRun);
+    on("bulkStop", "click", () => { bulkStop = true; });
 
     // ===================== Brand recovery =====================
     let brandRows = [];
-    document.getElementById("brandScan").addEventListener("click", async () => {
+    on("brandScan", "click", async () => {
       const st = document.getElementById("brandStatus");
       brandRows = [];
       // Walk the catalogue in slices so no single request runs long enough to be cut off.
@@ -1394,7 +1402,7 @@ ${conclSection}
         }
       }
     });
-    document.getElementById("brandExport").addEventListener("click", () => {
+    on("brandExport", "click", () => {
       if (!brandRows.length) return;
       const esc = (v) => { v = String(v == null ? "" : v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
       const lines = ["ID,Name,Brands,Confidence"].concat(brandRows.map((r) => [r.id, r.name, r.suggestedBrand, r.confidence || ""].map(esc).join(",")));
@@ -1403,11 +1411,11 @@ ${conclSection}
       a.download = "brands_" + document.getElementById("siteSelect").value + ".csv"; a.click(); URL.revokeObjectURL(a.href);
     });
 
-    document.getElementById("enrLoadList").addEventListener("click", enrLoadList);
-    document.getElementById("enrExport").addEventListener("click", enrExportCsv);
-    document.getElementById("enrApproveAll").addEventListener("click", enrApproveCurrent);
-    document.getElementById("enrClose").addEventListener("click", () => document.getElementById("enrEditor").classList.add("hidden"));
-    document.getElementById("enrRegen").addEventListener("click", () => { if (enrCurrentDraft) enrGenerate(enrCurrentDraft.productId); });
+    on("enrLoadList", "click", enrLoadList);
+    on("enrExport", "click", enrExportCsv);
+    on("enrApproveAll", "click", enrApproveCurrent);
+    on("enrClose", "click", () => document.getElementById("enrEditor").classList.add("hidden"));
+    on("enrRegen", "click", () => { if (enrCurrentDraft) enrGenerate(enrCurrentDraft.productId); });
 
     function renderCannibal(d) {
       const k = (v, l) => `<div class="card"><div class="kpi-label">${l}</div><div class="kpi-val">${v}</div></div>`;
@@ -1905,7 +1913,7 @@ ${conclSection}
       } catch (e) { prog.textContent = "שגיאה בסריקה: " + e.message; }
       btn.disabled = false; btn.textContent = "הרץ סריקה";
     }
-    document.getElementById("auditRun").addEventListener("click", runAudit);
+    on("auditRun", "click", runAudit);
 
     // ---- Query Fan-Out ----
     async function runFanout() {
@@ -1927,8 +1935,8 @@ ${conclSection}
       } catch (e) { st.textContent = "שגיאה: " + e.message; }
       btn.disabled = false; btn.textContent = "פרק נושא";
     }
-    document.getElementById("foRun").addEventListener("click", runFanout);
-    document.getElementById("foInput").addEventListener("keydown", (e) => { if (e.key === "Enter") runFanout(); });
+    on("foRun", "click", runFanout);
+    on("foInput", "keydown", (e) => { if (e.key === "Enter") runFanout(); });
 
     // ---- Position-bucket drill-down ----
     let sePosDetails = {};
@@ -2037,7 +2045,7 @@ ${conclSection}
         data: { labels: ser.map((s) => niceDate(String(s.date).replace(/-/g, ""))), datasets: [{ label: "מיקום", data: ser.map((s) => s.position), borderColor: "#1d4ed8", backgroundColor: "rgba(29,78,216,.08)", fill: true, tension: .3, pointRadius: 3, spanGaps: true }] },
         options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { reverse: true, min: 1, title: { display: true, text: "מיקום בגוגל (1 = למעלה)" } } } } });
     }
-    document.getElementById("rkChartSel").addEventListener("change", drawRkChart);
+    on("rkChartSel", "change", drawRkChart);
     async function rkApi(method, body) {
       const site = document.getElementById("siteSelect").value;
       const res = await fetch(`${BASE}/api/keywords?site=${site}`, { method, headers: { "X-Access-Key": accessKey, "Content-Type": "application/json" }, body: body ? JSON.stringify({ site, ...body }) : undefined });
@@ -2053,13 +2061,13 @@ ${conclSection}
         document.querySelectorAll(".rk-del").forEach((b) => b.addEventListener("click", async () => { await rkApi("POST", { remove: [b.dataset.k] }); loadRkChips(); }));
       } catch (e) { document.getElementById("rkChips").innerHTML = `<span class="text-amber-600 text-sm">⚠️ ${e.message || "שגיאת חיבור ל-Supabase"}</span>`; }
     }
-    document.getElementById("rkAdd").addEventListener("click", async () => {
+    on("rkAdd", "click", async () => {
       const v = document.getElementById("rkInput").value.trim(); if (!v) return;
       await rkApi("POST", { add: v.split(",").map((s) => s.trim()).filter(Boolean) });
       document.getElementById("rkInput").value = ""; loadRkChips();
     });
-    document.getElementById("rkInput").addEventListener("keydown", (e) => { if (e.key === "Enter") document.getElementById("rkAdd").click(); });
-    document.getElementById("rkVol").addEventListener("click", async () => {
+    on("rkInput", "keydown", (e) => { if (e.key === "Enter") document.getElementById("rkAdd").click(); });
+    on("rkVol", "click", async () => {
       const btn = document.getElementById("rkVol"), st = document.getElementById("rkStatus");
       btn.disabled = true; btn.textContent = "מושך נפחים...";
       try {
@@ -2070,7 +2078,7 @@ ${conclSection}
       } catch (e) { st.textContent = "שגיאה: " + e.message; }
       btn.disabled = false; btn.textContent = "📊 עדכן נפחי חיפוש";
     });
-    document.getElementById("rkRun").addEventListener("click", async () => {
+    on("rkRun", "click", async () => {
       const btn = document.getElementById("rkRun"), st = document.getElementById("rkStatus");
       btn.disabled = true; btn.textContent = "בודק מול גוגל...";
       try {
@@ -2233,20 +2241,20 @@ ${conclSection}
       document.querySelectorAll(".range-btn").forEach((x)=>x.classList.remove("active")); b.classList.add("active");
       reloadGroup();
     }));
-    document.getElementById("applyDates").addEventListener("click", () => {
+    on("applyDates", "click", () => {
       const s = document.getElementById("dateStart").value, e = document.getElementById("dateEnd").value;
       if (!s || !e) { setStatus("יש לבחור תאריך התחלה וסיום","error"); return; }
       if (s > e) { setStatus("תאריך ההתחלה מאוחר מהסיום","error"); return; }
       customStart = s; customEnd = e; document.querySelectorAll(".range-btn").forEach((b)=>b.classList.remove("active")); reloadGroup();
     });
-    document.getElementById("siteSelect").addEventListener("change", () => { localStorage.setItem("dashSite", document.getElementById("siteSelect").value); reloadGroup(); });
-    document.getElementById("refreshBtn").addEventListener("click", reloadGroup);
-    document.getElementById("cmpApply").addEventListener("click", () => {
+    on("siteSelect", "change", () => { localStorage.setItem("dashSite", document.getElementById("siteSelect").value); reloadGroup(); });
+    on("refreshBtn", "click", reloadGroup);
+    on("cmpApply", "click", () => {
       const s = document.getElementById("cmpStart").value, e = document.getElementById("cmpEnd").value;
       if (!s || !e) { setStatus("לבחירת השוואה — מלאי תאריך התחלה וסיום", "error"); return; }
       cmpStart = s; cmpEnd = e; reloadGroup();
     });
-    document.getElementById("cmpClear").addEventListener("click", () => {
+    on("cmpClear", "click", () => {
       cmpStart = cmpEnd = null; document.getElementById("cmpStart").value = ""; document.getElementById("cmpEnd").value = ""; reloadGroup();
     });
 
@@ -2290,8 +2298,8 @@ ${conclSection}
       clearInterval(warTimer); warTimer = null;
       if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
     }
-    document.getElementById("warRoomBtn").addEventListener("click", openWarRoom);
-    document.getElementById("warRoomClose").addEventListener("click", closeWarRoom);
+    on("warRoomBtn", "click", openWarRoom);
+    on("warRoomClose", "click", closeWarRoom);
     document.addEventListener("fullscreenchange", () => { if (!document.fullscreenElement && warTimer) closeWarRoom(); });
 
     // Dark mode
@@ -2328,9 +2336,9 @@ ${conclSection}
       document.getElementById("bellStatus").textContent = "טוען התראות...";
       try { const d = await api("/api/insights"); renderAlerts(d); } catch (e) { document.getElementById("bellStatus").textContent = ""; }
     }
-    document.getElementById("bellBtn").addEventListener("click", () => { document.getElementById("bellPanel").classList.remove("hidden"); loadAlerts(false); });
-    document.getElementById("bellClose").addEventListener("click", () => document.getElementById("bellPanel").classList.add("hidden"));
-    document.getElementById("bellBackdrop").addEventListener("click", () => document.getElementById("bellPanel").classList.add("hidden"));
+    on("bellBtn", "click", () => { document.getElementById("bellPanel").classList.remove("hidden"); loadAlerts(false); });
+    on("bellClose", "click", () => document.getElementById("bellPanel").classList.add("hidden"));
+    on("bellBackdrop", "click", () => document.getElementById("bellPanel").classList.add("hidden"));
 
     setActiveRange(savedRange); applyRole().finally(() => showGroup(currentGroup));
     // Load alerts in the background so the badge appears without opening the panel
