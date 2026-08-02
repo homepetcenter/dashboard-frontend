@@ -187,25 +187,99 @@
   </section>
 
   <!-- OVERVIEW -->
-  <section data-screen="overview">
-    <div class="card mb-4">
-      <div class="text-slate-600 font-medium mb-1">📅 השוואת תקופות <span id="pdSub" class="text-slate-400 text-sm"></span></div>
-      <div class="text-xs text-slate-400 mb-3">השוואה הוגנת: 1 בחודש עד אותו יום בכל תקופה</div>
-      <div id="pdBand" class="overflow-x-auto"></div>
+  <!-- PERFORMANCE — merged: סקירה + השוואת תקופות + מגמות + משתמשים חודשי + סיכום מנהלים -->
+  <section data-screen="perf">
+    <div class="perf-tabs flex flex-wrap gap-2 mb-4">
+      <button class="perf-tab active" data-perftab="overview">📈 סקירה</button>
+      <button class="perf-tab" data-perftab="trends">📉 מגמות ותחזית</button>
+      <button class="perf-tab" data-perftab="monthlyusers">👥 משתמשים לאורך זמן</button>
+      <button class="perf-tab" data-perftab="summary">📋 סיכום מנהלים</button>
     </div>
-    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
-      <div class="card"><div class="kpi-label">Sessions</div><div class="flex items-end gap-2"><div id="ovSessions" class="kpi-val">—</div><div id="ovSessions_d" class="delta"></div></div><div class="h-7 mt-1"><canvas id="spSessions"></canvas></div></div>
-      <div class="card"><div class="kpi-label">Users</div><div class="flex items-end gap-2"><div id="ovUsers" class="kpi-val">—</div><div id="ovUsers_d" class="delta"></div></div><div class="h-7 mt-1"><canvas id="spUsers"></canvas></div></div>
-      <div class="card"><div class="kpi-label">משתמשים חדשים</div><div class="flex items-end gap-2"><div id="ovNew" class="kpi-val">—</div><div id="ovNew_d" class="delta"></div></div><div class="h-7 mt-1"><canvas id="spNew"></canvas></div></div>
-      <div class="card"><div class="kpi-label">Bounce Rate</div><div class="flex items-end gap-2"><div id="ovBounce" class="kpi-val">—</div><div id="ovBounce_d" class="delta"></div></div></div>
-      <div class="card"><div class="kpi-label">צפיות / סשן</div><div class="flex items-end gap-2"><div id="ovPps" class="kpi-val">—</div><div id="ovPps_d" class="delta"></div></div></div>
-      <div class="card"><div class="kpi-label">זמן שהייה ממוצע</div><div class="flex items-end gap-2"><div id="ovDur" class="kpi-val">—</div><div id="ovDur_d" class="delta"></div></div></div>
-      <div class="card"><div class="kpi-label">Impressions</div><div class="flex items-end gap-2"><div id="ovImpr" class="kpi-val">—</div><div id="ovImpr_d" class="delta"></div></div></div>
-      <div class="card"><div class="kpi-label">Clicks</div><div class="flex items-end gap-2"><div id="ovClicks" class="kpi-val">—</div><div id="ovClicks_d" class="delta"></div></div></div>
-      <div class="card"><div class="kpi-label">CTR</div><div class="flex items-end gap-2"><div id="ovCtr" class="kpi-val">—</div><div id="ovCtr_d" class="delta"></div></div></div>
-      <div class="card"><div class="kpi-label">צפיות עמוד</div><div class="flex items-end gap-2"><div id="ovViews" class="kpi-val">—</div><div id="ovViews_d" class="delta"></div></div><div class="h-7 mt-1"><canvas id="spViews"></canvas></div></div>
+    <div data-perfview="overview">
+      <div class="card mb-4">
+        <div class="text-slate-600 font-medium mb-1">📅 השוואת תקופות <span id="pdSub" class="text-slate-400 text-sm"></span></div>
+        <div class="text-xs text-slate-400 mb-3">השוואה הוגנת: 1 בחודש עד אותו יום בכל תקופה</div>
+        <div id="pdBand" class="overflow-x-auto"></div>
+      </div>
+      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
+        <div class="card"><div class="kpi-label">Sessions</div><div class="flex items-end gap-2"><div id="ovSessions" class="kpi-val">—</div><div id="ovSessions_d" class="delta"></div></div><div class="h-7 mt-1"><canvas id="spSessions"></canvas></div></div>
+        <div class="card"><div class="kpi-label">Users</div><div class="flex items-end gap-2"><div id="ovUsers" class="kpi-val">—</div><div id="ovUsers_d" class="delta"></div></div><div class="h-7 mt-1"><canvas id="spUsers"></canvas></div></div>
+        <div class="card"><div class="kpi-label">משתמשים חדשים</div><div class="flex items-end gap-2"><div id="ovNew" class="kpi-val">—</div><div id="ovNew_d" class="delta"></div></div><div class="h-7 mt-1"><canvas id="spNew"></canvas></div></div>
+        <div class="card"><div class="kpi-label">Bounce Rate</div><div class="flex items-end gap-2"><div id="ovBounce" class="kpi-val">—</div><div id="ovBounce_d" class="delta"></div></div></div>
+        <div class="card"><div class="kpi-label">צפיות / סשן</div><div class="flex items-end gap-2"><div id="ovPps" class="kpi-val">—</div><div id="ovPps_d" class="delta"></div></div></div>
+        <div class="card"><div class="kpi-label">זמן שהייה ממוצע</div><div class="flex items-end gap-2"><div id="ovDur" class="kpi-val">—</div><div id="ovDur_d" class="delta"></div></div></div>
+        <div class="card"><div class="kpi-label">Impressions</div><div class="flex items-end gap-2"><div id="ovImpr" class="kpi-val">—</div><div id="ovImpr_d" class="delta"></div></div></div>
+        <div class="card"><div class="kpi-label">Clicks</div><div class="flex items-end gap-2"><div id="ovClicks" class="kpi-val">—</div><div id="ovClicks_d" class="delta"></div></div></div>
+        <div class="card"><div class="kpi-label">CTR</div><div class="flex items-end gap-2"><div id="ovCtr" class="kpi-val">—</div><div id="ovCtr_d" class="delta"></div></div></div>
+        <div class="card"><div class="kpi-label">צפיות עמוד</div><div class="flex items-end gap-2"><div id="ovViews" class="kpi-val">—</div><div id="ovViews_d" class="delta"></div></div><div class="h-7 mt-1"><canvas id="spViews"></canvas></div></div>
+      </div>
+      <div class="card"><div id="ovChartTitle" class="text-slate-600 font-medium mb-3">Sessions</div><canvas id="ovChart" height="90"></canvas></div>
     </div>
-    <div class="card"><div id="ovChartTitle" class="text-slate-600 font-medium mb-3">Sessions</div><canvas id="ovChart" height="90"></canvas></div>
+    <div data-perfview="trends" class="hidden">
+      <div class="card mb-4">
+        <div class="text-slate-600 font-medium mb-1">🔮 תחזית סוף חודש <span id="projDay" class="text-slate-400 text-sm"></span></div>
+        <div class="text-xs text-slate-400 mb-3">לפי הקצב הנוכחי של החודש הקלנדרי (לא תלוי בטווח שנבחר)</div>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div><div class="kpi-label">עד כה החודש (₪)</div><div id="projMtd" class="kpi-val">—</div></div>
+          <div><div class="kpi-label">תחזית הכנסות (₪)</div><div class="flex items-end gap-2"><div id="projRev" class="kpi-val !text-emerald-600">—</div><div id="projRev_d" class="delta"></div></div></div>
+          <div><div class="kpi-label">תחזית עסקאות</div><div class="flex items-end gap-2"><div id="projTx" class="kpi-val">—</div><div id="projTx_d" class="delta"></div></div></div>
+          <div><div class="kpi-label">חודש קודם (₪)</div><div id="projLast" class="kpi-val !text-slate-500">—</div></div>
+        </div>
+      </div>
+      <div class="card mb-4"><div class="text-slate-600 font-medium mb-2">הכנסות יומיות (₪)</div><canvas id="trRevenue" height="80"></canvas></div>
+      <div class="grid md:grid-cols-2 gap-4 mb-4">
+        <div class="card"><div class="text-slate-600 font-medium mb-2">אחוז המרה (%)</div><canvas id="trConv" height="110"></canvas></div>
+        <div class="card"><div class="text-slate-600 font-medium mb-2">עסקה ממוצעת (₪)</div><canvas id="trAov" height="110"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="text-slate-600 font-medium mb-1">📝 יומן הערות</div>
+        <div class="text-xs text-slate-400 mb-3">סמני שינויים שעשית ("החלפתי קריאייטיב", "שיניתי מטא") — יופיעו כקו סגול על הגרפים, וכך תראי אם השינוי עזר</div>
+        <div class="flex flex-wrap gap-2 mb-3">
+          <input id="annotDate" type="date" class="border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none" />
+          <input id="annotText" type="text" placeholder="מה עשית?" class="flex-1 min-w-40 border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-400" />
+          <button id="annotAdd" class="bg-purple-600 hover:bg-purple-700 text-white rounded-lg px-4 py-2 text-sm">הוספה</button>
+        </div>
+        <div id="annotList"></div>
+      </div>
+    </div>
+    <div data-perfview="monthlyusers" class="hidden">
+      <div class="card">
+        <div class="flex items-center justify-between mb-2 flex-wrap gap-2">
+          <div class="font-bold text-slate-800">👥 משתמשים חודשי</div>
+          <div class="flex gap-2">
+            <select id="muSource" onchange="loadMonthlyUsers()" class="border border-slate-300 rounded-lg px-3 py-1 text-sm outline-none focus:ring-2 focus:ring-blue-400">
+              <option value="all" selected>כל המקורות</option>
+              <option value="organic">תנועה אורגנית</option>
+              <option value="paid">תנועה ממומנת</option>
+            </select>
+            <select id="muMonths" onchange="loadMonthlyUsers()" class="border border-slate-300 rounded-lg px-3 py-1 text-sm outline-none focus:ring-2 focus:ring-blue-400">
+              <option value="1">חודש</option>
+              <option value="3">3 חודשים</option>
+              <option value="6">6 חודשים</option>
+              <option value="12">שנה</option>
+              <option value="18" selected>שנה וחצי</option>
+              <option value="24">שנתיים</option>
+            </select>
+          </div>
+        </div>
+        <div class="text-xs text-slate-400 mb-2">משתמשים לפי חודש, מחולק לשליש בחודש (ימים 1-10 / 11-20 / 21-31). הקו = נפח חודשי כולל. מקור: GA4</div>
+        <div style="height:340px"><canvas id="muChart"></canvas></div>
+      </div>
+    </div>
+    <div data-perfview="summary" class="hidden">
+      <div class="grid md:grid-cols-2 gap-4">
+        <div class="card">
+          <div class="text-center font-bold text-slate-800 mb-4">📋 Executive Summary — סיכום דירוגים</div>
+          <div class="grid grid-cols-3 text-xs text-slate-400 mb-1"><span></span><span class="text-center font-medium">עכשיו</span><span class="text-center font-medium">בסיס (התחלה)</span></div>
+          <div id="sumRanking"></div>
+          <div class="text-xs text-slate-400 mt-3" id="sumInitNote"></div>
+        </div>
+        <div class="card">
+          <div class="text-center font-bold text-slate-800 mb-4" id="sumTrafficTitle">📊 נתוני תנועה לאתר</div>
+          <div id="sumTraffic"></div>
+        </div>
+      </div>
+    </div>
   </section>
 
   <!-- COMPARE -->
@@ -231,34 +305,6 @@
     </div>
   </section>
 
-  <!-- TRENDS -->
-  <section data-screen="trends" class="hidden">
-    <div class="card mb-4">
-      <div class="text-slate-600 font-medium mb-1">🔮 תחזית סוף חודש <span id="projDay" class="text-slate-400 text-sm"></span></div>
-      <div class="text-xs text-slate-400 mb-3">לפי הקצב הנוכחי של החודש הקלנדרי (לא תלוי בטווח שנבחר)</div>
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div><div class="kpi-label">עד כה החודש (₪)</div><div id="projMtd" class="kpi-val">—</div></div>
-        <div><div class="kpi-label">תחזית הכנסות (₪)</div><div class="flex items-end gap-2"><div id="projRev" class="kpi-val !text-emerald-600">—</div><div id="projRev_d" class="delta"></div></div></div>
-        <div><div class="kpi-label">תחזית עסקאות</div><div class="flex items-end gap-2"><div id="projTx" class="kpi-val">—</div><div id="projTx_d" class="delta"></div></div></div>
-        <div><div class="kpi-label">חודש קודם (₪)</div><div id="projLast" class="kpi-val !text-slate-500">—</div></div>
-      </div>
-    </div>
-    <div class="card mb-4"><div class="text-slate-600 font-medium mb-2">הכנסות יומיות (₪)</div><canvas id="trRevenue" height="80"></canvas></div>
-    <div class="grid md:grid-cols-2 gap-4 mb-4">
-      <div class="card"><div class="text-slate-600 font-medium mb-2">אחוז המרה (%)</div><canvas id="trConv" height="110"></canvas></div>
-      <div class="card"><div class="text-slate-600 font-medium mb-2">עסקה ממוצעת (₪)</div><canvas id="trAov" height="110"></canvas></div>
-    </div>
-    <div class="card">
-      <div class="text-slate-600 font-medium mb-1">📝 יומן הערות</div>
-      <div class="text-xs text-slate-400 mb-3">סמני שינויים שעשית ("החלפתי קריאייטיב", "שיניתי מטא") — יופיעו כקו סגול על הגרפים, וכך תראי אם השינוי עזר</div>
-      <div class="flex flex-wrap gap-2 mb-3">
-        <input id="annotDate" type="date" class="border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none" />
-        <input id="annotText" type="text" placeholder="מה עשית?" class="flex-1 min-w-40 border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-400" />
-        <button id="annotAdd" class="bg-purple-600 hover:bg-purple-700 text-white rounded-lg px-4 py-2 text-sm">הוספה</button>
-      </div>
-      <div id="annotList"></div>
-    </div>
-  </section>
 
   <!-- SALES -->
   <section data-screen="sales" class="hidden">
@@ -636,47 +682,7 @@
     </div>
   </section>
 
-  <!-- MONTHLY USERS -->
-  <section data-screen="monthlyusers" class="hidden">
-    <div class="card">
-      <div class="flex items-center justify-between mb-2 flex-wrap gap-2">
-        <div class="font-bold text-slate-800">👥 משתמשים חודשי</div>
-        <div class="flex gap-2">
-          <select id="muSource" onchange="loadMonthlyUsers()" class="border border-slate-300 rounded-lg px-3 py-1 text-sm outline-none focus:ring-2 focus:ring-blue-400">
-            <option value="all" selected>כל המקורות</option>
-            <option value="organic">תנועה אורגנית</option>
-            <option value="paid">תנועה ממומנת</option>
-          </select>
-          <select id="muMonths" onchange="loadMonthlyUsers()" class="border border-slate-300 rounded-lg px-3 py-1 text-sm outline-none focus:ring-2 focus:ring-blue-400">
-            <option value="1">חודש</option>
-            <option value="3">3 חודשים</option>
-            <option value="6">6 חודשים</option>
-            <option value="12">שנה</option>
-            <option value="18" selected>שנה וחצי</option>
-            <option value="24">שנתיים</option>
-          </select>
-        </div>
-      </div>
-      <div class="text-xs text-slate-400 mb-2">משתמשים לפי חודש, מחולק לשליש בחודש (ימים 1-10 / 11-20 / 21-31). הקו = נפח חודשי כולל. מקור: GA4</div>
-      <div style="height:340px"><canvas id="muChart"></canvas></div>
-    </div>
-  </section>
 
-  <!-- EXECUTIVE SUMMARY -->
-  <section data-screen="summary" class="hidden">
-    <div class="grid md:grid-cols-2 gap-4">
-      <div class="card">
-        <div class="text-center font-bold text-slate-800 mb-4">📋 Executive Summary — סיכום דירוגים</div>
-        <div class="grid grid-cols-3 text-xs text-slate-400 mb-1"><span></span><span class="text-center font-medium">עכשיו</span><span class="text-center font-medium">בסיס (התחלה)</span></div>
-        <div id="sumRanking"></div>
-        <div class="text-xs text-slate-400 mt-3" id="sumInitNote"></div>
-      </div>
-      <div class="card">
-        <div class="text-center font-bold text-slate-800 mb-4" id="sumTrafficTitle">📊 נתוני תנועה לאתר</div>
-        <div id="sumTraffic"></div>
-      </div>
-    </div>
-  </section>
 
   <!-- PAGES PERFORMANCE -->
   <section data-screen="pageperf" class="hidden">

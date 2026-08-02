@@ -2237,15 +2237,39 @@ ${conclSection}
       content:{path:"/api/content",render:renderContent},
       pageperf:{path:"/api/pageperf",render:renderPagePerf},
       orgpotential:{path:"/api/orgpotential",render:renderOrgPotential},
+      perf:{static:true,render:()=>{ perfShow(perfView); }},
       spider:{static:true,render:()=>{}},
       gupdates:{path:"/api/volatility",render:renderGUpdates},
       textanalysis:{static:true,render:()=>{}},
     };
+    // ---- Merged "ביצועים" screen: one section, internal tabs, lazy loading ----
+    // Each internal view maps to the endpoints it needs. Only the OPEN view is fetched,
+    // so opening the tab costs 1-2 GA4 calls instead of the 5 the old split screens cost.
+    const PERF_VIEWS = {
+      overview:     ["overview", "periods"],   // KPI band + period comparison live together
+      trends:       ["trends"],
+      monthlyusers: ["monthlyusers"],
+      summary:      ["summary"],
+    };
+    let perfView = localStorage.getItem("dashPerfView") || "overview";
+    async function perfLoad(view, force) {
+      for (const n of (PERF_VIEWS[view] || [])) await loadPart(n, force);
+    }
+    function perfShow(view) {
+      if (!PERF_VIEWS[view]) view = "overview";
+      perfView = view;
+      localStorage.setItem("dashPerfView", view);
+      // Un-hide BEFORE loading: Chart.js sizes to 0 if its canvas is display:none at draw time.
+      document.querySelectorAll("[data-perfview]").forEach((el) => el.classList.toggle("hidden", el.dataset.perfview !== view));
+      document.querySelectorAll(".perf-tab").forEach((b) => b.classList.toggle("active", b.dataset.perftab === view));
+      perfLoad(view);
+    }
+
     // ---- Grouped navigation: 6 rich screens, each loads several endpoints ----
     const GROUPS = {
       home: ["home", "realtime", "activity"],
       decisions: ["opportunities", "insights"],
-      performance: ["summary", "monthlyusers", "overview", "periods", "trends", "goals", "snapshots"],
+      performance: ["perf", "goals", "snapshots"],
       commerce: ["sales", "ads", "woo", "topproducts", "woocust", "orderhist", "merchant", "pricing"],
       keywords: ["search", "ranks", "rankdist", "orgpotential", "gap", "cannibal", "crosscannibal"],
       content: ["pages", "pageperf", "content", "entity", "decay"],
@@ -2253,7 +2277,7 @@ ${conclSection}
       tools: ["catalog", "enrich", "spider", "textanalysis", "gupdates", "health"],
       compare: ["compare"],
     };
-    const DOM_ORDER = ["home","realtime","activity","opportunities","insights","summary","monthlyusers","snapshots","overview","trends","goals","sales","ads","woo","topproducts","woocust","orderhist","merchant","pricing","traffic","audience","analyses","retention","events","ranks","rankdist","content","pageperf","orgpotential","gap","cannibal","decay","crosscannibal","catalog","enrich","spider","search","pages","entity","textanalysis","gupdates","health","compare"];
+    const DOM_ORDER = ["home","realtime","activity","opportunities","insights","perf","goals","snapshots","sales","ads","woo","topproducts","woocust","orderhist","merchant","pricing","traffic","audience","analyses","retention","events","ranks","rankdist","content","pageperf","orgpotential","gap","cannibal","decay","crosscannibal","catalog","enrich","spider","search","pages","entity","textanalysis","gupdates","health","compare"];
 
     async function loadPart(name, force) {
       const t = PARTS[name], key = cacheKey();
@@ -2264,7 +2288,7 @@ ${conclSection}
         document.getElementById("updatedAt").textContent = "עודכן: " + new Date().toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" });
       } catch (err) { if (err.message && err.message.includes("forbidden")) return; setStatus("שגיאה: " + err.message, "error"); }
     }
-    const SECTION_TITLES = { home:"🏠 בית", activity:"📋 יומן 24 שעות", realtime:"👥 מי באתר עכשיו", pricing:"💸 תחרותיות מחירים", crosscannibal:"🥊 קניבליזציה בין המותגים", catalog:"🩺 בריאות קטלוג", enrich:"✍️ מחולל תוכן", opportunities:"🎯 הזדמנויות השבוע", insights:"💡 תובנות", summary:"📋 סיכום מנהלים", monthlyusers:"👥 משתמשים חודשי", snapshots:"🗄️ נתונים שמורים", overview:"📈 סקירה", trends:"📉 מגמות", realtime:"⏱️ זמן אמת", goals:"🎯 יעדים", sales:"💰 מכירות", ads:"📣 פרסום (ROAS)", woo:"🛍️ חנות (WooCommerce)", topproducts:"🏆 מוצרים מובילים", woocust:"👤 לקוחות", orderhist:"📜 היסטוריית הזמנות", merchant:"🛒 Merchant Center", traffic:"🚦 מקורות תנועה", audience:"🌍 קהל", analyses:"🗓️ ניתוחים", retention:"🔁 Retention", events:"🔔 אירועים", search:"🔍 חיפוש", pages:"📄 דפים מובילים", health:"🩺 בריאות האתר", ranks:"📈 מעקב מיקומים", rankdist:"📊 פיזור דירוג", content:"📈 ביצועי תוכן", pageperf:"📑 ביצועי עמודים", orgpotential:"🚀 פוטנציאל אורגני", gap:"🔋 פערי מילים", cannibal:"⚔️ קניבליזציה", decay:"🍂 שחיקת תוכן", spider:"🕷️ Spider Goggles", gupdates:"🌦️ עדכוני גוגל", entity:"🏆 סמכות מותג", textanalysis:"📝 ניתוח טקסט", compare:"📊 השוואת אתרים" };
+    const SECTION_TITLES = { home:"🏠 בית", activity:"📋 יומן 24 שעות", realtime:"👥 מי באתר עכשיו", pricing:"💸 תחרותיות מחירים", crosscannibal:"🥊 קניבליזציה בין המותגים", catalog:"🩺 בריאות קטלוג", enrich:"✍️ מחולל תוכן", opportunities:"🎯 הזדמנויות השבוע", insights:"💡 תובנות", perf:"📈 ביצועים", summary:"📋 סיכום מנהלים", monthlyusers:"👥 משתמשים חודשי", snapshots:"🗄️ נתונים שמורים", overview:"📈 סקירה", trends:"📉 מגמות", realtime:"⏱️ זמן אמת", goals:"🎯 יעדים", sales:"💰 מכירות", ads:"📣 פרסום (ROAS)", woo:"🛍️ חנות (WooCommerce)", topproducts:"🏆 מוצרים מובילים", woocust:"👤 לקוחות", orderhist:"📜 היסטוריית הזמנות", merchant:"🛒 Merchant Center", traffic:"🚦 מקורות תנועה", audience:"🌍 קהל", analyses:"🗓️ ניתוחים", retention:"🔁 Retention", events:"🔔 אירועים", search:"🔍 חיפוש", pages:"📄 דפים מובילים", health:"🩺 בריאות האתר", ranks:"📈 מעקב מיקומים", rankdist:"📊 פיזור דירוג", content:"📈 ביצועי תוכן", pageperf:"📑 ביצועי עמודים", orgpotential:"🚀 פוטנציאל אורגני", gap:"🔋 פערי מילים", cannibal:"⚔️ קניבליזציה", decay:"🍂 שחיקת תוכן", spider:"🕷️ Spider Goggles", gupdates:"🌦️ עדכוני גוגל", entity:"🏆 סמכות מותג", textanalysis:"📝 ניתוח טקסט", compare:"📊 השוואת אתרים" };
     const SOURCES = {
       ga4:      { label: "Google Analytics", color: "#E37400", emoji: "📈" },
       gsc:      { label: "Search Console",   color: "#1a73e8", emoji: "🔍" },
@@ -2277,7 +2301,7 @@ ${conclSection}
     };
     const SCREEN_SRC = {
       overview: "ga4", trends: "ga4", realtime: "ga4", periods: "ga4", goals: "ga4", monthlyusers: "ga4", traffic: "ga4", audience: "ga4", analyses: "ga4", retention: "ga4", events: "ga4",
-      summary: "mixed", insights: "mixed", opportunities: "mixed", compare: "mixed", home: "mixed", activity: "mixed",
+      perf: "mixed", summary: "mixed", insights: "mixed", opportunities: "mixed", compare: "mixed", home: "mixed", activity: "mixed",
       pricing: "merchant", crosscannibal: "gsc", catalog: "woo", enrich: "woo",
       search: "gsc", ranks: "gsc", rankdist: "gsc", pages: "gsc", pageperf: "gsc", orgpotential: "gsc", gap: "gsc", cannibal: "gsc", decay: "gsc", content: "gsc", entity: "gsc", gupdates: "gsc", health: "gsc",
       woo: "woo", woocust: "woo", topproducts: "woo", sales: "woo",
@@ -2324,6 +2348,7 @@ ${conclSection}
     const reloadGroup = () => { Object.keys(cache).forEach((k) => delete cache[k]); alertsKey = ""; loadGroup(currentGroup, true); };
 
     document.querySelectorAll(".tab-btn").forEach((b) => b.addEventListener("click", () => showGroup(b.dataset.group)));
+    document.querySelectorAll(".perf-tab").forEach((b) => b.addEventListener("click", () => perfShow(b.dataset.perftab)));
     function setActiveRange(r) { currentRange = r; customStart = customEnd = null; localStorage.setItem("dashRange", r); document.querySelectorAll(".range-btn").forEach((b)=>b.classList.toggle("active", b.dataset.range===r)); }
     document.querySelectorAll(".range-btn[data-range]").forEach((b)=>b.addEventListener("click",()=>{ setActiveRange(b.dataset.range); reloadGroup(); }));
     // Calendar-month quick buttons (this month / last month)

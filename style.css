@@ -88,3 +88,8 @@
     /* Scrollbars: subtle */
     *::-webkit-scrollbar { height: 8px; width: 8px; }
     *::-webkit-scrollbar-thumb { background: #dadce0; border-radius: 8px; }
+
+/* ---- Internal tabs inside the merged "ביצועים" screen ---- */
+.perf-tab { font-size:.85rem; padding:.4rem .9rem; border-radius:999px; background:#f1f5f9; color:#475569; border:1px solid transparent; transition:all .15s; }
+.perf-tab:hover { background:#e0edff; color:#1d4ed8; }
+.perf-tab.active { background:#1a73e8; color:#fff; font-weight:600; }
