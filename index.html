@@ -81,7 +81,7 @@
 
   <!-- Tabs (6 grouped screens) -->
   <div class="tab-bar card !py-0 px-3 mb-3 flex flex-wrap gap-1">
-    <button data-group="home" class="tab-btn px-4 py-3 text-sm">🏠 בית</button>
+    <button data-group="home" class="tab-btn px-4 py-3 text-sm">🏠 בית · חי · 24 שעות</button>
     <button data-group="decisions" class="tab-btn px-4 py-3 text-sm">🎯 הזדמנויות ותובנות</button>
     <button data-group="performance" class="tab-btn px-4 py-3 text-sm">📈 ביצועים</button>
     <button data-group="commerce" class="tab-btn px-4 py-3 text-sm">💰 מכירות וחנות</button>
@@ -101,6 +101,17 @@
     <div id="homeTotals" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4"></div>
     <div id="homeSites" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4"></div>
     <div class="text-xs text-slate-400 text-center mb-2">נתוני היום מ-GA4 · קליקים 7 ימים מ-Search Console · לחיצה על מותג עוברת לביצועים שלו</div>
+  </section>
+
+  <!-- 24H ACTIVITY LOG -->
+  <section data-screen="activity" class="hidden">
+    <div id="actTotals" class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4"></div>
+    <div id="actAlerts" class="mb-4"></div>
+    <div id="actSites" class="space-y-4"></div>
+    <div class="text-xs text-slate-400 mt-3">
+      מקורות: GA4 (תנועה, הכנסות, דפים) · WooCommerce (הזמנות ומצבן) · בדיקת זמינות ישירה לאתר.
+      לוגים של השרת עצמו (שגיאות PHP, ניסיונות פריצה) אינם זמינים דרך ה-API — ראי הסבר בהמשך.
+    </div>
   </section>
 
   <!-- OPPORTUNITIES -->
@@ -134,22 +145,23 @@
 
   <!-- REALTIME -->
   <section data-screen="realtime" class="hidden">
-    <div class="card mb-4 text-center relative">
-      <button id="warRoomBtn" class="absolute top-3 start-3 border border-slate-300 rounded-lg px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100">🖥️ חדר מלחמה</button>
-      <div class="kpi-label">משתמשים פעילים עכשיו</div><div id="rtActive" class="text-5xl font-bold text-emerald-600">—</div><div class="text-xs text-slate-400 mt-1">מתעדכן כל 20 שניות · 30 הדקות האחרונות</div>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+      <div class="card text-center"><div class="kpi-label">משתמשים פעילים עכשיו</div><div id="rtActive" class="text-4xl font-bold text-emerald-600">—</div></div>
+      <div class="card"><div class="kpi-label">מדינות</div><div id="rtCountriesN" class="kpi-val">—</div></div>
+      <div class="card"><div class="kpi-label">דפים פעילים</div><div id="rtPagesN" class="kpi-val">—</div></div>
+      <div class="card"><div class="kpi-label">מכשירים</div><div id="rtDevices" class="text-sm mt-1 text-slate-600">—</div></div>
+    </div>
+    <div class="card mb-4">
+      <div class="flex items-center justify-between flex-wrap gap-2 mb-1">
+        <div class="font-bold text-slate-800">👥 מי נמצא עכשיו — פירוט מלא</div>
+        <label class="text-sm text-slate-600 flex items-center gap-1"><input id="rtOnlyForeign" type="checkbox"> רק מחוץ לישראל</label>
+      </div>
+      <div class="text-xs text-slate-400 mb-3">כל שורה = צירוף של מדינה, עיר, דף ומכשיר. מתעדכן כל 20 שניות (30 הדקות האחרונות). גוגל לא חושפת משתמשים בודדים — זהו הפירוט המרבי שה-API מאפשר.</div>
+      <div id="rtDetailMount"></div>
     </div>
     <div class="grid md:grid-cols-3 gap-4">
-      <div class="card"><div class="text-slate-600 font-medium mb-3">לפי מכשיר</div><div id="rtDeviceMount"></div></div>
-      <div class="card">
-        <div class="flex items-center gap-2 mb-3 flex-wrap">
-          <div class="text-slate-600 font-medium">לפי:</div>
-          <div class="flex rounded-lg overflow-hidden border border-slate-300">
-            <button data-rtg="byCity" class="rt-geo range-btn px-3 py-1 text-xs active">ערים</button>
-            <button data-rtg="byCountry" class="rt-geo range-btn px-3 py-1 text-xs">מדינות</button>
-          </div>
-        </div>
-        <div id="rtGeoMount"></div>
-      </div>
+      <div class="card"><div class="text-slate-600 font-medium mb-3">לפי מדינה</div><div id="rtCountryMount"></div></div>
+      <div class="card"><div class="text-slate-600 font-medium mb-3">לפי דף</div><div id="rtPageMount"></div></div>
       <div class="card"><div class="text-slate-600 font-medium mb-3">מה קורה עכשיו (אירועים)</div><div id="rtEventMount"></div></div>
     </div>
   </section>
@@ -207,10 +219,6 @@
   </section>
 
   <section data-screen="compare" class="hidden">
-    <div class="card mb-4">
-      <div class="flex items-center justify-between mb-2"><div class="text-slate-600 font-medium">🟢 מצב חי — משתמשים פעילים עכשיו</div><span class="text-xs text-slate-400">רענון אוטומטי כל 20 שניות</span></div>
-      <div id="cmpLive" class="grid grid-cols-3 gap-3"></div>
-    </div>
     <div class="card mb-4"><div class="text-slate-600 font-medium mb-3">השוואה בין האתרים — תנועה ומכירות <span class="text-xs font-normal text-slate-400">(הכנסות מ-WooCommerce · ▲/▼ מול התקופה הקודמת)</span></div><div id="cmpMount"></div></div>
     <div class="card mb-4"><div class="text-slate-600 font-medium mb-3">🔍 השוואת SEO (Search Console)</div><div id="cmpSeoMount"></div></div>
     <div class="card mb-4"><div class="text-slate-600 font-medium mb-3">🚦 תמהיל מקורות תנועה והמרה</div><div id="cmpMixMount"></div></div>

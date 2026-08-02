@@ -663,7 +663,6 @@ ${conclSection}
       mountTable("cmpFinMount", [
         {key:"site",label:"אתר",align:"right"},{key:"gross",label:"ברוטו (₪)",type:"num"},{key:"net",label:"נטו כולל משלוח (₪)",type:"num"},{key:"refunds",label:"החזרים (₪)",type:"num"},{key:"items",label:"פריטים",type:"num"},
       ], finRows, { search:false, defaultSort:{key:"gross",dir:"desc"} });
-      if (!viewer) loadLiveSites();
     }
     async function loadLiveSites() {
       if (userRole === "viewer") return;
@@ -788,13 +787,40 @@ ${conclSection}
       const age = d.age || []; makeChart("audAge", { type:"bar", data:{ labels:age.map((x)=>x.name), datasets:[{ data:age.map((x)=>x.users), backgroundColor:"#8b5cf6" }] }, options:{responsive:true,plugins:{legend:{display:false}}} });
       const gen = d.gender || []; makeChart("audGender", { type:"doughnut", data:{ labels:gen.map((x)=>x.name==="male"?"זכר":x.name==="female"?"נקבה":x.name), datasets:[{ data:gen.map((x)=>x.users), backgroundColor:["#1d4ed8","#ec4899","#94a3b8"] }] }, options:{responsive:true,plugins:{legend:{position:"bottom"}}} });
     }
+    // The single place that answers "who is on the site right now, where from, on which page".
+    let rtLast = null;
+    const DEVICE_HE = { desktop: "מחשב", mobile: "נייד", tablet: "טאבלט" };
     function renderRealtime(d) {
-      document.getElementById("rtActive").textContent = fmt(d.active);
-      mountTable("rtDeviceMount", [ {key:"name",label:"מכשיר",align:"right"},{key:"users",label:"פעילים",type:"num"} ], (d.byDevice||[]).slice(), { search:false, defaultSort:{key:"users",dir:"desc"} });
-      rtGeoData = { byCity: (d.byCity||[]).slice(), byCountry: (d.byCountry||[]).slice() };
-      drawRtGeo();
-      mountTable("rtEventMount", [ {key:"name",label:"אירוע",align:"right"},{key:"count",label:"כמות",type:"num"} ], (d.byEvent||[]).slice(), { search:false, defaultSort:{key:"count",dir:"desc"} });
+      rtLast = d;
+      const el = (id) => document.getElementById(id);
+      if (el("rtActive")) el("rtActive").textContent = fmt(d.active);
+      if (el("rtCountriesN")) el("rtCountriesN").textContent = fmt((d.byCountry || []).length);
+      if (el("rtPagesN")) el("rtPagesN").textContent = fmt((d.byPage || []).length);
+      if (el("rtDevices")) el("rtDevices").innerHTML = (d.byDevice || [])
+        .map((x) => `${DEVICE_HE[x.name] || x.name}: <b>${fmt(x.users)}</b>`).join(" · ") || "—";
+      drawRtDetail();
+      mountTable("rtCountryMount", [{ key: "name", label: "מדינה", align: "right" }, { key: "users", label: "פעילים", type: "num" }],
+        (d.byCountry || []).slice(), { search: false, defaultSort: { key: "users", dir: "desc" }, totals: false });
+      mountTable("rtPageMount", [{ key: "name", label: "דף", align: "right", long: true }, { key: "users", label: "פעילים", type: "num" }],
+        (d.byPage || []).slice(), { search: false, defaultSort: { key: "users", dir: "desc" }, totals: false });
+      mountTable("rtEventMount", [{ key: "name", label: "אירוע", align: "right" }, { key: "count", label: "כמות", type: "num" }],
+        (d.byEvent || []).slice(), { search: false, defaultSort: { key: "count", dir: "desc" }, totals: false });
     }
+    function drawRtDetail() {
+      if (!rtLast) return;
+      const foreignOnly = document.getElementById("rtOnlyForeign") && document.getElementById("rtOnlyForeign").checked;
+      let rows = (rtLast.detail || []).slice();
+      if (foreignOnly) rows = rows.filter((r) => !/israel|ישראל/i.test(r.country || ""));
+      mountTable("rtDetailMount", [
+        { key: "country", label: "מדינה", render: (v) => /israel/i.test(v || "") ? `🇮🇱 ${v}` : `<span style="color:#b45309">${String(v || "(לא ידוע)").replace(/</g, "&lt;")}</span>` },
+        { key: "city", label: "עיר" },
+        { key: "page", label: "דף", align: "right", long: true },
+        { key: "device", label: "מכשיר", render: (v) => DEVICE_HE[v] || v || "" },
+        { key: "users", label: "פעילים", type: "num" },
+        { key: "views", label: "צפיות", type: "num" },
+      ], rows, { defaultSort: { key: "users", dir: "desc" }, scroll: true, totals: false });
+    }
+    on("rtOnlyForeign", "change", drawRtDetail);
     function goalKey() { return "goals_" + document.getElementById("siteSelect").value; }
     async function loadPacing(budget) {
       const info = document.getElementById("pacingInfo");
@@ -997,6 +1023,74 @@ ${conclSection}
         Object.keys(cache).forEach((x) => delete cache[x]);
         showGroup("performance");
       }));
+    }
+    // ---- 24h activity log ----------------------------------------------------
+    const ORDER_STATUS_HE = {
+      completed: "הושלמה", processing: "בטיפול", "on-hold": "בהמתנה",
+      pending: "ממתינה לתשלום", failed: "נכשלה", cancelled: "בוטלה", refunded: "זוכתה",
+    };
+    function renderActivity(d) {
+      const k = (v, l, cls) => `<div class="card"><div class="kpi-label">${l}</div><div class="kpi-val ${cls || ""}">${v}</div></div>`;
+      const t = d.totals || {};
+      document.getElementById("actTotals").innerHTML =
+        k(fmt(t.sessions), "סשנים (24 ש')") +
+        k("₪" + fmt(t.revenue), "הכנסות") +
+        k(fmt(t.orders), "הזמנות") +
+        k(fmt(t.problemOrders), "הזמנות בעייתיות", t.problemOrders ? "!text-rose-600" : "") +
+        k(t.down ? fmt(t.down) : "תקין", "אתרים למטה", t.down ? "!text-rose-600" : "!text-emerald-600");
+
+      // Anything that needs attention, surfaced above the fold.
+      const alerts = [];
+      (d.sites || []).forEach((s) => {
+        const nm = BRAND_NAMES[s.site] || s.site;
+        if (!s.up) alerts.push(`🔴 <b>${nm}</b> — האתר לא הגיב לבדיקה${s.httpStatus ? ` (קוד ${s.httpStatus})` : ""}`);
+        else if (s.responseMs > 3000) alerts.push(`🐌 <b>${nm}</b> — תגובה איטית: ${(s.responseMs / 1000).toFixed(1)} שניות`);
+        if (s.problemOrders) alerts.push(`⚠️ <b>${nm}</b> — ${s.problemOrders} הזמנות שנכשלו/בוטלו (₪${fmt(s.problemValue)})`);
+        if (s.wooConnected === false) alerts.push(`ℹ️ <b>${nm}</b> — אין חיבור WooCommerce, לכן אין נתוני הזמנות`);
+      });
+      document.getElementById("actAlerts").innerHTML = alerts.length
+        ? `<div class="card border-r-4 border-amber-400 bg-amber-50"><div class="font-bold text-slate-800 mb-2">דורש תשומת לב</div>${alerts.map((a) => `<div class="text-sm text-slate-700 mb-1">${a}</div>`).join("")}</div>`
+        : `<div class="card border-r-4 border-emerald-400 bg-emerald-50 text-sm text-slate-700">✅ הכול תקין — אין אתרים למטה ואין הזמנות בעייתיות ב-24 השעות האחרונות.</div>`;
+
+      const hhmm = (iso) => { try { return new Date(iso).toLocaleString("he-IL", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }); } catch (e) { return iso || ""; } };
+      const list = (arr, key, val, unit) => (arr || []).slice(0, 5)
+        .map((x) => `<div class="flex justify-between text-xs py-0.5"><span class="truncate ms-2">${String(x[key] || "").replace(/</g, "&lt;")}</span><span class="text-slate-500 shrink-0">${fmt(x[val])}${unit || ""}</span></div>`).join("") || '<div class="text-xs text-slate-400">אין נתונים</div>';
+
+      document.getElementById("actSites").innerHTML = (d.sites || []).map((s) => {
+        const nm = BRAND_NAMES[s.site] || s.site;
+        const health = !s.up ? `<span class="text-xs px-2 py-0.5 rounded-full" style="background:#fee2e2;color:#b91c1c">לא זמין</span>`
+          : `<span class="text-xs px-2 py-0.5 rounded-full" style="background:#dcfce7;color:#166534">זמין · ${s.responseMs}ms</span>`;
+        const orderRows = (s.orders || []).slice(0, 15).map((o) => `
+          <tr class="border-b ${o.problem ? "bg-rose-50" : ""}">
+            <td class="py-1 text-right">${hhmm(o.at)}</td>
+            <td class="py-1 text-center">#${o.number || o.id}</td>
+            <td class="py-1 text-center">${ORDER_STATUS_HE[o.status] || o.status}</td>
+            <td class="py-1 text-center">₪${fmt(o.total)}</td>
+            <td class="py-1 text-center text-slate-500">${String(o.payment || "").replace(/</g, "&lt;")}</td>
+          </tr>`).join("");
+        return `<div class="card">
+          <div class="flex items-center justify-between flex-wrap gap-2 mb-3">
+            <div class="font-bold text-slate-800">${nm}</div>
+            <div class="flex items-center gap-2">${health}</div>
+          </div>
+          <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-3 text-sm">
+            <div><div class="kpi-label">סשנים</div><div class="font-bold">${fmt(s.sessions)}</div></div>
+            <div><div class="kpi-label">משתמשים</div><div class="font-bold">${fmt(s.users)}</div></div>
+            <div><div class="kpi-label">צפיות בדפים</div><div class="font-bold">${fmt(s.pageviews)}</div></div>
+            <div><div class="kpi-label">הזמנות</div><div class="font-bold">${fmt(s.ordersCount)}${s.problemOrders ? ` <span class="text-rose-600 text-xs">(${s.problemOrders} בעייתיות)</span>` : ""}</div></div>
+            <div><div class="kpi-label">הכנסות</div><div class="font-bold">₪${fmt(s.revenue)}</div></div>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
+            <div><div class="text-xs font-bold text-slate-600 mb-1">דפים מובילים</div>${list(s.topPages, "name", "views")}</div>
+            <div><div class="text-xs font-bold text-slate-600 mb-1">מקורות תנועה</div>${list(s.topSources, "name", "sessions")}</div>
+          </div>
+          ${orderRows ? `<div class="text-xs font-bold text-slate-600 mb-1">הזמנות אחרונות</div>
+          <div class="overflow-x-auto"><table class="w-full text-xs">
+            <tr class="text-slate-400"><th class="text-right py-1">מתי</th><th>מספר</th><th>סטטוס</th><th>סכום</th><th>אמצעי תשלום</th></tr>
+            ${orderRows}
+          </table></div>` : `<div class="text-xs text-slate-400">${s.wooConnected ? "לא היו הזמנות ב-24 השעות האחרונות" : "אין חיבור WooCommerce לאתר זה"}</div>`}
+        </div>`;
+      }).join("");
     }
     function renderPricing(d) {
       const un = document.getElementById("prUnavailable");
@@ -2132,6 +2226,7 @@ ${conclSection}
       cannibal:{path:"/api/cannibal",render:renderCannibal},
       decay:{path:"/api/decay",render:renderDecay},
       home:{path:"/api/home",render:renderHome},
+      activity:{path:"/api/activity",render:renderActivity},
       pricing:{path:"/api/pricing",render:renderPricing},
       crosscannibal:{path:"/api/cross-cannibal",render:renderCrossCannibal},
       catalog:{path:"/api/catalog",render:renderCatalog},
@@ -2148,9 +2243,9 @@ ${conclSection}
     };
     // ---- Grouped navigation: 6 rich screens, each loads several endpoints ----
     const GROUPS = {
-      home: ["home"],
+      home: ["home", "realtime", "activity"],
       decisions: ["opportunities", "insights"],
-      performance: ["summary", "monthlyusers", "overview", "periods", "trends", "realtime", "goals", "snapshots"],
+      performance: ["summary", "monthlyusers", "overview", "periods", "trends", "goals", "snapshots"],
       commerce: ["sales", "ads", "woo", "topproducts", "woocust", "orderhist", "merchant", "pricing"],
       keywords: ["search", "ranks", "rankdist", "orgpotential", "gap", "cannibal", "crosscannibal"],
       content: ["pages", "pageperf", "content", "entity", "decay"],
@@ -2158,7 +2253,7 @@ ${conclSection}
       tools: ["catalog", "enrich", "spider", "textanalysis", "gupdates", "health"],
       compare: ["compare"],
     };
-    const DOM_ORDER = ["home","opportunities","insights","summary","monthlyusers","snapshots","overview","trends","realtime","goals","sales","ads","woo","topproducts","woocust","orderhist","merchant","pricing","traffic","audience","analyses","retention","events","ranks","rankdist","content","pageperf","orgpotential","gap","cannibal","decay","crosscannibal","catalog","enrich","spider","search","pages","entity","textanalysis","gupdates","health","compare"];
+    const DOM_ORDER = ["home","realtime","activity","opportunities","insights","summary","monthlyusers","snapshots","overview","trends","goals","sales","ads","woo","topproducts","woocust","orderhist","merchant","pricing","traffic","audience","analyses","retention","events","ranks","rankdist","content","pageperf","orgpotential","gap","cannibal","decay","crosscannibal","catalog","enrich","spider","search","pages","entity","textanalysis","gupdates","health","compare"];
 
     async function loadPart(name, force) {
       const t = PARTS[name], key = cacheKey();
@@ -2169,7 +2264,7 @@ ${conclSection}
         document.getElementById("updatedAt").textContent = "עודכן: " + new Date().toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" });
       } catch (err) { if (err.message && err.message.includes("forbidden")) return; setStatus("שגיאה: " + err.message, "error"); }
     }
-    const SECTION_TITLES = { home:"🏠 בית", pricing:"💸 תחרותיות מחירים", crosscannibal:"🥊 קניבליזציה בין המותגים", catalog:"🩺 בריאות קטלוג", enrich:"✍️ מחולל תוכן", opportunities:"🎯 הזדמנויות השבוע", insights:"💡 תובנות", summary:"📋 סיכום מנהלים", monthlyusers:"👥 משתמשים חודשי", snapshots:"🗄️ נתונים שמורים", overview:"📈 סקירה", trends:"📉 מגמות", realtime:"⏱️ זמן אמת", goals:"🎯 יעדים", sales:"💰 מכירות", ads:"📣 פרסום (ROAS)", woo:"🛍️ חנות (WooCommerce)", topproducts:"🏆 מוצרים מובילים", woocust:"👤 לקוחות", orderhist:"📜 היסטוריית הזמנות", merchant:"🛒 Merchant Center", traffic:"🚦 מקורות תנועה", audience:"🌍 קהל", analyses:"🗓️ ניתוחים", retention:"🔁 Retention", events:"🔔 אירועים", search:"🔍 חיפוש", pages:"📄 דפים מובילים", health:"🩺 בריאות האתר", ranks:"📈 מעקב מיקומים", rankdist:"📊 פיזור דירוג", content:"📈 ביצועי תוכן", pageperf:"📑 ביצועי עמודים", orgpotential:"🚀 פוטנציאל אורגני", gap:"🔋 פערי מילים", cannibal:"⚔️ קניבליזציה", decay:"🍂 שחיקת תוכן", spider:"🕷️ Spider Goggles", gupdates:"🌦️ עדכוני גוגל", entity:"🏆 סמכות מותג", textanalysis:"📝 ניתוח טקסט", compare:"📊 השוואת אתרים" };
+    const SECTION_TITLES = { home:"🏠 בית", activity:"📋 יומן 24 שעות", realtime:"👥 מי באתר עכשיו", pricing:"💸 תחרותיות מחירים", crosscannibal:"🥊 קניבליזציה בין המותגים", catalog:"🩺 בריאות קטלוג", enrich:"✍️ מחולל תוכן", opportunities:"🎯 הזדמנויות השבוע", insights:"💡 תובנות", summary:"📋 סיכום מנהלים", monthlyusers:"👥 משתמשים חודשי", snapshots:"🗄️ נתונים שמורים", overview:"📈 סקירה", trends:"📉 מגמות", realtime:"⏱️ זמן אמת", goals:"🎯 יעדים", sales:"💰 מכירות", ads:"📣 פרסום (ROAS)", woo:"🛍️ חנות (WooCommerce)", topproducts:"🏆 מוצרים מובילים", woocust:"👤 לקוחות", orderhist:"📜 היסטוריית הזמנות", merchant:"🛒 Merchant Center", traffic:"🚦 מקורות תנועה", audience:"🌍 קהל", analyses:"🗓️ ניתוחים", retention:"🔁 Retention", events:"🔔 אירועים", search:"🔍 חיפוש", pages:"📄 דפים מובילים", health:"🩺 בריאות האתר", ranks:"📈 מעקב מיקומים", rankdist:"📊 פיזור דירוג", content:"📈 ביצועי תוכן", pageperf:"📑 ביצועי עמודים", orgpotential:"🚀 פוטנציאל אורגני", gap:"🔋 פערי מילים", cannibal:"⚔️ קניבליזציה", decay:"🍂 שחיקת תוכן", spider:"🕷️ Spider Goggles", gupdates:"🌦️ עדכוני גוגל", entity:"🏆 סמכות מותג", textanalysis:"📝 ניתוח טקסט", compare:"📊 השוואת אתרים" };
     const SOURCES = {
       ga4:      { label: "Google Analytics", color: "#E37400", emoji: "📈" },
       gsc:      { label: "Search Console",   color: "#1a73e8", emoji: "🔍" },
@@ -2182,7 +2277,7 @@ ${conclSection}
     };
     const SCREEN_SRC = {
       overview: "ga4", trends: "ga4", realtime: "ga4", periods: "ga4", goals: "ga4", monthlyusers: "ga4", traffic: "ga4", audience: "ga4", analyses: "ga4", retention: "ga4", events: "ga4",
-      summary: "mixed", insights: "mixed", opportunities: "mixed", compare: "mixed", home: "mixed",
+      summary: "mixed", insights: "mixed", opportunities: "mixed", compare: "mixed", home: "mixed", activity: "mixed",
       pricing: "merchant", crosscannibal: "gsc", catalog: "woo", enrich: "woo",
       search: "gsc", ranks: "gsc", rankdist: "gsc", pages: "gsc", pageperf: "gsc", orgpotential: "gsc", gap: "gsc", cannibal: "gsc", decay: "gsc", content: "gsc", entity: "gsc", gupdates: "gsc", health: "gsc",
       woo: "woo", woocust: "woo", topproducts: "woo", sales: "woo",
@@ -2344,5 +2439,4 @@ ${conclSection}
     // Load alerts in the background so the badge appears without opening the panel
     setTimeout(() => loadAlerts(false), 2000);
     setInterval(() => { if (GROUPS[currentGroup] && GROUPS[currentGroup].includes("realtime") && !document.hidden) loadPart("realtime", true); }, 20000);
-    setInterval(() => { if (currentGroup === "compare" && !document.hidden) loadLiveSites(); }, 20000);
     setInterval(() => { if (currentGroup === "home" && !document.hidden) loadPart("home", true); }, 60000);
